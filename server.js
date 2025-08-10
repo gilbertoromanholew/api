@@ -10,9 +10,10 @@ app.post('/users', (req, res) => {
 
 app.get('/users', (req, res) => {
     res.status(200).json(users);
+    console.log("GET /users called");
 });
 
-app.listen(3020);
+app.listen(3000);
 
 
 /*
