@@ -1,5 +1,5 @@
 import express from 'express';
-import { validateCPF } from '../controllers/cpfController.js';
+import { validateCPF } from './cpfController.js';
 
 const router = express.Router();
 

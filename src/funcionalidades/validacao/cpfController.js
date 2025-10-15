@@ -1,4 +1,4 @@
-import { isValidCPF } from '../utils/cpfValidator.js';
+import { isValidCPF } from './cpfValidator.js';
 
 export const validateCPF = async (req, res) => {
     const { cpf } = req.body;
@@ -15,4 +15,3 @@ export const validateCPF = async (req, res) => {
     
     res.status(200).json({ valid: true, message: 'CPF válido.' });
 };
-

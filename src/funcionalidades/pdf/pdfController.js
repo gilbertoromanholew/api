@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pdfParse = require('../utils/pdfParseWrapper.cjs');
+const pdfParse = require('../../utils/pdfParseWrapper.cjs');
 
 export const readPDF = async (req, res) => {
     try {
@@ -25,4 +25,3 @@ export const readPDF = async (req, res) => {
         res.status(500).json({ error: 'Erro ao processar o arquivo PDF.', details: error.message });
     }
 };
-
