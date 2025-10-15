@@ -1,0 +1,14 @@
+Documentação da API - Em desenvolvimento
+
+Esta é uma documentação temporária enquanto a API cresce. Atualize conforme novos endpoints e funções são adicionados.
+
+Endpoints disponíveis:
+- POST /validate-cpf: Valida um CPF fornecido no corpo da requisição (JSON: {"cpf": "12345678901"}). Retorna se é válido ou não.
+
+Funções disponíveis:
+- isValidCPF(cpf): Função para validar formato de CPF (usada internamente no endpoint /validate-cpf).
+
+Notas:
+- Acesso restrito por IP: Apenas IPs autorizados podem acessar.
+- Para IPs não autorizados: Retorna erro 403 com mensagem "Pare de tentar hackear! ;)".
+- Servidor roda na porta 3000, acessível via LAN em 192.168.168.100:3000.
