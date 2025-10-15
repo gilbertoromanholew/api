@@ -6,6 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Middleware para bloquear todas as requisições GET
+app.get('*', (req, res) => {
+    res.status(403).json({ error: 'Erro: Pare de tentar hackear!' });
+});
+
 // --- FUNÇÃO DE VALIDAÇÃO DE CPF (NO BACKEND) ---
 function isValidCPF(cpf) {
     cpf = String(cpf).replace(/[^\d]+/g, '');
