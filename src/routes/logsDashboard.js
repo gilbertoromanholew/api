@@ -855,16 +855,18 @@ export const getLogsDashboard = (req, res) => {
         <!-- Recent Logs -->
         <div class="section">
             <div class="section-header">
-                <h2 class="section-title">📝 Logs de Acesso Recentes</h2>
-                <div class="filters">
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleLogsSection()">
+                    <span id="logs-section-icon">▼</span>
+                    📝 Logs de Acesso Recentes
+                </h2>
+                <div class="filters" id="logs-controls">
                     <input type="number" class="filter-input" id="limitInput" 
-                           placeholder="Limite (padrão: 50)" value="50">
-                    <select class="filter-select" id="authorizedFilter">
+                           placeholder="Limite (padrão: 50)" value="50" onchange="loadLogs()">
+                    <select class="filter-select" id="authorizedFilter" onchange="loadLogs()">
                         <option value="">Todos os Acessos</option>
                         <option value="true">✅ Apenas Autorizados</option>
                         <option value="false">❌ Apenas Negados</option>
                     </select>
-                    <button class="btn" onclick="loadLogs()">Aplicar Filtros</button>
                 </div>
             </div>
             <div class="table-container" id="tableContainer">
@@ -906,6 +908,9 @@ export const getLogsDashboard = (req, res) => {
         let logsPerPage = 50;
         let isLoadingMore = false;
         let hasMoreLogs = true;
+        let currentOpenIP = null; // IP do modal aberto (para auto-refresh)
+        let ipStatsLimit = 12; // Limite de cards visíveis
+        let showAllIPs = false; // Estado de expansão da seção de IPs
 
         // Carregar estatísticas gerais
         async function loadGeneralStats() {
@@ -990,49 +995,87 @@ export const getLogsDashboard = (req, res) => {
             document.getElementById('alertBanner').classList.remove('show');
         }
 
+        // Estado de expansão dos cards
+        const cardStates = {
+            endpoints: false,
+            browsers: false,
+            devices: false
+        };
+
         // Atualizar métricas avançadas
         function updateAdvancedMetrics(stats) {
             // Tempo médio de resposta (simulado)
             document.getElementById('avgResponseTime').textContent = '~45ms';
             
-            // Endpoints mais acessados (URLs reais) - TOP 3
-            const topEndpointsHtml = Object.entries(stats.top_endpoints || {})
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3)
-                .map(([url, count]) => \`
+            // Endpoints mais acessados (URLs reais)
+            renderExpandableMetric(
+                'topEndpoints',
+                stats.top_endpoints || {},
+                'endpoints',
+                'info',
+                (url) => \`<span style="font-family: 'Courier New', monospace; font-size: 0.9em;">\${url}</span>\`
+            );
+            
+            // Navegadores mais usados
+            renderExpandableMetric(
+                'topBrowsers',
+                stats.top_browsers || {},
+                'browsers',
+                'success'
+            );
+            
+            // Dispositivos mais usados (plataformas)
+            renderExpandableMetric(
+                'topDevices',
+                stats.top_platforms || {},
+                'devices',
+                'warning'
+            );
+        }
+
+        // Renderizar métrica com expansão
+        function renderExpandableMetric(elementId, data, stateKey, badgeClass, labelFormatter = null) {
+            const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+            const isExpanded = cardStates[stateKey];
+            const itemsToShow = isExpanded ? entries : entries.slice(0, 3);
+            const hasMore = entries.length > 3;
+            
+            if (entries.length === 0) {
+                document.getElementById(elementId).innerHTML = 
+                    '<div style="text-align: center; color: var(--text-muted); padding: 10px;">Sem dados</div>';
+                return;
+            }
+            
+            const itemsHtml = itemsToShow.map(([label, count]) => {
+                const displayLabel = labelFormatter ? labelFormatter(label) : \`<span>\${label}</span>\`;
+                return \`
                     <div class="metric-item">
-                        <span style="font-family: 'Courier New', monospace; font-size: 0.9em;">\${url}</span>
-                        <span class="badge info">\${count}</span>
+                        \${displayLabel}
+                        <span class="badge \${badgeClass}">\${count}</span>
                     </div>
-                \`).join('') || '<div style="text-align: center; color: var(--text-muted);">Sem dados</div>';
+                \`;
+            }).join('');
             
-            document.getElementById('topEndpoints').innerHTML = topEndpointsHtml;
+            const toggleButton = hasMore ? \`
+                <button 
+                    class="btn-expand" 
+                    onclick="toggleMetricCard('\${stateKey}')"
+                    style="margin-top: 10px; width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85em; transition: all 0.3s ease;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                    onmouseout="this.style.background='rgba(255,255,255,0.1)'"
+                >
+                    \${isExpanded ? '▲ Ver menos' : \`▼ Ver todos (\${entries.length})\`}
+                </button>
+            \` : '';
             
-            // Navegadores mais usados - TOP 3
-            const topBrowsersHtml = Object.entries(stats.top_browsers || {})
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3)
-                .map(([browser, count]) => \`
-                    <div class="metric-item">
-                        <span>\${browser}</span>
-                        <span class="badge success">\${count}</span>
-                    </div>
-                \`).join('') || '<div style="text-align: center; color: var(--text-muted);">Sem dados</div>';
-            
-            document.getElementById('topBrowsers').innerHTML = topBrowsersHtml;
-            
-            // Dispositivos mais usados (plataformas) - TOP 3
-            const topDevicesHtml = Object.entries(stats.top_platforms || {})
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3)
-                .map(([device, count]) => \`
-                    <div class="metric-item">
-                        <span>\${device}</span>
-                        <span class="badge warning">\${count}</span>
-                    </div>
-                \`).join('') || '<div style="text-align: center; color: var(--text-muted);">Sem dados</div>';
-            
-            document.getElementById('topDevices').innerHTML = topDevicesHtml;
+            document.getElementById(elementId).innerHTML = itemsHtml + toggleButton;
+        }
+
+        // Alternar expansão de card
+        function toggleMetricCard(stateKey) {
+            cardStates[stateKey] = !cardStates[stateKey];
+            // Re-renderizar usando os dados já carregados
+            loadGeneralStats();
         }
 
         // Carregar estatísticas por IP
@@ -1042,7 +1085,11 @@ export const getLogsDashboard = (req, res) => {
                 const data = await response.json();
                 
                 if (data.success && data.ips.length > 0) {
-                    document.getElementById('ipStatsGrid').innerHTML = data.ips.map(ip => {
+                    const allIPs = data.ips;
+                    const visibleIPs = showAllIPs ? allIPs : allIPs.slice(0, ipStatsLimit);
+                    const hasMoreIPs = allIPs.length > ipStatsLimit;
+                    
+                    document.getElementById('ipStatsGrid').innerHTML = visibleIPs.map(ip => {
                         const isSuspicious = ip.denied > 5 || (ip.denied / ip.total_attempts) > 0.5;
                         
                         return \`
@@ -1074,13 +1121,47 @@ export const getLogsDashboard = (req, res) => {
                                 \${isSuspicious ? '<span class="badge danger" style="margin-top: 10px;">⚠️ Suspeito</span>' : ''}
                             </div>
                         \`;
-                    }).join('');
+                    }).join('') + (hasMoreIPs && !showAllIPs ? \`
+                        <button 
+                            class="btn-expand-ips" 
+                            onclick="toggleAllIPs(event)"
+                            style="grid-column: 1 / -1; padding: 15px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%); border: 2px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; color: #fff; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px;"
+                            onmouseover="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.5)'"
+                            onmouseout="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.3)'"
+                        >
+                            <span style="font-size: 1.2em;">▼</span>
+                            Ver todos os \${allIPs.length} IPs
+                        </button>
+                    \` : hasMoreIPs ? \`
+                        <button 
+                            class="btn-expand-ips" 
+                            onclick="toggleAllIPs(event)"
+                            style="grid-column: 1 / -1; padding: 15px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%); border: 2px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; color: #fff; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px;"
+                            onmouseover="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.5)'"
+                            onmouseout="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.3)'"
+                        >
+                            <span style="font-size: 1.2em;">▲</span>
+                            Ver menos (mostrar apenas \${ipStatsLimit})
+                        </button>
+                    \` : '');
+                    
+                    // Se o modal está aberto, atualizar também
+                    if (currentOpenIP) {
+                        refreshIPDetails(currentOpenIP);
+                    }
                 } else {
                     document.getElementById('ipStatsGrid').innerHTML = '<div class="loading">Nenhuma estatística disponível</div>';
                 }
             } catch (error) {
                 console.error('Erro ao carregar IP stats:', error);
             }
+        }
+
+        // Alternar visualização de todos os IPs
+        function toggleAllIPs(event) {
+            if (event) event.stopPropagation();
+            showAllIPs = !showAllIPs;
+            loadIPStats();
         }
 
         // Carregar logs
@@ -1108,11 +1189,19 @@ export const getLogsDashboard = (req, res) => {
                         const isNightAccess = isNightTime(log.timestamp);
                         const rowClass = isSuspicious ? 'suspicious-row' : isNightAccess ? 'night-access' : '';
                         
+                        // Formatar localização com bandeira
+                        const countryFlag = log.countryCode ? getFlagEmoji(log.countryCode) : '🌍';
+                        const location = log.city && log.country 
+                            ? \`\${countryFlag} \${log.city}, \${log.country}\`
+                            : log.country 
+                            ? \`\${countryFlag} \${log.country}\`
+                            : '🌍 Desconhecido';
+                        
                         return \`
                             <tr class="\${rowClass}">
                                 <td>\${formatDateTime(log.timestamp)}</td>
                                 <td style="font-family: 'Courier New', monospace;">\${log.ip_detected || '−'}</td>
-                                <td>\${log.country || 'Desconhecido'}</td>
+                                <td>\${location}</td>
                                 <td>\${log.browser || 'Desconhecido'}</td>
                                 <td>\${log.platform || 'Desconhecido'}</td>
                                 <td title="\${log.url || ''}">\${truncate(log.url, 50) || '−'}</td>
@@ -1195,10 +1284,26 @@ export const getLogsDashboard = (req, res) => {
             return text.length > length ? text.substring(0, length) + '...' : text;
         }
 
+        // Converter código de país para emoji de bandeira
+        function getFlagEmoji(countryCode) {
+            if (!countryCode || countryCode === 'LOCAL') return '🏠';
+            const codePoints = countryCode
+                .toUpperCase()
+                .split('')
+                .map(char => 127397 + char.charCodeAt());
+            return String.fromCodePoint(...codePoints);
+        }
+
         // Mostrar detalhes do IP
         async function showIPDetails(ip) {
+            currentOpenIP = ip; // Salvar IP aberto para auto-refresh
             showToast(\`Carregando detalhes do IP: \${ip}\`, 'info');
-            
+            await refreshIPDetails(ip);
+            document.getElementById('ipDetailsPanel').classList.add('show');
+        }
+
+        // Atualizar detalhes do IP (usado no auto-refresh)
+        async function refreshIPDetails(ip) {
             try {
                 // Buscar logs específicos deste IP
                 const response = await fetch(\`/api/logs?ip=\${encodeURIComponent(ip)}\`);
@@ -1251,15 +1356,21 @@ export const getLogsDashboard = (req, res) => {
                         
                         <!-- Informações do IP -->
                         <div class="detail-section">
-                            <h3 class="detail-section-title">🌍 Informações do IP</h3>
+                            <h3 class="detail-section-title">🌍 Informações de Geolocalização</h3>
                             <div class="detail-grid">
                                 <div class="detail-item">
                                     <div class="detail-label">Endereço IP</div>
                                     <div class="detail-value" style="font-family: 'Courier New', monospace;">\${ip}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">País/Região</div>
-                                    <div class="detail-value">\${firstRequest.country || 'Desconhecido'}</div>
+                                    <div class="detail-label">Localização</div>
+                                    <div class="detail-value">
+                                        \${firstRequest.countryCode ? getFlagEmoji(firstRequest.countryCode) : '🌍'} 
+                                        \${firstRequest.city && firstRequest.country 
+                                            ? \`\${firstRequest.city}, \${firstRequest.country}\`
+                                            : firstRequest.country || 'Desconhecido'
+                                        }
+                                    </div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Primeira Requisição</div>
@@ -1274,25 +1385,42 @@ export const getLogsDashboard = (req, res) => {
                         
                         <!-- Endpoints Acessados -->
                         <div class="detail-section">
-                            <h3 class="detail-section-title">🔗 Endpoints Acessados (\${endpoints.length})</h3>
-                            <ul class="detail-list">
-                                \${endpoints.slice(0, 10).map(url => {
+                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('endpoints-\${ip}')">
+                                <span id="endpoints-\${ip}-icon">▼</span> 🔗 Endpoints Acessados (\${endpoints.length})
+                            </h3>
+                            <ul class="detail-list" id="endpoints-\${ip}" style="max-height: 300px; overflow-y: auto;">
+                                \${endpoints.slice(0, 5).map(url => {
                                     const count = ipLogs.filter(log => log.url === url).length;
                                     return \`
                                         <li>
-                                            <span>\${url || 'N/A'}</span>
+                                            <span style="font-family: 'Courier New', monospace; font-size: 0.9em;">\${url || 'N/A'}</span>
                                             <span class="badge info">\${count}x</span>
                                         </li>
                                     \`;
                                 }).join('')}
-                                \${endpoints.length > 10 ? \`<li><em>... e mais \${endpoints.length - 10} endpoints</em></li>\` : ''}
+                                \${endpoints.length > 5 ? \`<li style="display: none;" class="expand-item-endpoints-\${ip}">\${
+                                    endpoints.slice(5).map(url => {
+                                        const count = ipLogs.filter(log => log.url === url).length;
+                                        return \`<span style="font-family: 'Courier New', monospace; font-size: 0.9em;">\${url || 'N/A'}</span> <span class="badge info">\${count}x</span>\`;
+                                    }).join('</li><li style="display: none;" class="expand-item-endpoints-' + ip + '">')
+                                }</li>\` : ''}
                             </ul>
+                            \${endpoints.length > 5 ? \`
+                                <button class="btn-expand" onclick="expandDetailList('endpoints-\${ip}')" style="margin-top: 10px; width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85em;">
+                                    ▼ Ver todos (\${endpoints.length})
+                                </button>
+                            \` : ''}
                         </div>
                         
                         <!-- Navegadores Usados -->
                         <div class="detail-section">
-                            <h3 class="detail-section-title">🌐 Navegadores Usados</h3>
-                            <ul class="detail-list">
+                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('browsers-\${ip}')">
+                                <span id="browsers-\${ip}-icon">▼</span> 🌐 Navegadores Usados
+                            </h3>
+                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('browsers-\${ip}')">
+                                <span id="browsers-\${ip}-icon">▼</span> 🌐 Navegadores Usados
+                            </h3>
+                            <ul class="detail-list" id="browsers-\${ip}">
                                 \${browsers.map(browser => {
                                     const count = ipLogs.filter(log => log.browser === browser).length;
                                     return \`
@@ -1307,8 +1435,10 @@ export const getLogsDashboard = (req, res) => {
                         
                         <!-- Plataformas Usadas -->
                         <div class="detail-section">
-                            <h3 class="detail-section-title">💻 Plataformas Usadas</h3>
-                            <ul class="detail-list">
+                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('platforms-\${ip}')">
+                                <span id="platforms-\${ip}-icon">▼</span> 💻 Plataformas Usadas
+                            </h3>
+                            <ul class="detail-list" id="platforms-\${ip}">
                                 \${platforms.map(platform => {
                                     const count = ipLogs.filter(log => log.platform === platform).length;
                                     return \`
@@ -1350,10 +1480,11 @@ export const getLogsDashboard = (req, res) => {
                         \` : ''}
                     \`;
                     
-                    // Mostrar painel de detalhes e rolar até ele
-                    const panel = document.getElementById('ipDetailsPanel');
-                    panel.classList.add('show');
-                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    // Rolar até o painel (apenas na primeira abertura)
+                    if (!document.getElementById('ipDetailsPanel').classList.contains('show')) {
+                        const panel = document.getElementById('ipDetailsPanel');
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                     
                 } else {
                     showToast('Nenhum log encontrado para este IP', 'warning');
@@ -1366,7 +1497,51 @@ export const getLogsDashboard = (req, res) => {
         
         // Fechar painel de detalhes
         function closeIPDetails() {
+            currentOpenIP = null; // Limpar IP aberto
             document.getElementById('ipDetailsPanel').classList.remove('show');
+        }
+
+        // Alternar expansão/colapso de seções no modal
+        function toggleDetailSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById(sectionId + '-icon');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                section.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // Alternar seção de logs
+        function toggleLogsSection() {
+            const container = document.getElementById('tableContainer');
+            const controls = document.getElementById('logs-controls');
+            const icon = document.getElementById('logs-section-icon');
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                controls.style.display = 'flex';
+                icon.textContent = '▼';
+            } else {
+                container.style.display = 'none';
+                controls.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // Expandir lista de detalhes (mostrar todos os itens)
+        function expandDetailList(listId) {
+            const items = document.querySelectorAll(\`.expand-item-\${listId}\`);
+            const button = event.target;
+            
+            items.forEach(item => {
+                item.style.display = 'list-item';
+            });
+            
+            button.style.display = 'none';
         }
 
         // Limpar logs
