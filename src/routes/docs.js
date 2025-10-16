@@ -566,53 +566,63 @@ export const getApiDocs = (req, res) => {
 
         <!-- Informações de Segurança -->
         <div class="info-box ip-info">
-            <h2>🔒 Informações de Acesso</h2>
-            <div class="ip-detail">
-                <span class="ip-label">Seu IP:</span>
-                <span class="ip-value">${req.ip}</span>
-            </div>
-            <div class="ip-detail">
-                <span class="ip-label">Status de Acesso:</span>
-                <span class="ip-value">✅ Autorizado</span>
-            </div>
-            <div class="ip-detail">
-                <span class="ip-label">Sistema de Segurança:</span>
-                <span class="ip-value">Filtro de IP Ativo</span>
-            </div>
-            <div class="ip-detail">
-                <span class="ip-label">User-Agent:</span>
-                <span class="ip-value" style="font-size: 0.85em;">${req.get('user-agent')}</span>
+            <h2 style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleSection('access-info')">
+                <span id="access-info-icon">▶</span>
+                🔒 Informações de Acesso
+            </h2>
+            <div id="access-info-content" style="display: none; margin-top: 15px;">
+                <div class="ip-detail">
+                    <span class="ip-label">Seu IP Público:</span>
+                    <span class="ip-value" id="publicIP">Detectando...</span>
+                </div>
+                <div class="ip-detail">
+                    <span class="ip-label">Status de Acesso:</span>
+                    <span class="ip-value">✅ Autorizado</span>
+                </div>
+                <div class="ip-detail">
+                    <span class="ip-label">Sistema de Segurança:</span>
+                    <span class="ip-value">Filtro de IP Ativo</span>
+                </div>
+                <div class="ip-detail">
+                    <span class="ip-label">User-Agent:</span>
+                    <span class="ip-value" style="font-size: 0.85em;">${req.get('user-agent')}</span>
+                </div>
             </div>
         </div>
 
         <!-- Sistema de Autenticação -->
         <div class="info-box">
-            <h2>🔑 Sistema de Autenticação</h2>
-            <p><strong>Como funciona o controle de acesso:</strong></p>
-            <ol style="margin-left: 20px; margin-top: 15px; line-height: 2;">
-                <li><strong>Filtro de IP:</strong> Apenas IPs autorizados podem acessar a API</li>
-                <li><strong>Lista Branca:</strong> IPs são configurados no arquivo <code>src/config/allowedIPs.js</code></li>
-                <li><strong>Logs de Acesso:</strong> Todos os acessos são registrados para auditoria</li>
-                <li><strong>Proteção Automática:</strong> IPs não autorizados recebem erro 403</li>
-            </ol>
-            <div class="code-block" style="margin-top: 20px;">
-                <div class="code-header">
-                    <span class="code-lang">JavaScript - Exemplo de Configuração</span>
-                    <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
-                </div>
-                <pre><code>// src/config/allowedIPs.js
+            <h2 style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleSection('auth-info')">
+                <span id="auth-info-icon">▶</span>
+                🔑 Sistema de Autenticação
+            </h2>
+            <div id="auth-info-content" style="display: none; margin-top: 15px;">
+                <p><strong>Como funciona o controle de acesso:</strong></p>
+                <ol style="margin-left: 20px; margin-top: 15px; line-height: 2;">
+                    <li><strong>Filtro de IP:</strong> Apenas IPs autorizados podem acessar a API</li>
+                    <li><strong>Lista Branca:</strong> IPs são configurados no arquivo <code>src/config/allowedIPs.js</code></li>
+                    <li><strong>Logs de Acesso:</strong> Todos os acessos são registrados para auditoria</li>
+                    <li><strong>Proteção Automática:</strong> IPs não autorizados recebem erro 403</li>
+                </ol>
+                <div class="code-block" style="margin-top: 20px;">
+                    <div class="code-header">
+                        <span class="code-lang">JavaScript - Exemplo de Configuração</span>
+                        <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+                    </div>
+                    <pre><code>// src/config/allowedIPs.js
 export const allowedIPs = [
     '127.0.0.1',
     '::1',
     'SEU_IP_AQUI'
 ];</code></pre>
+                </div>
             </div>
         </div>
 
         <!-- Funções Disponíveis -->
         <div class="info-box">
             <h2>📦 Funções Disponíveis</h2>
-            <p style="margin-bottom: 20px;">Esta API possui <strong id="functionsCount">...</strong> funções carregadas dinamicamente:</p>
+            <p style="margin-bottom: 20px;">Esta API possui <strong id="functionsCount">...</strong> funções carregadas dinamicamente. Clique em uma função para ver exemplos e testar:</p>
             <div id="functionsList">
                 <div style="text-align: center; padding: 40px;">
                     <div class="loading"></div>
@@ -621,43 +631,24 @@ export const allowedIPs = [
             </div>
         </div>
 
-        <!-- Endpoints Detalhados (DINÂMICO) -->
-        <div class="info-box">
-            <h2>📡 Exemplos de Uso</h2>
-            <p style="margin-bottom: 20px;">Exemplos de código gerados automaticamente para todos os endpoints:</p>
-            
-            <div id="examplesContainer">
-                <div style="text-align: center; padding: 40px;">
-                    <div class="loading"></div>
-                    <p style="margin-top: 15px; color: #666;">Carregando exemplos...</p>
+        <!-- Exemplos e Explorador (Aparecem ao clicar em uma função) -->
+        <div id="functionDetailsContainer" style="display: none;">
+            <!-- Exemplos de Uso -->
+            <div class="info-box">
+                <h2>📡 Exemplos de Uso - <span id="selectedFunctionName"></span></h2>
+                <div id="selectedExamplesContainer">
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666;">Selecione uma função acima para ver os exemplos</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- API Explorer (DINÂMICO) -->
-        <div class="info-box">
-            <h2>🔬 Explorador de API</h2>
-            <p style="margin-bottom: 20px;">Teste os endpoints diretamente desta página:</p>
-            
-            <div class="api-explorer">
-                <div class="explorer-form">
-                    <div class="form-group">
-                        <label class="form-label">Endpoint:</label>
-                        <select class="form-select" id="explorerEndpoint" onchange="updateExplorerForm()">
-                            <option value="">Carregando endpoints...</option>
-                        </select>
-                    </div>
-                    
-                    <div id="explorerBody" class="form-group">
-                        <label class="form-label">Body (JSON):</label>
-                        <textarea class="form-textarea" id="explorerBodyInput">{}</textarea>
-                    </div>
-                    
-                    <button class="test-btn" onclick="testEndpoint()">🚀 Testar Endpoint</button>
-                    
-                    <div id="explorerResponse" style="display: none;">
-                        <label class="form-label">Resposta:</label>
-                        <div class="response-box" id="explorerResponseContent"></div>
+            <!-- API Explorer -->
+            <div class="info-box">
+                <h2>🔬 Explorador de API - <span id="selectedExplorerName"></span></h2>
+                <div id="selectedExplorerContainer">
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666;">Selecione uma função acima para testar</p>
                     </div>
                 </div>
             </div>
@@ -686,6 +677,51 @@ export const allowedIPs = [
     <script>
         // Variáveis globais
         let startTime = Date.now();
+        let allFunctionsData = []; // Armazenar dados de todas as funções
+        let allEndpointsData = []; // Armazenar todos os endpoints
+
+        // Toggle de seções colapsáveis
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + '-content');
+            const icon = document.getElementById(sectionId + '-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // Detectar IP público do usuário
+        async function detectPublicIP() {
+            try {
+                // Tentar pegar do nosso próprio endpoint de logs
+                const response = await fetch('/api/logs/ips');
+                const data = await response.json();
+                
+                if (data.success && data.ips.length > 0) {
+                    // Pegar o IP mais recente (último acesso)
+                    const mostRecentIP = data.ips.sort((a, b) => 
+                        new Date(b.last_request) - new Date(a.last_request)
+                    )[0];
+                    
+                    document.getElementById('publicIP').textContent = mostRecentIP.ip;
+                    document.getElementById('publicIP').style.fontWeight = 'bold';
+                    document.getElementById('publicIP').style.color = 'var(--success)';
+                } else {
+                    // Fallback: usar serviço externo
+                    const ipResponse = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipResponse.json();
+                    document.getElementById('publicIP').textContent = ipData.ip;
+                }
+            } catch (error) {
+                console.error('Erro ao detectar IP público:', error);
+                document.getElementById('publicIP').textContent = 'Não detectado';
+                document.getElementById('publicIP').style.color = '#999';
+            }
+        }
 
         // Carregar estatísticas em tempo real
         async function loadStats() {
@@ -724,10 +760,14 @@ export const allowedIPs = [
                 const data = await response.json();
                 
                 if (data.success && data.functions.length > 0) {
+                    allFunctionsData = data.functions; // Armazenar globalmente
                     document.getElementById('functionsCount').textContent = data.functions.length;
                     
-                    const html = data.functions.map(func => \`
-                        <div class="function-card">
+                    const html = data.functions.map((func, index) => \`
+                        <div class="function-card" style="cursor: pointer; transition: all 0.3s ease;" 
+                             onclick="showFunctionDetails('\${func.name}', ${index})"
+                             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(102, 126, 234, 0.3)';"
+                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';">
                             <div class="function-name">📦 \${func.name}</div>
                             <div class="function-desc">\${func.description}</div>
                             \${func.endpoints.length > 0 ? \`
@@ -739,6 +779,9 @@ export const allowedIPs = [
                                     \`).join('')}
                                 </div>
                             \` : '<p style="color: #999; font-size: 0.9em;">Nenhum endpoint encontrado</p>'}
+                            <div style="margin-top: 10px; color: var(--primary); font-size: 0.9em; font-weight: 600;">
+                                👆 Clique para ver exemplos e testar
+                            </div>
                         </div>
                     \`).join('');
                     
@@ -750,6 +793,144 @@ export const allowedIPs = [
             } catch (error) {
                 console.error('Erro ao carregar funções:', error);
                 document.getElementById('functionsList').innerHTML = '<p style="text-align: center; color: #ef4444;">Erro ao carregar funções</p>';
+            }
+        }
+
+        // Mostrar detalhes de uma função específica
+        function showFunctionDetails(funcName, funcIndex) {
+            const func = allFunctionsData[funcIndex];
+            
+            // Mostrar container de detalhes
+            document.getElementById('functionDetailsContainer').style.display = 'block';
+            document.getElementById('selectedFunctionName').textContent = funcName;
+            document.getElementById('selectedExplorerName').textContent = funcName;
+            
+            // Rolar suavemente até a seção de detalhes
+            document.getElementById('functionDetailsContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            // Gerar exemplos apenas desta função
+            let examplesHtml = '';
+            func.endpoints.forEach((endpoint, idx) => {
+                const uniqueId = \`endpoint-\${funcIndex}-\${idx}\`;
+                examplesHtml += generateExampleCard(endpoint, func, uniqueId);
+            });
+            
+            if (examplesHtml) {
+                document.getElementById('selectedExamplesContainer').innerHTML = examplesHtml;
+            } else {
+                document.getElementById('selectedExamplesContainer').innerHTML = '<p style="text-align: center; color: #999;">Nenhum exemplo disponível</p>';
+            }
+            
+            // Gerar explorador apenas desta função
+            generateExplorerForFunction(func);
+            
+            // Toast de feedback
+            showToast(\`📦 Explorando função: \${funcName}\`, 'info');
+        }
+
+        // Gerar explorador para uma função específica
+        function generateExplorerForFunction(func) {
+            const explorerHtml = \`
+                <div class="api-explorer">
+                    <div class="explorer-form">
+                        <div class="form-group">
+                            <label class="form-label">Endpoint:</label>
+                            <select class="form-select" id="selectedExplorerEndpoint" onchange="updateSelectedExplorerForm()">
+                                \${func.endpoints.map(ep => \`
+                                    <option value="\${ep.path}" data-method="\${ep.method}">
+                                        \${ep.method} \${ep.path}
+                                    </option>
+                                \`).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Método:</label>
+                            <input type="text" class="form-input" id="selectedExplorerMethod" readonly>
+                        </div>
+                        
+                        <div class="form-group" id="selectedExplorerBodyGroup" style="display: none;">
+                            <label class="form-label">Body (JSON):</label>
+                            <textarea class="form-textarea" id="selectedExplorerBody" rows="8" placeholder="{ }"></textarea>
+                        </div>
+                        
+                        <button class="btn-primary" onclick="executeSelectedRequest()">
+                            🚀 Executar Requisição
+                        </button>
+                    </div>
+                    
+                    <div class="explorer-response">
+                        <h3 style="margin-bottom: 15px; color: #333;">📋 Resposta:</h3>
+                        <pre id="selectedExplorerResponse" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; min-height: 200px; overflow: auto;">Aguardando requisição...</pre>
+                    </div>
+                </div>
+            \`;
+            
+            document.getElementById('selectedExplorerContainer').innerHTML = explorerHtml;
+            updateSelectedExplorerForm();
+        }
+
+        // Atualizar formulário do explorador selecionado
+        function updateSelectedExplorerForm() {
+            const select = document.getElementById('selectedExplorerEndpoint');
+            const selectedOption = select.options[select.selectedIndex];
+            const method = selectedOption.getAttribute('data-method');
+            
+            document.getElementById('selectedExplorerMethod').value = method;
+            
+            const bodyGroup = document.getElementById('selectedExplorerBodyGroup');
+            if (method === 'GET' || method === 'DELETE') {
+                bodyGroup.style.display = 'none';
+            } else {
+                bodyGroup.style.display = 'block';
+                // Gerar exemplo de body
+                const endpoint = selectedOption.value;
+                const exampleBody = getExampleBody(endpoint, method);
+                document.getElementById('selectedExplorerBody').value = JSON.stringify(exampleBody, null, 2);
+            }
+        }
+
+        // Executar requisição do explorador selecionado
+        async function executeSelectedRequest() {
+            const endpoint = document.getElementById('selectedExplorerEndpoint').value;
+            const method = document.getElementById('selectedExplorerMethod').value;
+            const bodyTextarea = document.getElementById('selectedExplorerBody');
+            const responseContent = document.getElementById('selectedExplorerResponse');
+            
+            responseContent.textContent = 'Executando requisição...';
+            
+            try {
+                const fetchOptions = {
+                    method: method,
+                    headers: {}
+                };
+                
+                let body = null;
+                const bodyText = bodyTextarea ? bodyTextarea.value : '';
+                
+                if (method !== 'GET' && bodyText && bodyText.trim() !== '{}' && !bodyText.includes('Upload')) {
+                    try {
+                        body = JSON.parse(bodyText);
+                        fetchOptions.headers['Content-Type'] = 'application/json';
+                        fetchOptions.body = JSON.stringify(body);
+                    } catch (e) {
+                        throw new Error('JSON inválido no body');
+                    }
+                }
+                
+                const response = await fetch(endpoint, fetchOptions);
+                const data = await response.json();
+                
+                responseContent.textContent = JSON.stringify(data, null, 2);
+                
+                if (response.ok) {
+                    showToast('✅ Requisição realizada com sucesso!', 'success');
+                } else {
+                    showToast('❌ Requisição retornou erro', 'error');
+                }
+            } catch (error) {
+                responseContent.textContent = 'Erro: ' + error.message;
+                showToast('❌ Erro ao realizar requisição: ' + error.message, 'error');
             }
         }
 
@@ -1094,10 +1275,9 @@ print(response.json())\`;
         }
 
         // Inicializar
+        detectPublicIP(); // Detectar IP público do usuário
         loadStats();
         loadFunctions();
-        loadExamples();
-        populateExplorer();
         
         // Atualizar stats a cada 5 segundos
         setInterval(loadStats, 5000);

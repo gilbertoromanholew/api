@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-success.svg)](https://api.samm.host)
 
-> **API REST modular com auto-descoberta de rotas, validação centralizada e sistema de templates para desenvolvimento rápido.**
+> **API REST modular com auto-descoberta de rotas, validação centralizada, dashboard de monitoramento em tempo real e sistema de templates para desenvolvimento rápido.**
 
 **🌐 URL de Produção:** https://api.samm.host
 
@@ -18,8 +18,8 @@
 - [Início Rápido](#-início-rápido)
 - [Arquitetura](#-arquitetura)
 - [Endpoints Disponíveis](#-endpoints-disponíveis)
+- [Dashboard Interativo](#-dashboard-interativo)
 - [Como Criar Nova Funcionalidade](#-como-criar-nova-funcionalidade)
-- [Dashboard de Logs](#-dashboard-de-logs)
 - [Configuração](#-configuração)
 - [Segurança](#-segurança)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
@@ -29,16 +29,43 @@
 
 ## ✨ Características
 
+### 🏗️ Arquitetura & Desenvolvimento
 - 🎯 **Arquitetura Modular** - Funcionalidades independentes e auto-descobertas
 - ⚡ **Auto-carregamento de Rotas** - Descobre e registra rotas automaticamente
 - 🛡️ **Validação Centralizada** - Sistema de schemas reutilizáveis
 - 🎨 **Respostas Padronizadas** - BaseController para consistência
-- 📝 **Documentação Automática** - Dashboard web interativo
-- 🔒 **Controle de Acesso por IP** - Whitelist de IPs autorizados com geolocalização
-- 🚦 **Tratamento Global de Erros** - Error handler centralizado
-- 📦 **Sistema de Templates** - Crie novas funcionalidades em 5 minutos
+- � **Sistema de Templates** - Crie novas funcionalidades em 5 minutos
 - 🌐 **CORS Habilitado** - Pronto para APIs públicas
-- 📊 **Dashboard de Logs** - Visualize acessos em tempo real com métricas avançadas
+- 🚦 **Tratamento Global de Erros** - Error handler centralizado
+
+### 📊 Monitoramento & Documentação
+- �📝 **Documentação Automática Interativa** (`/docs`)
+  - Interface limpa com seções colapsáveis
+  - Detecção automática de IP público
+  - Cards de funções clicáveis com exemplos integrados
+  - Explorador de API embutido para testes diretos
+  - Exemplos de código em múltiplas linguagens
+  
+- 🎯 **Dashboard de Logs em Tempo Real** (`/logs`)
+  - Métricas gerais (requisições, uptime, IPs únicos)
+  - Cards de métricas expansíveis (top 3 + ver todos)
+  - Estatísticas detalhadas por IP com geolocalização completa
+  - Modal com detalhes de IP e auto-refresh (3s)
+  - Detecção e pinning do seu IP no topo da lista
+  - Logs de acesso recentes com filtros (colapsável por padrão)
+  - Paginação inteligente (12 IPs visíveis + expandir)
+  - Sistema de cache de geolocalização (24h TTL)
+  - Interface escalável para 100+ IPs
+
+### 🔒 Segurança & Geolocalização
+- 🔐 **Controle de Acesso por IP** - Whitelist com logging automático
+- � **Geolocalização Completa** (ip-api.com - 24+ campos):
+  - País, cidade, região, CEP, timezone, coordenadas
+  - ISP, organização, AS (Sistema Autônomo)
+  - Flags de hospedagem, proxy/VPN, rede móvel
+  - Cache de 24h para performance
+- � **Bandeiras de Países** - Representação visual com emojis
+- 🏠 **Detecção de IP do Usuário** - Identifica e destaca seu IP automaticamente
 
 ---
 
@@ -346,33 +373,132 @@ module.exports = new MeuController();
 
 ---
 
-## 📊 Dashboard de Logs
+## 🎯 Dashboard Interativo
 
-Acesse **http://localhost:3000/logs** para visualizar:
+### 📝 Documentação Interativa (`/docs`)
 
-### Estatísticas Gerais (Auto-refresh 3s)
-- ✅ Total de acessos
-- 🚫 Acessos bloqueados
-- 👥 IPs únicos
-- ⏱️ Tempo médio de resposta
+Acesse **http://localhost:3000/docs** para uma experiência completa:
 
-### Métricas Avançadas (Top 3)
-- 🔥 **Endpoints Mais Acessados** - URLs mais requisitadas
-- 🌐 **Navegadores Mais Usados** - Chrome, Firefox, Edge, etc.
-- 💻 **Dispositivos Mais Usados** - Windows, Linux, Mac, etc.
+#### Recursos Principais:
+- 📊 **Estatísticas em Tempo Real**
+  - Total de requisições
+  - Requisições autorizadas
+  - IPs únicos conectados
+  - Uptime do servidor (atualiza a cada segundo)
 
-### Logs em Tempo Real
-- 🌍 **Geolocalização de IPs** - País e cidade de cada acesso
-- 🕐 Timestamps precisos
-- 📋 Detalhes completos de cada requisição
-- 🔍 Modal expandido com informações detalhadas
+- 🔒 **Informações de Acesso** (Colapsável)
+  - Detecção automática do seu **IP público real**
+  - Status de autorização
+  - Informações de segurança
+  - User-Agent detectado
 
-### Recursos do Dashboard
-- 🔄 Auto-refresh a cada 3 segundos
-- 📱 Interface responsiva
-- 🎨 Gradientes modernos
-- 🔔 Notificações toast (máx. 3 simultâneas)
-- ❌ Fechar notificações manualmente
+- 🔑 **Sistema de Autenticação** (Colapsável)
+  - Explicação do filtro de IP
+  - Como configurar IPs autorizados
+  - Exemplos de configuração
+
+- 📦 **Funções Disponíveis** (Seção Principal)
+  - Cards interativos e clicáveis
+  - Hover com animação de elevação
+  - **Ao clicar em uma função:**
+    - 📡 Exemplos de uso aparecem dinamicamente
+    - � Explorador de API aparece para teste direto
+    - Exemplos em JavaScript, Python, cURL
+    - Teste endpoints com body customizado
+    - Resposta formatada em JSON
+  - Toast notifications para feedback
+  - Scroll suave automático
+
+#### Vantagens:
+- ✅ Interface ultra-limpa sem scroll infinito
+- ✅ Conteúdo sob demanda (clique para expandir)
+- ✅ Teste de API integrado
+- ✅ Exemplos de código prontos para copiar
+- ✅ Zero redundância - tudo em um só lugar
+
+---
+
+## 📊 Dashboard de Logs (`/logs`)
+
+Acesse **http://localhost:3000/logs** para monitoramento avançado:
+
+#### Estatísticas Gerais (Auto-refresh 10s)
+- ✅ **Total de Requisições** - Contador global
+- ✔️ **Requisições Autorizadas** - Acessos permitidos
+- 🌍 **IPs Únicos** - Contagem de visitantes diferentes
+- ⏱️ **Uptime do Servidor** - Tempo online
+
+#### Cards de Métricas Expansíveis
+Cada card mostra **Top 3** + botão "Ver todos":
+- 🔥 **Endpoints Mais Acessados**
+- 🌐 **Navegadores Mais Usados** (Chrome, Firefox, Edge, Safari, etc.)
+- 💻 **Plataformas Mais Usadas** (Windows, Linux, macOS, Android, etc.)
+- 🌍 **Países Mais Frequentes** (com bandeiras)
+
+#### Estatísticas Detalhadas por IP
+- 🏠 **Seu IP fixado no topo** com badge "VOCÊ" e borda verde
+- **Paginação inteligente:** 12 IPs visíveis + botão "Ver todos"
+- **Cards com informações ricas:**
+  - Endereço IP + bandeira do país
+  - Total de requisições
+  - Primeira e última requisição
+  - Navegador e plataforma
+  - Botão para ver detalhes completos
+
+#### Modal de Detalhes de IP (Auto-refresh 3s)
+Ao clicar em um IP, veja:
+- 🌍 **Geolocalização Completa:**
+  - País, cidade, região/estado, CEP
+  - Timezone com relógio
+  - Coordenadas geográficas (link para Google Maps)
+  
+- 🌐 **Informações de Rede:**
+  - ISP (Provedor de Internet)
+  - Organização proprietária
+  - AS (Sistema Autônomo)
+  - Badges de alerta: 🏢 Hospedagem, 🔒 Proxy/VPN, 📱 Rede Móvel
+
+- 📊 **Estatísticas de Acesso:**
+  - Total de requisições
+  - Requisições autorizadas vs negadas
+  - Endpoints acessados
+  - Navegadores usados
+  - Plataformas detectadas
+
+- � **Logs Detalhados (Expansível):**
+  - Horário preciso de cada acesso
+  - Endpoint requisitado
+  - Status de autorização
+  - Navegador e plataforma
+
+#### Seção de Logs Recentes (Colapsável)
+**Reduzida por padrão** - Clique no título para expandir:
+- Tabela com últimos acessos
+- **Filtros dinâmicos:**
+  - Limite de registros (padrão: 50)
+  - Tipo de acesso (todos, autorizados, negados)
+  - Filtros aplicam automaticamente (sem botão)
+- Paginação "Ver mais" para carregar incrementalmente
+
+#### Sistema de Geolocalização Avançado
+- **24+ campos da ip-api.com:**
+  - Localização: país, cidade, região, CEP, timezone, coordenadas
+  - Rede: ISP, organização, AS (Sistema Autônomo)
+  - Segurança: flags de hospedagem, proxy, VPN, rede móvel
+- **Cache inteligente:** 24h de validade por IP
+- **Performance:** Máximo de 45 requisições/minuto respeitado
+
+#### Recursos Especiais:
+- 🔄 **Auto-refresh seletivo:**
+  - Stats gerais: 10s
+  - Modal aberto: 3s
+  - Resto da página: estático
+- 🏠 **Detecção automática do seu IP** (pinado no topo)
+- 🎨 **Interface escalável** (testada com 100+ IPs)
+- 📱 **Design responsivo**
+- � **Animações suaves**
+- 🔔 **Toast notifications** (máx. 3 simultâneos)
+- 🌍 **Bandeiras de países** (emojis nativos)
 
 ---
 
