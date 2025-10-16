@@ -765,7 +765,7 @@ export const allowedIPs = [
                     
                     const html = data.functions.map((func, index) => \`
                         <div class="function-card" style="cursor: pointer; transition: all 0.3s ease;" 
-                             onclick="showFunctionDetails('\${func.name}', ${index})"
+                             onclick="showFunctionDetails('\${func.name}', \${index})"
                              onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(102, 126, 234, 0.3)';"
                              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';">
                             <div class="function-name">📦 \${func.name}</div>
