@@ -111,7 +111,7 @@ export const getApiDocs = (req, res) => {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 API Documentação</h1>
+            <h1>🚀 API - Documentação Completa</h1>
             <p>Versão 2.0</p>
             <div class="status">● ONLINE</div>
         </div>
