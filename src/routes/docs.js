@@ -544,26 +544,6 @@ export const getApiDocs = (req, res) => {
             </div>
         </div>
 
-        <!-- Stats em Tempo Real -->
-        <div class="stats-grid" id="statsGrid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalRequests">...</div>
-                <div class="stat-label">Total de Requisições</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="authorizedRequests">...</div>
-                <div class="stat-label">✅ Autorizados</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="uniqueIPs">...</div>
-                <div class="stat-label">IPs Únicos</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="uptime">...</div>
-                <div class="stat-label">Uptime</div>
-            </div>
-        </div>
-
         <!-- Informações de Segurança -->
         <div class="info-box ip-info">
             <h2 style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleSection('access-info')">
@@ -622,34 +602,11 @@ export const allowedIPs = [
         <!-- Funções Disponíveis -->
         <div class="info-box">
             <h2>📦 Funções Disponíveis</h2>
-            <p style="margin-bottom: 20px;">Esta API possui <strong id="functionsCount">...</strong> funções carregadas dinamicamente. Clique em uma função para ver exemplos e testar:</p>
+            <p style="margin-bottom: 20px;">Esta API possui <strong id="functionsCount">...</strong> funções carregadas dinamicamente. Clique em uma função para expandir os detalhes:</p>
             <div id="functionsList">
                 <div style="text-align: center; padding: 40px;">
                     <div class="loading"></div>
                     <p style="margin-top: 15px; color: #666;">Carregando funções...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Exemplos e Explorador (Aparecem ao clicar em uma função) -->
-        <div id="functionDetailsContainer" style="display: none;">
-            <!-- Exemplos de Uso -->
-            <div class="info-box">
-                <h2>📡 Exemplos de Uso - <span id="selectedFunctionName"></span></h2>
-                <div id="selectedExamplesContainer">
-                    <div style="text-align: center; padding: 40px;">
-                        <p style="color: #666;">Selecione uma função acima para ver os exemplos</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- API Explorer -->
-            <div class="info-box">
-                <h2>🔬 Explorador de API - <span id="selectedExplorerName"></span></h2>
-                <div id="selectedExplorerContainer">
-                    <div style="text-align: center; padding: 40px;">
-                        <p style="color: #666;">Selecione uma função acima para testar</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -678,7 +635,7 @@ export const allowedIPs = [
         // Variáveis globais
         let startTime = Date.now();
         let allFunctionsData = []; // Armazenar dados de todas as funções
-        let allEndpointsData = []; // Armazenar todos os endpoints
+        let expandedFunctions = {}; // Controlar quais funções estão expandidas
 
         // Toggle de seções colapsáveis
         function toggleSection(sectionId) {
@@ -723,36 +680,6 @@ export const allowedIPs = [
             }
         }
 
-        // Carregar estatísticas em tempo real
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/logs/stats');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const stats = data.stats;
-                    document.getElementById('totalRequests').textContent = stats.total_requests;
-                    document.getElementById('authorizedRequests').textContent = stats.authorized_requests;
-                    document.getElementById('uniqueIPs').textContent = stats.unique_ips;
-                    updateUptime();
-                }
-            } catch (error) {
-                console.error('Erro ao carregar estatísticas:', error);
-                document.getElementById('apiStatus').textContent = 'OFFLINE';
-                document.querySelector('.status-badge').style.background = '#ef4444';
-            }
-        }
-
-        // Atualizar uptime
-        function updateUptime() {
-            const elapsed = Date.now() - startTime;
-            const hours = Math.floor(elapsed / 3600000);
-            const minutes = Math.floor((elapsed % 3600000) / 60000);
-            const seconds = Math.floor((elapsed % 60000) / 1000);
-            
-            document.getElementById('uptime').textContent = \`\${hours}h \${minutes}m \${seconds}s\`;
-        }
-
         // Carregar funções disponíveis
         async function loadFunctions() {
             try {
@@ -760,27 +687,33 @@ export const allowedIPs = [
                 const data = await response.json();
                 
                 if (data.success && data.functions.length > 0) {
-                    allFunctionsData = data.functions; // Armazenar globalmente
+                    allFunctionsData = data.functions;
                     document.getElementById('functionsCount').textContent = data.functions.length;
                     
                     const html = data.functions.map((func, index) => \`
-                        <div class="function-card" style="cursor: pointer; transition: all 0.3s ease;" 
-                             onclick="showFunctionDetails('\${func.name}', \${index})"
-                             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(102, 126, 234, 0.3)';"
-                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';">
-                            <div class="function-name">📦 \${func.name}</div>
-                            <div class="function-desc">\${func.description}</div>
-                            \${func.endpoints.length > 0 ? \`
-                                <div class="endpoints-list">
-                                    \${func.endpoints.map(ep => \`
-                                        <span class="endpoint-badge method-\${ep.method.toLowerCase()}">
-                                            \${ep.method} \${ep.path}
-                                        </span>
-                                    \`).join('')}
+                        <div class="function-card" id="func-card-\${index}" style="transition: all 0.3s ease;">
+                            <div onclick="toggleFunctionDetails(\${index})" style="cursor: pointer;">
+                                <div class="function-name">
+                                    <span id="func-icon-\${index}">▶</span> 📦 \${func.name}
                                 </div>
-                            \` : '<p style="color: #999; font-size: 0.9em;">Nenhum endpoint encontrado</p>'}
-                            <div style="margin-top: 10px; color: var(--primary); font-size: 0.9em; font-weight: 600;">
-                                👆 Clique para ver exemplos e testar
+                                <div class="function-desc">\${func.description}</div>
+                                \${func.endpoints.length > 0 ? \`
+                                    <div class="endpoints-list" style="margin-top: 10px;">
+                                        \${func.endpoints.map(ep => \`
+                                            <span class="endpoint-badge method-\${ep.method.toLowerCase()}">
+                                                \${ep.method} \${ep.path}
+                                            </span>
+                                        \`).join('')}
+                                    </div>
+                                \` : '<p style="color: #999; font-size: 0.9em;">Nenhum endpoint encontrado</p>'}
+                                <div style="margin-top: 10px; color: var(--primary); font-size: 0.9em; font-weight: 600;">
+                                    👆 Clique para expandir detalhes
+                                </div>
+                            </div>
+                            
+                            <!-- Detalhes inline (inicialmente oculto) -->
+                            <div id="func-details-\${index}" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #dee2e6;">
+                                <!-- Será preenchido dinamicamente -->
                             </div>
                         </div>
                     \`).join('');
@@ -796,46 +729,39 @@ export const allowedIPs = [
             }
         }
 
-        // Mostrar detalhes de uma função específica
-        function showFunctionDetails(funcName, funcIndex) {
+        // Toggle detalhes de uma função (expansão inline)
+        function toggleFunctionDetails(funcIndex) {
             const func = allFunctionsData[funcIndex];
+            const detailsDiv = document.getElementById('func-details-' + funcIndex);
+            const icon = document.getElementById('func-icon-' + funcIndex);
             
-            // Mostrar container de detalhes
-            document.getElementById('functionDetailsContainer').style.display = 'block';
-            document.getElementById('selectedFunctionName').textContent = funcName;
-            document.getElementById('selectedExplorerName').textContent = funcName;
+            // Se já está expandido, colapsar
+            if (expandedFunctions[funcIndex]) {
+                detailsDiv.style.display = 'none';
+                icon.textContent = '▶';
+                expandedFunctions[funcIndex] = false;
+                return;
+            }
             
-            // Rolar suavemente até a seção de detalhes
-            document.getElementById('functionDetailsContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Expandir e gerar conteúdo
+            expandedFunctions[funcIndex] = true;
+            icon.textContent = '▼';
             
-            // Gerar exemplos apenas desta função
-            let examplesHtml = '';
+            // Gerar exemplos
+            let examplesHtml = '<h3 style="color: var(--primary); margin-bottom: 15px;">📡 Exemplos de Uso</h3>';
             func.endpoints.forEach((endpoint, idx) => {
                 const uniqueId = \`endpoint-\${funcIndex}-\${idx}\`;
                 examplesHtml += generateExampleCard(endpoint, func, uniqueId);
             });
             
-            if (examplesHtml) {
-                document.getElementById('selectedExamplesContainer').innerHTML = examplesHtml;
-            } else {
-                document.getElementById('selectedExamplesContainer').innerHTML = '<p style="text-align: center; color: #999;">Nenhum exemplo disponível</p>';
-            }
-            
-            // Gerar explorador apenas desta função
-            generateExplorerForFunction(func);
-            
-            // Toast de feedback
-            showToast(\`📦 Explorando função: \${funcName}\`, 'info');
-        }
-
-        // Gerar explorador para uma função específica
-        function generateExplorerForFunction(func) {
+            // Gerar explorador
             const explorerHtml = \`
+                <h3 style="color: var(--primary); margin: 30px 0 15px 0;">🔬 Testar API</h3>
                 <div class="api-explorer">
                     <div class="explorer-form">
                         <div class="form-group">
                             <label class="form-label">Endpoint:</label>
-                            <select class="form-select" id="selectedExplorerEndpoint" onchange="updateSelectedExplorerForm()">
+                            <select class="form-select" id="explorer-endpoint-\${funcIndex}" onchange="updateExplorerForm(\${funcIndex})">
                                 \${func.endpoints.map(ep => \`
                                     <option value="\${ep.path}" data-method="\${ep.method}">
                                         \${ep.method} \${ep.path}
@@ -846,58 +772,95 @@ export const allowedIPs = [
                         
                         <div class="form-group">
                             <label class="form-label">Método:</label>
-                            <input type="text" class="form-input" id="selectedExplorerMethod" readonly>
+                            <input type="text" class="form-input" id="explorer-method-\${funcIndex}" readonly>
                         </div>
                         
-                        <div class="form-group" id="selectedExplorerBodyGroup" style="display: none;">
+                        <div class="form-group" id="explorer-body-group-\${funcIndex}" style="display: none;">
                             <label class="form-label">Body (JSON):</label>
-                            <textarea class="form-textarea" id="selectedExplorerBody" rows="8" placeholder="{ }"></textarea>
+                            <textarea class="form-textarea" id="explorer-body-\${funcIndex}" rows="6" placeholder="{ }"></textarea>
                         </div>
                         
-                        <button class="btn-primary" onclick="executeSelectedRequest()">
+                        <button class="btn-primary" onclick="executeRequest(\${funcIndex})">
                             🚀 Executar Requisição
                         </button>
                     </div>
                     
                     <div class="explorer-response">
                         <h3 style="margin-bottom: 15px; color: #333;">📋 Resposta:</h3>
-                        <pre id="selectedExplorerResponse" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; min-height: 200px; overflow: auto;">Aguardando requisição...</pre>
+                        <pre id="explorer-response-\${funcIndex}" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; min-height: 150px; overflow: auto;">Aguardando requisição...</pre>
                     </div>
                 </div>
             \`;
             
-            document.getElementById('selectedExplorerContainer').innerHTML = explorerHtml;
-            updateSelectedExplorerForm();
+            detailsDiv.innerHTML = examplesHtml + explorerHtml;
+            detailsDiv.style.display = 'block';
+            
+            // Inicializar formulário do explorador
+            updateExplorerForm(funcIndex);
+            
+            // Scroll suave até o card expandido
+            document.getElementById('func-card-' + funcIndex).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        // Atualizar formulário do explorador selecionado
-        function updateSelectedExplorerForm() {
-            const select = document.getElementById('selectedExplorerEndpoint');
+        // Atualizar formulário do explorador inline
+        function updateExplorerForm(funcIndex) {
+            const select = document.getElementById('explorer-endpoint-' + funcIndex);
             const selectedOption = select.options[select.selectedIndex];
             const method = selectedOption.getAttribute('data-method');
             
-            document.getElementById('selectedExplorerMethod').value = method;
+            document.getElementById('explorer-method-' + funcIndex).value = method;
             
-            const bodyGroup = document.getElementById('selectedExplorerBodyGroup');
+            const bodyGroup = document.getElementById('explorer-body-group-' + funcIndex);
             if (method === 'GET' || method === 'DELETE') {
                 bodyGroup.style.display = 'none';
             } else {
                 bodyGroup.style.display = 'block';
-                // Gerar exemplo de body
                 const endpoint = selectedOption.value;
                 const exampleBody = getExampleBody(endpoint, method);
-                document.getElementById('selectedExplorerBody').value = JSON.stringify(exampleBody, null, 2);
+                document.getElementById('explorer-body-' + funcIndex).value = JSON.stringify(exampleBody, null, 2);
             }
         }
 
-        // Executar requisição do explorador selecionado
-        async function executeSelectedRequest() {
-            const endpoint = document.getElementById('selectedExplorerEndpoint').value;
-            const method = document.getElementById('selectedExplorerMethod').value;
-            const bodyTextarea = document.getElementById('selectedExplorerBody');
-            const responseContent = document.getElementById('selectedExplorerResponse');
+        // Executar requisição inline
+        async function executeRequest(funcIndex) {
+            const endpoint = document.getElementById('explorer-endpoint-' + funcIndex).value;
+            const method = document.getElementById('explorer-method-' + funcIndex).value;
+            const bodyTextarea = document.getElementById('explorer-body-' + funcIndex);
+            const responseContent = document.getElementById('explorer-response-' + funcIndex);
             
             responseContent.textContent = 'Executando requisição...';
+            
+            try {
+                let fetchOptions = {
+                    method: method,
+                    headers: {}
+                };
+                
+                if (method !== 'GET' && bodyTextarea && bodyTextarea.value.trim() !== '{}') {
+                    try {
+                        const body = JSON.parse(bodyTextarea.value);
+                        fetchOptions.headers['Content-Type'] = 'application/json';
+                        fetchOptions.body = JSON.stringify(body);
+                    } catch (e) {
+                        throw new Error('JSON inválido no body');
+                    }
+                }
+                
+                const response = await fetch(endpoint, fetchOptions);
+                const data = await response.json();
+                
+                responseContent.textContent = JSON.stringify(data, null, 2);
+                
+                if (response.ok) {
+                    showToast('✅ Requisição realizada com sucesso!', 'success');
+                } else {
+                    showToast('❌ Requisição retornou erro', 'error');
+                }
+            } catch (error) {
+                responseContent.textContent = 'Erro: ' + error.message;
+                showToast('❌ Erro: ' + error.message, 'error');
+            }
+        }
             
             try {
                 const fetchOptions = {
@@ -1206,57 +1169,6 @@ print(response.json())\`;
                 bodyInput.value = endpoint.includes('pdf') ? '// Upload de arquivo' : '{}';
             }
             
-            // Esconder resposta anterior
-            document.getElementById('explorerResponse').style.display = 'none';
-        }
-
-        // Testar endpoint
-        async function testEndpoint() {
-            const select = document.getElementById('explorerEndpoint');
-            const endpoint = select.value;
-            const method = select.options[select.selectedIndex].dataset.method || 'POST';
-            const bodyText = document.getElementById('explorerBodyInput').value;
-            const responseDiv = document.getElementById('explorerResponse');
-            const responseContent = document.getElementById('explorerResponseContent');
-            
-            responseDiv.style.display = 'block';
-            responseContent.textContent = 'Aguardando resposta...';
-            
-            try {
-                let body;
-                let fetchOptions = {
-                    method: method,
-                    headers: {}
-                };
-                
-                // Apenas adicionar body se não for GET
-                if (method !== 'GET' && bodyText && bodyText.trim() !== '{}' && !bodyText.includes('Upload')) {
-                    try {
-                        body = JSON.parse(bodyText);
-                        fetchOptions.headers['Content-Type'] = 'application/json';
-                        fetchOptions.body = JSON.stringify(body);
-                    } catch (e) {
-                        throw new Error('JSON inválido no body');
-                    }
-                }
-                
-                const response = await fetch(endpoint, fetchOptions);
-                
-                const data = await response.json();
-                
-                responseContent.textContent = JSON.stringify(data, null, 2);
-                
-                if (response.ok) {
-                    showToast('Requisição realizada com sucesso!', 'success');
-                } else {
-                    showToast('Requisição retornou erro', 'error');
-                }
-            } catch (error) {
-                responseContent.textContent = 'Erro: ' + error.message;
-                showToast('Erro ao realizar requisição: ' + error.message, 'error');
-            }
-        }
-
         // Mostrar toast notification
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
@@ -1275,13 +1187,8 @@ print(response.json())\`;
         }
 
         // Inicializar
-        detectPublicIP(); // Detectar IP público do usuário
-        loadStats();
+        detectPublicIP();
         loadFunctions();
-        
-        // Atualizar stats a cada 5 segundos
-        setInterval(loadStats, 5000);
-        setInterval(updateUptime, 1000);
     </script>
 </body>
 </html>
