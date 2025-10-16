@@ -861,73 +861,6 @@ export const allowedIPs = [
                 showToast('❌ Erro: ' + error.message, 'error');
             }
         }
-            
-            try {
-                const fetchOptions = {
-                    method: method,
-                    headers: {}
-                };
-                
-                let body = null;
-                const bodyText = bodyTextarea ? bodyTextarea.value : '';
-                
-                if (method !== 'GET' && bodyText && bodyText.trim() !== '{}' && !bodyText.includes('Upload')) {
-                    try {
-                        body = JSON.parse(bodyText);
-                        fetchOptions.headers['Content-Type'] = 'application/json';
-                        fetchOptions.body = JSON.stringify(body);
-                    } catch (e) {
-                        throw new Error('JSON inválido no body');
-                    }
-                }
-                
-                const response = await fetch(endpoint, fetchOptions);
-                const data = await response.json();
-                
-                responseContent.textContent = JSON.stringify(data, null, 2);
-                
-                if (response.ok) {
-                    showToast('✅ Requisição realizada com sucesso!', 'success');
-                } else {
-                    showToast('❌ Requisição retornou erro', 'error');
-                }
-            } catch (error) {
-                responseContent.textContent = 'Erro: ' + error.message;
-                showToast('❌ Erro ao realizar requisição: ' + error.message, 'error');
-            }
-        }
-
-        // Carregar exemplos de uso dinamicamente
-        async function loadExamples() {
-            try {
-                const response = await fetch('/api/functions');
-                const data = await response.json();
-                
-                if (data.success && data.functions.length > 0) {
-                    let examplesHtml = '';
-                    let endpointCounter = 0;
-                    
-                    // Gerar exemplos para cada função e seus endpoints
-                    data.functions.forEach(func => {
-                        func.endpoints.forEach(endpoint => {
-                            const uniqueId = \`endpoint-\${endpointCounter++}\`;
-                            examplesHtml += generateExampleCard(endpoint, func, uniqueId);
-                        });
-                    });
-                    
-                    if (examplesHtml) {
-                        document.getElementById('examplesContainer').innerHTML = examplesHtml;
-                    } else {
-                        document.getElementById('examplesContainer').innerHTML = '<p style="text-align: center; color: #999;">Nenhum exemplo disponível</p>';
-                    }
-                } else {
-                    document.getElementById('examplesContainer').innerHTML = '<p style="text-align: center; color: #999;">Nenhum endpoint encontrado</p>';
-                }
-            } catch (error) {
-                console.error('Erro ao carregar exemplos:', error);
-                document.getElementById('examplesContainer').innerHTML = '<p style="text-align: center; color: #ef4444;">Erro ao carregar exemplos</p>';
-            }
-        }
 
         // Gerar card de exemplo para um endpoint
         function generateExampleCard(endpoint, func, uniqueId) {
@@ -1118,57 +1051,6 @@ print(response.json())\`;
             });
         }
 
-        // Popular explorador de API com endpoints dinâmicos
-        async function populateExplorer() {
-            try {
-                const response = await fetch('/api/functions');
-                const data = await response.json();
-                
-                if (data.success && data.functions.length > 0) {
-                    const select = document.getElementById('explorerEndpoint');
-                    select.innerHTML = '';
-                    
-                    // Adicionar todos os endpoints encontrados
-                    data.functions.forEach(func => {
-                        func.endpoints.forEach(endpoint => {
-                            const option = document.createElement('option');
-                            option.value = endpoint.path;
-                            option.textContent = \`\${endpoint.method} \${endpoint.path}\`;
-                            option.dataset.method = endpoint.method;
-                            select.appendChild(option);
-                        });
-                    });
-                    
-                    // Atualizar form com o primeiro endpoint
-                    if (select.options.length > 0) {
-                        updateExplorerForm();
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao popular explorador:', error);
-            }
-        }
-
-        // Atualizar form do explorador
-        function updateExplorerForm() {
-            const select = document.getElementById('explorerEndpoint');
-            const endpoint = select.value;
-            const bodyInput = document.getElementById('explorerBodyInput');
-            
-            if (!endpoint) {
-                bodyInput.value = '{}';
-                return;
-            }
-            
-            // Gerar exemplo de body baseado no endpoint
-            const exampleBody = getExampleBody(endpoint, 'POST');
-            
-            if (exampleBody) {
-                bodyInput.value = JSON.stringify(exampleBody, null, 2);
-            } else {
-                bodyInput.value = endpoint.includes('pdf') ? '// Upload de arquivo' : '{}';
-            }
-            
         // Mostrar toast notification
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
