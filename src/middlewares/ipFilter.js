@@ -19,8 +19,9 @@ async function getIPGeolocation(ip) {
     }
 
     try {
-        // Usar ip-api.com (gratuito, sem necessidade de API key, 45 req/min)
-        const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,query`, {
+        // Usar ip-api.com com TODOS os campos disponíveis
+        // fields=66846719 retorna todos os campos disponíveis
+        const response = await fetch(`http://ip-api.com/json/${ip}?fields=66846719`, {
             timeout: 3000 // 3 segundos timeout
         });
         
@@ -31,7 +32,19 @@ async function getIPGeolocation(ip) {
                 const geoData = {
                     country: data.country || 'Desconhecido',
                     city: data.city || 'Desconhecido',
-                    countryCode: data.countryCode || 'XX'
+                    countryCode: data.countryCode || 'XX',
+                    region: data.region || '',
+                    regionName: data.regionName || '',
+                    isp: data.isp || 'Desconhecido',
+                    org: data.org || 'Desconhecido',
+                    as: data.as || 'N/A',
+                    lat: data.lat || 0,
+                    lon: data.lon || 0,
+                    timezone: data.timezone || 'UTC',
+                    zip: data.zip || 'N/A',
+                    hosting: data.hosting || false,
+                    proxy: data.proxy || false,
+                    mobile: data.mobile || false
                 };
                 
                 // Armazenar no cache
@@ -48,7 +61,23 @@ async function getIPGeolocation(ip) {
     }
 
     // Fallback se falhar
-    return { country: 'Desconhecido', city: 'Desconhecido', countryCode: 'XX' };
+    return {
+        country: 'Desconhecido',
+        city: 'Desconhecido',
+        countryCode: 'XX',
+        region: '',
+        regionName: '',
+        isp: 'Desconhecido',
+        org: 'Desconhecido',
+        as: 'N/A',
+        lat: 0,
+        lon: 0,
+        timezone: 'UTC',
+        zip: 'N/A',
+        hosting: false,
+        proxy: false,
+        mobile: false
+    };
 }
 
 // Middleware para bloquear requisições de IPs não autorizados
@@ -79,10 +108,30 @@ export const ipFilter = async (req, res, next) => {
             socket: 'IP da conexão TCP direta'
         },
         
-        // Informações de Localização (prioriza headers de proxy, depois geolocalização via API)
+        // Informações de Localização (expandido com todos os dados da ip-api.com)
         country: req.headers['cf-ipcountry'] || req.headers['x-country-code'] || geoData.country,
         countryCode: geoData.countryCode,
         city: req.headers['cf-ipcity'] || geoData.city,
+        region: geoData.region,
+        regionName: geoData.regionName,
+        
+        // Informações de Rede (ISP, Org, AS)
+        isp: geoData.isp,
+        org: geoData.org,
+        as: geoData.as,
+        
+        // Coordenadas geográficas
+        lat: geoData.lat,
+        lon: geoData.lon,
+        
+        // Timezone e CEP
+        timezone: geoData.timezone,
+        zip: geoData.zip,
+        
+        // Flags de segurança
+        hosting: geoData.hosting, // É servidor de hospedagem?
+        proxy: geoData.proxy, // É proxy?
+        mobile: geoData.mobile, // É rede móvel?
         
         // Informações do Cliente
         user_agent: req.headers['user-agent'] || null,

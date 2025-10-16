@@ -856,10 +856,10 @@ export const getLogsDashboard = (req, res) => {
         <div class="section">
             <div class="section-header">
                 <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleLogsSection()">
-                    <span id="logs-section-icon">▼</span>
+                    <span id="logs-section-icon">▶</span>
                     📝 Logs de Acesso Recentes
                 </h2>
-                <div class="filters" id="logs-controls">
+                <div class="filters" id="logs-controls" style="display: none;">
                     <input type="number" class="filter-input" id="limitInput" 
                            placeholder="Limite (padrão: 50)" value="50" onchange="loadLogs()">
                     <select class="filter-select" id="authorizedFilter" onchange="loadLogs()">
@@ -869,7 +869,7 @@ export const getLogsDashboard = (req, res) => {
                     </select>
                 </div>
             </div>
-            <div class="table-container" id="tableContainer">
+            <div class="table-container" id="tableContainer" style="display: none;">
                 <table>
                     <thead>
                         <tr>
@@ -911,6 +911,31 @@ export const getLogsDashboard = (req, res) => {
         let currentOpenIP = null; // IP do modal aberto (para auto-refresh)
         let ipStatsLimit = 12; // Limite de cards visíveis
         let showAllIPs = false; // Estado de expansão da seção de IPs
+        let myIP = null; // IP do usuário atual
+
+        // Detectar IP do usuário ao carregar a página
+        async function detectMyIP() {
+            try {
+                // Fazer uma requisição para qualquer endpoint para que o servidor registre
+                const response = await fetch('/api/logs/stats');
+                const data = await response.json();
+                
+                // Buscar IPs registrados
+                const ipsResponse = await fetch('/api/logs/ips');
+                const ipsData = await ipsResponse.json();
+                
+                if (ipsData.success && ipsData.ips.length > 0) {
+                    // O IP mais recente provavelmente é o meu
+                    const sortedIPs = ipsData.ips.sort((a, b) => 
+                        new Date(b.last_seen) - new Date(a.last_seen)
+                    );
+                    myIP = sortedIPs[0].ip;
+                    console.log(\`🏠 Meu IP detectado: \${myIP}\`);
+                }
+            } catch (error) {
+                console.error('Erro ao detectar meu IP:', error);
+            }
+        }
 
         // Carregar estatísticas gerais
         async function loadGeneralStats() {
@@ -1085,18 +1110,40 @@ export const getLogsDashboard = (req, res) => {
                 const data = await response.json();
                 
                 if (data.success && data.ips.length > 0) {
-                    const allIPs = data.ips;
+                    let allIPs = data.ips;
+                    
+                    // Separar meu IP do resto
+                    let myIPData = null;
+                    let otherIPs = [];
+                    
+                    allIPs.forEach(ip => {
+                        if (ip.ip === myIP) {
+                            myIPData = ip;
+                        } else {
+                            otherIPs.push(ip);
+                        }
+                    });
+                    
+                    // Se meu IP foi identificado, colocar no topo
+                    if (myIPData) {
+                        allIPs = [myIPData, ...otherIPs];
+                    } else {
+                        allIPs = otherIPs;
+                    }
+                    
                     const visibleIPs = showAllIPs ? allIPs : allIPs.slice(0, ipStatsLimit);
                     const hasMoreIPs = allIPs.length > ipStatsLimit;
                     
                     document.getElementById('ipStatsGrid').innerHTML = visibleIPs.map(ip => {
                         const isSuspicious = ip.denied > 5 || (ip.denied / ip.total_attempts) > 0.5;
+                        const isMyIP = ip.ip === myIP;
                         
                         return \`
-                            <div class="ip-card \${isSuspicious ? 'suspicious' : ''}" onclick="showIPDetails('\${ip.ip}')">
+                            <div class="ip-card \${isSuspicious ? 'suspicious' : ''} \${isMyIP ? 'my-ip' : ''}" onclick="showIPDetails('\${ip.ip}')" style="\${isMyIP ? 'border: 2px solid var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);' : ''}">
                                 <div class="ip-address">
-                                    \${isSuspicious ? '⚠️' : ''}
+                                    \${isMyIP ? '🏠 ' : ''}\${isSuspicious ? '⚠️ ' : ''}
                                     \${ip.ip}
+                                    \${isMyIP ? '<span class="badge success" style="margin-left: 8px; font-size: 0.75em;">VOCÊ</span>' : ''}
                                 </div>
                                 <div class="ip-stat">
                                     <span class="ip-stat-label">Total:</span>
@@ -1367,11 +1414,33 @@ export const getLogsDashboard = (req, res) => {
                                     <div class="detail-value">
                                         \${firstRequest.countryCode ? getFlagEmoji(firstRequest.countryCode) : '🌍'} 
                                         \${firstRequest.city && firstRequest.country 
-                                            ? \`\${firstRequest.city}, \${firstRequest.country}\`
+                                            ? \`\${firstRequest.city}, \${firstRequest.regionName || ''} - \${firstRequest.country}\`
                                             : firstRequest.country || 'Desconhecido'
                                         }
                                     </div>
                                 </div>
+                                \${firstRequest.zip && firstRequest.zip !== 'N/A' ? \`
+                                <div class="detail-item">
+                                    <div class="detail-label">CEP</div>
+                                    <div class="detail-value">\${firstRequest.zip}</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.timezone ? \`
+                                <div class="detail-item">
+                                    <div class="detail-label">⏰ Timezone</div>
+                                    <div class="detail-value">\${firstRequest.timezone}</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.lat && firstRequest.lon ? \`
+                                <div class="detail-item">
+                                    <div class="detail-label">📍 Coordenadas</div>
+                                    <div class="detail-value">
+                                        <a href="https://www.google.com/maps?q=\${firstRequest.lat},\${firstRequest.lon}" target="_blank" style="color: var(--primary); text-decoration: none;">
+                                            \${firstRequest.lat}, \${firstRequest.lon} 🗺️
+                                        </a>
+                                    </div>
+                                </div>
+                                \` : ''}
                                 <div class="detail-item">
                                     <div class="detail-label">Primeira Requisição</div>
                                     <div class="detail-value">\${new Date(firstRequest.timestamp).toLocaleString('pt-BR')}</div>
@@ -1382,6 +1451,51 @@ export const getLogsDashboard = (req, res) => {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Informações de Rede -->
+                        \${firstRequest.isp || firstRequest.org || firstRequest.as ? \`
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">🌐 Informações de Rede</h3>
+                            <div class="detail-grid">
+                                \${firstRequest.isp && firstRequest.isp !== 'Desconhecido' ? \`
+                                <div class="detail-item">
+                                    <div class="detail-label">ISP (Provedor)</div>
+                                    <div class="detail-value">\${firstRequest.isp}</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.org && firstRequest.org !== 'Desconhecido' ? \`
+                                <div class="detail-item">
+                                    <div class="detail-label">Organização</div>
+                                    <div class="detail-value">\${firstRequest.org}</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.as && firstRequest.as !== 'N/A' ? \`
+                                <div class="detail-item">
+                                    <div class="detail-label">AS (Sistema Autônomo)</div>
+                                    <div class="detail-value" style="font-family: 'Courier New', monospace; font-size: 0.9em;">\${firstRequest.as}</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.hosting ? \`
+                                <div class="detail-item" style="border-color: var(--warning);">
+                                    <div class="detail-label">🏢 Hospedagem</div>
+                                    <div class="detail-value" style="color: var(--warning);">Servidor de Hospedagem</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.proxy ? \`
+                                <div class="detail-item" style="border-color: var(--danger);">
+                                    <div class="detail-label">🔒 Proxy</div>
+                                    <div class="detail-value" style="color: var(--danger);">Detectado Proxy/VPN</div>
+                                </div>
+                                \` : ''}
+                                \${firstRequest.mobile ? \`
+                                <div class="detail-item" style="border-color: var(--info);">
+                                    <div class="detail-label">📱 Rede Móvel</div>
+                                    <div class="detail-value" style="color: var(--info);">Conexão Móvel</div>
+                                </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                        \` : ''}
                         
                         <!-- Endpoints Acessados -->
                         <div class="detail-section">
@@ -1414,9 +1528,6 @@ export const getLogsDashboard = (req, res) => {
                         
                         <!-- Navegadores Usados -->
                         <div class="detail-section">
-                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('browsers-\${ip}')">
-                                <span id="browsers-\${ip}-icon">▼</span> 🌐 Navegadores Usados
-                            </h3>
                             <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('browsers-\${ip}')">
                                 <span id="browsers-\${ip}-icon">▼</span> 🌐 Navegadores Usados
                             </h3>
@@ -1674,6 +1785,7 @@ export const getLogsDashboard = (req, res) => {
         }
 
         // Inicializar
+        detectMyIP(); // Detectar IP do usuário primeiro
         loadAllData();
         startCountdown();
         startRefreshInterval();
