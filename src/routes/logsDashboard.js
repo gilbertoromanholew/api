@@ -311,92 +311,87 @@ export const getLogsDashboard = (req, res) => {
             color: #f1f5f9;
         }
         
-        /* Modal para detalhes do IP */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-        }
-        
-        .modal.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-content {
-            background: #1e293b;
+        /* Detalhes expansíveis do IP */
+        .ip-details {
+            margin-top: 30px;
+            background: #0f172a;
             border-radius: 15px;
-            max-width: 900px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border: 2px solid #667eea;
+            display: none;
         }
         
-        .modal-header {
+        .ip-details.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .ip-details-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 25px;
-            border-radius: 15px 15px 0 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .modal-header h2 {
+        .ip-details-header h3 {
             color: white;
             margin: 0;
-            font-size: 1.8em;
+            font-size: 1.5em;
         }
         
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 25px;
-            font-size: 2em;
-            color: white;
-            cursor: pointer;
-            background: none;
+        .close-details-btn {
+            background: rgba(255, 255, 255, 0.2);
             border: none;
-            line-height: 1;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
         }
         
-        .modal-close:hover {
-            color: #ef4444;
+        .close-details-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
         
-        .modal-body {
+        .ip-details-body {
             padding: 25px;
         }
         
-        .modal-stats {
+        .ip-details-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
         
-        .modal-stat-card {
-            background: #0f172a;
+        .ip-details-stat-card {
+            background: #1e293b;
             padding: 15px;
             border-radius: 8px;
             text-align: center;
         }
         
-        .modal-stat-value {
+        .ip-details-stat-value {
             font-size: 2em;
             font-weight: bold;
             color: #667eea;
             margin-bottom: 5px;
         }
         
-        .modal-stat-label {
+        .ip-details-stat-label {
             color: #94a3b8;
             font-size: 0.85em;
         }
@@ -456,6 +451,35 @@ export const getLogsDashboard = (req, res) => {
             <div class="ip-stats-grid" id="ipStatsGrid">
                 <div class="loading">Carregando estatísticas de IP...</div>
             </div>
+            
+            <!-- Detalhes expansíveis do IP -->
+            <div id="ipDetails" class="ip-details">
+                <div class="ip-details-header">
+                    <h3 id="ipDetailsTitle">Detalhes do IP</h3>
+                    <button class="close-details-btn" onclick="closeIPDetails()">✕ Fechar</button>
+                </div>
+                <div class="ip-details-body">
+                    <div class="ip-details-stats" id="ipDetailsStats"></div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 15px;">📋 Histórico de Acessos</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Horário</th>
+                                    <th>Método</th>
+                                    <th>URL Acessada</th>
+                                    <th>Navegador</th>
+                                    <th>Plataforma</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ipDetailsLogsTable">
+                                <tr><td colspan="6" class="loading">Selecione um IP para ver os detalhes...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="section">
@@ -489,37 +513,6 @@ export const getLogsDashboard = (req, res) => {
                         <tr><td colspan="7" class="loading">Carregando logs...</td></tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para detalhes do IP -->
-    <div id="ipModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalIPTitle">Detalhes do IP</h2>
-                <button class="modal-close" onclick="closeIPModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-stats" id="modalStats"></div>
-                <h3 style="color: #f1f5f9; margin-bottom: 15px;">📋 Histórico de Acessos</h3>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Horário</th>
-                                <th>Método</th>
-                                <th>URL Acessada</th>
-                                <th>Navegador</th>
-                                <th>Plataforma</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="modalLogsTable">
-                            <tr><td colspan="6" class="loading">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     </div>
@@ -735,19 +728,23 @@ export const getLogsDashboard = (req, res) => {
             }
         }
 
-        // Função para fechar modal
-        function closeIPModal() {
-            document.getElementById('ipModal').classList.remove('show');
+        // Função para fechar detalhes do IP
+        function closeIPDetails() {
+            document.getElementById('ipDetails').classList.remove('show');
         }
 
-        // Função para abrir modal de detalhes do IP
+        // Função para abrir detalhes do IP
         async function showIPDetails(ip) {
-            document.getElementById('modalIPTitle').textContent = \`Detalhes do IP: \${ip}\`;
-            document.getElementById('ipModal').classList.add('show');
+            const detailsDiv = document.getElementById('ipDetails');
+            document.getElementById('ipDetailsTitle').textContent = \`Detalhes do IP: \${ip}\`;
+            
+            // Scroll suave até a div de detalhes
+            detailsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            detailsDiv.classList.add('show');
             
             // Mostrar loading
-            document.getElementById('modalStats').innerHTML = '<div class="loading">Carregando estatísticas...</div>';
-            document.getElementById('modalLogsTable').innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando logs...</td></tr>';
+            document.getElementById('ipDetailsStats').innerHTML = '<div class="loading">Carregando estatísticas...</div>';
+            document.getElementById('ipDetailsLogsTable').innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando logs...</td></tr>';
             
             try {
                 // Carregar logs específicos do IP
@@ -759,76 +756,68 @@ export const getLogsDashboard = (req, res) => {
                     
                     // Calcular estatísticas
                     const totalAttempts = logs.length;
-                    const authorized = logs.filter(l => l.authorized).length;
-                    const denied = logs.filter(l => !l.authorized).length;
+                    const authorized = logs.filter(l => l.is_authorized).length;
+                    const denied = logs.filter(l => !l.is_authorized).length;
                     const uniqueUrls = [...new Set(logs.map(l => l.url))].length;
                     const browsers = [...new Set(logs.map(l => l.browser).filter(b => b))];
                     const platforms = [...new Set(logs.map(l => l.platform).filter(p => p))];
                     const countries = [...new Set(logs.map(l => l.country).filter(c => c))];
                     
                     // Renderizar estatísticas
-                    document.getElementById('modalStats').innerHTML = \`
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value">\${totalAttempts}</div>
-                            <div class="modal-stat-label">Total de Acessos</div>
+                    document.getElementById('ipDetailsStats').innerHTML = \`
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value">\${totalAttempts}</div>
+                            <div class="ip-details-stat-label">Total de Acessos</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value" style="color: #10b981;">\${authorized}</div>
-                            <div class="modal-stat-label">Autorizados</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value" style="color: #10b981;">\${authorized}</div>
+                            <div class="ip-details-stat-label">Autorizados</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value" style="color: #ef4444;">\${denied}</div>
-                            <div class="modal-stat-label">Negados</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value" style="color: #ef4444;">\${denied}</div>
+                            <div class="ip-details-stat-label">Negados</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value">\${uniqueUrls}</div>
-                            <div class="modal-stat-label">URLs Únicas</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value">\${uniqueUrls}</div>
+                            <div class="ip-details-stat-label">URLs Únicas</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value">\${browsers.join(', ') || 'N/A'}</div>
-                            <div class="modal-stat-label">Navegadores</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value">\${browsers.join(', ') || 'N/A'}</div>
+                            <div class="ip-details-stat-label">Navegadores</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value">\${platforms.join(', ') || 'N/A'}</div>
-                            <div class="modal-stat-label">Plataformas</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value">\${platforms.join(', ') || 'N/A'}</div>
+                            <div class="ip-details-stat-label">Plataformas</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value">\${countries.join(', ') || 'N/A'}</div>
-                            <div class="modal-stat-label">Países</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value">\${countries.join(', ') || 'N/A'}</div>
+                            <div class="ip-details-stat-label">Países</div>
                         </div>
-                        <div class="modal-stat-card">
-                            <div class="modal-stat-value">\${new Date(logs[0].timestamp).toLocaleString('pt-BR')}</div>
-                            <div class="modal-stat-label">Último Acesso</div>
+                        <div class="ip-details-stat-card">
+                            <div class="ip-details-stat-value">\${new Date(logs[0].timestamp).toLocaleString('pt-BR')}</div>
+                            <div class="ip-details-stat-label">Último Acesso</div>
                         </div>
                     \`;
                     
                     // Renderizar tabela de logs
-                    document.getElementById('modalLogsTable').innerHTML = logs.map(log => \`
+                    document.getElementById('ipDetailsLogsTable').innerHTML = logs.map(log => \`
                         <tr>
                             <td>\${new Date(log.timestamp).toLocaleString('pt-BR')}</td>
                             <td><span class="badge info">\${log.method}</span></td>
                             <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="\${log.url}">\${log.url}</td>
                             <td>\${log.browser || 'N/A'}</td>
                             <td>\${log.platform || 'N/A'}</td>
-                            <td><span class="badge \${log.authorized ? 'success' : 'danger'}">\${log.authorized ? 'Autorizado' : 'Negado'}</span></td>
+                            <td><span class="badge \${log.is_authorized ? 'success' : 'danger'}">\${log.is_authorized ? 'Autorizado' : 'Negado'}</span></td>
                         </tr>
                     \`).join('');
                 } else {
-                    document.getElementById('modalStats').innerHTML = '<div class="loading">Nenhuma estatística disponível</div>';
-                    document.getElementById('modalLogsTable').innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum log encontrado para este IP</td></tr>';
+                    document.getElementById('ipDetailsStats').innerHTML = '<div class="loading">Nenhuma estatística disponível</div>';
+                    document.getElementById('ipDetailsLogsTable').innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum log encontrado para este IP</td></tr>';
                 }
             } catch (error) {
-                console.error('Error loading IP details:', error);
-                document.getElementById('modalStats').innerHTML = '<div class="loading" style="color: #ef4444;">Erro ao carregar estatísticas</div>';
-                document.getElementById('modalLogsTable').innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444;">Erro ao carregar logs</td></tr>';
-            }
-        }
-
-        // Fechar modal ao clicar fora
-        window.onclick = function(event) {
-            const modal = document.getElementById('ipModal');
-            if (event.target === modal) {
-                closeIPModal();
+                console.error('Erro ao carregar detalhes do IP:', error);
+                document.getElementById('ipDetailsStats').innerHTML = '<div class="loading" style="color: #ef4444;">Erro ao carregar estatísticas</div>';
+                document.getElementById('ipDetailsLogsTable').innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444;">Erro ao carregar logs</td></tr>';
             }
         }
 
