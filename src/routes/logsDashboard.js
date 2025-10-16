@@ -912,6 +912,10 @@ export const getLogsDashboard = (req, res) => {
         let ipStatsLimit = 12; // Limite de cards visíveis
         let showAllIPs = false; // Estado de expansão da seção de IPs
         let myIP = null; // IP do usuário atual
+        
+        // Estados de expansão dos cards (preservar durante refresh)
+        let expandedMetrics = {}; // {metricId: true/false}
+        let expandedIPCards = {}; // {ip: {browsers: true/false, platforms: true/false, endpoints: true/false}}
 
         // Detectar IP do usuário ao carregar a página
         async function detectMyIP() {
@@ -1597,6 +1601,20 @@ export const getLogsDashboard = (req, res) => {
                         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
                     
+                    // Restaurar estados de expansão salvos
+                    if (expandedIPCards[ip]) {
+                        Object.keys(expandedIPCards[ip]).forEach(sectionId => {
+                            const section = document.getElementById(sectionId);
+                            const icon = document.getElementById(sectionId + '-icon');
+                            
+                            if (section && icon) {
+                                const isExpanded = expandedIPCards[ip][sectionId];
+                                section.style.display = isExpanded ? 'block' : 'none';
+                                icon.textContent = isExpanded ? '▼' : '▶';
+                            }
+                        });
+                    }
+                    
                 } else {
                     showToast('Nenhum log encontrado para este IP', 'warning');
                 }
@@ -1624,6 +1642,12 @@ export const getLogsDashboard = (req, res) => {
                 section.style.display = 'none';
                 icon.textContent = '▶';
             }
+            
+            // Salvar estado de expansão
+            if (!expandedIPCards[currentOpenIP]) {
+                expandedIPCards[currentOpenIP] = {};
+            }
+            expandedIPCards[currentOpenIP][sectionId] = (section.style.display === 'block');
         }
 
         // Alternar seção de logs
