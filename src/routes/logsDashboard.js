@@ -414,7 +414,7 @@ export const getLogsDashboard = (req, res) => {
             <h1>🔍 Access Logs Dashboard</h1>
             <p class="subtitle">
                 <span class="live-indicator"></span>
-                Monitoramento em tempo real (atualiza a cada 10s) | Seu IP: <strong>${clientIp}</strong>
+                Monitoramento em tempo real (atualiza a cada 3s) | Seu IP: <strong>${clientIp}</strong>
             </p>
         </div>
         
@@ -519,7 +519,7 @@ export const getLogsDashboard = (req, res) => {
 
     <script>
         let autoRefresh = true;
-        let countdown = 10; // Aumentado para 10 segundos
+        let countdown = 3; // Contagem regressiva de 3 segundos
         let countdownInterval;
         let refreshInterval;
 
