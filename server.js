@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { getApiInfo } from './src/routes/index.js';
+import { getApiDocs } from './src/routes/docs.js';
 
 // Funcionalidades
 import cpfRoutes from './src/funcionalidades/validacao/cpfRoutes.js';
@@ -22,8 +23,9 @@ app.use(express.json());
 // Middleware de segurança - filtro de IP
 app.use(ipFilter);
 
-// Rota raiz - Documentação
-app.get('/', getApiInfo);
+// Rotas de Documentação
+app.get('/', getApiInfo);           // JSON com toda documentação
+app.get('/docs', getApiDocs);       // Página HTML bonita
 
 // Funcionalidades da API
 app.use(cpfRoutes);        // Validação

@@ -1,0 +1,40 @@
+╔════════════════════════════════════════════════════════════════╗
+║           INFORMAÇÕES DA SUA REDE E CONFIGURAÇÃO              ║
+╚════════════════════════════════════════════════════════════════╝
+
+📍 SEU PC:
+├─ IP Local (LAN):      192.168.168.100
+├─ IP Público (WAN):    177.73.205.198
+├─ Gateway:             192.168.168.1
+├─ Máscara de Sub-rede: 255.255.255.0
+└─ Interface:           Wi-Fi (Wifi1200G-R)
+
+🌐 API HOSPEDADA:
+├─ URL:                 https://api.samm.host
+├─ Porta:               3000 (interna)
+├─ Protocolo:           HTTPS (recomendado)
+└─ Status:              🟢 Online
+
+🔒 IPs AUTORIZADOS (configurado no .env):
+├─ 127.0.0.1            → Localhost IPv4 (sempre permitido)
+├─ ::1                  → Localhost IPv6 (sempre permitido)
+├─ 192.168.168.100      → Seu IP local (LAN)
+└─ 177.73.205.198       → Seu IP público (Internet)
+
+⚠️  IMPORTANTE:
+- Quando você acessa de casa pela INTERNET → servidor vê 177.73.205.198
+- Se seu IP público mudar, atualize o .env no servidor
+- IPs residenciais podem mudar (verifique periodicamente)
+
+📝 TESTAR ACESSO:
+1. Abra: https://api.samm.host/
+2. Deve retornar a documentação da API
+3. Se der erro 403, seu IP não está autorizado
+
+🔧 ATUALIZAR IP NO SERVIDOR:
+1. SSH no servidor
+2. Edite .env: nano ~/api/.env
+3. Adicione: ALLOWED_IPS=177.73.205.198
+4. Reinicie: pm2 restart api
+
+═══════════════════════════════════════════════════════════════
