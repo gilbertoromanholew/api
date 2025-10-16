@@ -7,13 +7,13 @@ const __dirname = path.dirname(__filename);
 
 /**
  * Carrega automaticamente todas as rotas de funcionalidades
- * Busca por arquivos que terminam em 'Routes.js' em src/funcionalidades/
+ * Busca por arquivos que terminam em 'Routes.js' em src/functions/
  * 
  * @param {Object} app - Instância do Express app
  * @returns {Promise<Array>} Lista de funcionalidades carregadas
  */
 export async function autoLoadRoutes(app) {
-    const funcionalidadesDir = path.join(__dirname, '../funcionalidades');
+    const funcionalidadesDir = path.join(__dirname, '../functions');
     const loadedRoutes = [];
     
     console.log('\n📦 Auto-carregando funcionalidades...\n');
@@ -77,7 +77,7 @@ export async function autoLoadRoutes(app) {
  * @returns {Array} Lista de funcionalidades com suas informações
  */
 export function listFuncionalidades() {
-    const funcionalidadesDir = path.join(__dirname, '../funcionalidades');
+    const funcionalidadesDir = path.join(__dirname, '../functions');
     const funcionalidades = [];
     
     try {

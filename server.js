@@ -24,7 +24,7 @@ app.get('/docs', getApiDocs);       // Página HTML bonita
 app.get('/logs', getLogsDashboard); // Dashboard de logs em tempo real
 app.use(logsRoutes);                // API de logs
 
-// Auto-carregar funcionalidades do diretório src/funcionalidades/
+// Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
 
 // Handlers de erro (devem ser os ÚLTIMOS middlewares)
@@ -32,9 +32,9 @@ app.use(notFoundHandler);  // 404 - Rota não encontrada
 app.use(errorHandler);     // Erro genérico
 
 // Iniciar servidor
-app.listen(config.port, config.host, () => {
-    console.log(`🚀 Servidor rodando na porta ${config.port}`);
-    console.log(`📍 Acesse: http://localhost:${config.port}`);
-    console.log(`📖 Documentação: http://localhost:${config.port}/docs`);
-    console.log(`📊 Dashboard: http://localhost:${config.port}/logs\n`);
+app.listen(config.server.port, config.server.host, () => {
+    console.log(`🚀 Servidor rodando na porta ${config.server.port}`);
+    console.log(`📍 Acesse: http://localhost:${config.server.port}`);
+    console.log(`📖 Documentação: http://localhost:${config.server.port}/docs`);
+    console.log(`📊 Dashboard: http://localhost:${config.server.port}/logs\n`);
 });

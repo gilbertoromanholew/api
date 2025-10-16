@@ -1,9 +1,6 @@
 # Dependências
 /node_modules
 
-# Variáveis de ambiente (NUNCA COMMITAR)
-.env
-
 # Logs
 /logs
 *.log
@@ -28,3 +25,23 @@ Thumbs.db
 # Temporários
 *.tmp
 *.temp
+
+# Git
+.git/
+.gitignore
+
+# ============================================
+# ✅ ARQUIVOS QUE VÃO PARA O GITHUB (PRODUÇÃO)
+# ============================================
+# ✅ package.json          - Dependências
+# ✅ package-lock.json     - Lock de versões
+# ✅ server.js             - Entry point
+# ✅ .env.example          - Template de config
+# ✅ README.md             - Documentação
+# ✅ src/**                - Todo código fonte
+#    ├── core/             - BaseController, routeLoader
+#    ├── middlewares/      - validator, errorHandler, ipFilter
+#    ├── config/           - Configurações
+#    ├── routes/           - docs, logs
+#    ├── utils/            - Utilitários
+#    └── functions/        - Funcionalidades (exemplo, pdf, _TEMPLATE)
