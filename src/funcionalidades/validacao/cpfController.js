@@ -1,17 +1,21 @@
+import { BaseController } from '../../core/BaseController.js';
 import { isValidCPF } from './cpfValidator.js';
 
-export const validateCPF = async (req, res) => {
-    const { cpf } = req.body;
+class CPFController extends BaseController {
+    async validateCPF(req, res) {
+        return this.execute(req, res, async (req, res) => {
+            const { cpf } = req.body;
 
-    if (!cpf) {
-        return res.status(400).json({ valid: false, message: 'CPF não fornecido.' });
+            const isCpfValid = isValidCPF(cpf);
+
+            if (!isCpfValid) {
+                return this.error(res, 'CPF inválido', 200);
+            }
+            
+            this.success(res, { valid: true, cpf }, 'CPF válido');
+        });
     }
+}
 
-    const isCpfValid = isValidCPF(cpf);
-
-    if (!isCpfValid) {
-        return res.status(200).json({ valid: false, message: 'CPF inválido.' });
-    }
-    
-    res.status(200).json({ valid: true, message: 'CPF válido.' });
-};
+export const cpfController = new CPFController();
+export const validateCPF = (req, res) => cpfController.validateCPF(req, res);

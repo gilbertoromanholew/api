@@ -16,17 +16,11 @@ export const getApiInfo = (req, res) => {
         },
         version: '2.0',
         status: 'online',
-        
-        documentation: {
-            interactive_docs: {
-                url: 'https://api.samm.host/docs',
-                description: '📚 Visit our beautiful interactive documentation page',
-                action: 'Click the link above to explore all endpoints with examples and code snippets'
-            }
-        },
+        autor: 'Gilberto Romanhole',
         
         quick_links: {
             docs: 'https://api.samm.host/docs',
+            logs: 'https://api.samm.host/logs',
             github: 'https://github.com/gilbertoromanholew/api'
         }
     });
