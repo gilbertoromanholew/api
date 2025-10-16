@@ -476,6 +476,24 @@ export const getLogsDashboard = (req, res) => {
             opacity: 0.8;
         }
         
+        .toast-close {
+            background: none;
+            border: none;
+            color: #333;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: all 0.2s;
+            opacity: 0.6;
+            line-height: 1;
+        }
+        
+        .toast-close:hover {
+            opacity: 1;
+            transform: scale(1.2);
+            color: #000;
+        }
+        
         /* Loading */
         .loading {
             text-align: center;
@@ -547,6 +565,131 @@ export const getLogsDashboard = (req, res) => {
             border-bottom: none;
         }
         
+        /* IP Details Panel */
+        .ip-details-panel {
+            display: none;
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 25px;
+            border: 2px solid var(--primary);
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+            animation: slideDown 0.4s ease-out;
+        }
+        
+        .ip-details-panel.show {
+            display: block;
+        }
+        
+        @keyframes slideDown {
+            from { 
+                transform: translateY(-20px); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateY(0); 
+                opacity: 1; 
+            }
+        }
+        
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .details-title {
+            font-size: 1.8em;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .details-close {
+            background: var(--danger);
+            border: none;
+            color: white;
+            font-size: 1.1em;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .details-close:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+        
+        .details-body {
+            color: var(--text-light);
+        }
+        
+        .detail-section {
+            margin-bottom: 25px;
+        }
+        
+        .detail-section-title {
+            font-size: 1.2em;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .detail-item {
+            background: var(--dark-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .detail-label {
+            color: var(--text-muted);
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            color: var(--text-light);
+            font-size: 1.1em;
+            font-weight: 600;
+            word-break: break-all;
+        }
+        
+        .detail-list {
+            list-style: none;
+        }
+        
+        .detail-list li {
+            background: var(--dark-bg);
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 3px solid var(--info);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .detail-list li:hover {
+            background: var(--border);
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .header h1 {
@@ -569,6 +712,18 @@ export const getLogsDashboard = (req, res) => {
             .btn {
                 flex: 1;
                 justify-content: center;
+            }
+            
+            .ip-details-panel {
+                padding: 20px;
+            }
+            
+            .details-title {
+                font-size: 1.4em;
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -642,6 +797,12 @@ export const getLogsDashboard = (req, res) => {
                     </div>
                 </div>
                 <div class="metric-card">
+                    <div class="metric-title">🌐 Navegadores Mais Usados</div>
+                    <div class="metric-list" id="topBrowsers">
+                        <div class="loading">Carregando...</div>
+                    </div>
+                </div>
+                <div class="metric-card">
                     <div class="metric-title">📱 Dispositivos Mais Usados</div>
                     <div class="metric-list" id="topDevices">
                         <div class="loading">Carregando...</div>
@@ -673,6 +834,20 @@ export const getLogsDashboard = (req, res) => {
                 <div class="loading">
                     <div class="spinner"></div>
                     Carregando estatísticas...
+                </div>
+            </div>
+            
+            <!-- Painel de Detalhes do IP -->
+            <div class="ip-details-panel" id="ipDetailsPanel">
+                <div class="details-header">
+                    <h2 class="details-title">
+                        <span>🔍</span>
+                        <span id="detailsIPAddress">Detalhes do IP</span>
+                    </h2>
+                    <button class="details-close" onclick="closeIPDetails()">✖ Fechar</button>
+                </div>
+                <div class="details-body" id="detailsBody">
+                    <!-- Conteúdo será preenchido dinamicamente -->
                 </div>
             </div>
         </div>
@@ -723,7 +898,7 @@ export const getLogsDashboard = (req, res) => {
     <script>
         // Variáveis globais
         let autoRefresh = true;
-        let countdown = 10;
+        let countdown = 3;
         let countdownInterval;
         let refreshInterval;
         let previousStats = {};
@@ -820,27 +995,40 @@ export const getLogsDashboard = (req, res) => {
             // Tempo médio de resposta (simulado)
             document.getElementById('avgResponseTime').textContent = '~45ms';
             
-            // Endpoints mais acessados
-            const topEndpointsHtml = Object.entries(stats.top_browsers || {})
+            // Endpoints mais acessados (URLs reais) - TOP 3
+            const topEndpointsHtml = Object.entries(stats.top_endpoints || {})
                 .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
-                .map(([endpoint, count]) => \`
+                .slice(0, 3)
+                .map(([url, count]) => \`
                     <div class="metric-item">
-                        <span>\${endpoint}</span>
+                        <span style="font-family: 'Courier New', monospace; font-size: 0.9em;">\${url}</span>
                         <span class="badge info">\${count}</span>
                     </div>
                 \`).join('') || '<div style="text-align: center; color: var(--text-muted);">Sem dados</div>';
             
             document.getElementById('topEndpoints').innerHTML = topEndpointsHtml;
             
-            // Dispositivos mais usados
+            // Navegadores mais usados - TOP 3
+            const topBrowsersHtml = Object.entries(stats.top_browsers || {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([browser, count]) => \`
+                    <div class="metric-item">
+                        <span>\${browser}</span>
+                        <span class="badge success">\${count}</span>
+                    </div>
+                \`).join('') || '<div style="text-align: center; color: var(--text-muted);">Sem dados</div>';
+            
+            document.getElementById('topBrowsers').innerHTML = topBrowsersHtml;
+            
+            // Dispositivos mais usados (plataformas) - TOP 3
             const topDevicesHtml = Object.entries(stats.top_platforms || {})
                 .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
+                .slice(0, 3)
                 .map(([device, count]) => \`
                     <div class="metric-item">
                         <span>\${device}</span>
-                        <span class="badge success">\${count}</span>
+                        <span class="badge warning">\${count}</span>
                     </div>
                 \`).join('') || '<div style="text-align: center; color: var(--text-muted);">Sem dados</div>';
             
@@ -877,7 +1065,7 @@ export const getLogsDashboard = (req, res) => {
                                 </div>
                                 <div class="ip-stat">
                                     <span class="ip-stat-label">🌍 País:</span>
-                                    <span class="ip-stat-value">\${ip.countries.join(', ') || 'N/A'}</span>
+                                    <span class="ip-stat-value">\${ip.countries && ip.countries.length > 0 ? ip.countries.join(', ') : 'Desconhecido'}</span>
                                 </div>
                                 <div class="ip-stat">
                                     <span class="ip-stat-label">⏰ Último:</span>
@@ -923,11 +1111,11 @@ export const getLogsDashboard = (req, res) => {
                         return \`
                             <tr class="\${rowClass}">
                                 <td>\${formatDateTime(log.timestamp)}</td>
-                                <td style="font-family: 'Courier New', monospace;">\${log.ip_detected}</td>
-                                <td>\${log.country || '−'}</td>
-                                <td>\${log.browser || '−'}</td>
-                                <td>\${log.platform || '−'}</td>
-                                <td title="\${log.url}">\${truncate(log.url, 50) || '−'}</td>
+                                <td style="font-family: 'Courier New', monospace;">\${log.ip_detected || '−'}</td>
+                                <td>\${log.country || 'Desconhecido'}</td>
+                                <td>\${log.browser || 'Desconhecido'}</td>
+                                <td>\${log.platform || 'Desconhecido'}</td>
+                                <td title="\${log.url || ''}">\${truncate(log.url, 50) || '−'}</td>
                                 <td>
                                     <span class="badge \${log.is_authorized ? 'success' : 'danger'}">
                                         \${log.is_authorized ? '✅ OK' : '❌ Negado'}
@@ -1008,9 +1196,177 @@ export const getLogsDashboard = (req, res) => {
         }
 
         // Mostrar detalhes do IP
-        function showIPDetails(ip) {
-            showToast(\`Visualizando detalhes do IP: \${ip}\`, 'info');
-            // Implementar modal ou redirecionamento
+        async function showIPDetails(ip) {
+            showToast(\`Carregando detalhes do IP: \${ip}\`, 'info');
+            
+            try {
+                // Buscar logs específicos deste IP
+                const response = await fetch(\`/api/logs?ip=\${encodeURIComponent(ip)}\`);
+                const data = await response.json();
+                
+                if (data.success && data.logs) {
+                    const ipLogs = data.logs;
+                    
+                    // Calcular estatísticas
+                    const totalRequests = ipLogs.length;
+                    const authorized = ipLogs.filter(log => log.is_authorized).length;
+                    const denied = totalRequests - authorized;
+                    const endpoints = [...new Set(ipLogs.map(log => log.url).filter(u => u))];
+                    const browsers = [...new Set(ipLogs.map(log => log.browser || 'Desconhecido').filter(b => b))];
+                    const platforms = [...new Set(ipLogs.map(log => log.platform || 'Desconhecido').filter(p => p))];
+                    
+                    // Primeira e última requisição
+                    const sortedLogs = ipLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    const firstRequest = sortedLogs[0];
+                    const lastRequest = sortedLogs[sortedLogs.length - 1];
+                    
+                    // Montar HTML da div de detalhes
+                    document.getElementById('detailsIPAddress').innerHTML = \`
+                        Detalhes do IP: <span style="color: var(--primary);">\${ip}</span>
+                    \`;
+                    
+                    document.getElementById('detailsBody').innerHTML = \`
+                        <!-- Estatísticas Gerais -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">📊 Estatísticas Gerais</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Total de Requisições</div>
+                                    <div class="detail-value">\${totalRequests}</div>
+                                </div>
+                                <div class="detail-item" style="border-color: var(--success);">
+                                    <div class="detail-label">Autorizadas</div>
+                                    <div class="detail-value" style="color: var(--success);">\${authorized}</div>
+                                </div>
+                                <div class="detail-item" style="border-color: var(--danger);">
+                                    <div class="detail-label">Negadas</div>
+                                    <div class="detail-value" style="color: var(--danger);">\${denied}</div>
+                                </div>
+                                <div class="detail-item" style="border-color: var(--warning);">
+                                    <div class="detail-label">Taxa de Sucesso</div>
+                                    <div class="detail-value" style="color: var(--warning);">\${((authorized/totalRequests)*100).toFixed(1)}%</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Informações do IP -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">🌍 Informações do IP</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Endereço IP</div>
+                                    <div class="detail-value" style="font-family: 'Courier New', monospace;">\${ip}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">País/Região</div>
+                                    <div class="detail-value">\${firstRequest.country || 'Desconhecido'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Primeira Requisição</div>
+                                    <div class="detail-value">\${new Date(firstRequest.timestamp).toLocaleString('pt-BR')}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Última Requisição</div>
+                                    <div class="detail-value">\${new Date(lastRequest.timestamp).toLocaleString('pt-BR')}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Endpoints Acessados -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">🔗 Endpoints Acessados (\${endpoints.length})</h3>
+                            <ul class="detail-list">
+                                \${endpoints.slice(0, 10).map(url => {
+                                    const count = ipLogs.filter(log => log.url === url).length;
+                                    return \`
+                                        <li>
+                                            <span>\${url || 'N/A'}</span>
+                                            <span class="badge info">\${count}x</span>
+                                        </li>
+                                    \`;
+                                }).join('')}
+                                \${endpoints.length > 10 ? \`<li><em>... e mais \${endpoints.length - 10} endpoints</em></li>\` : ''}
+                            </ul>
+                        </div>
+                        
+                        <!-- Navegadores Usados -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">🌐 Navegadores Usados</h3>
+                            <ul class="detail-list">
+                                \${browsers.map(browser => {
+                                    const count = ipLogs.filter(log => log.browser === browser).length;
+                                    return \`
+                                        <li>
+                                            <span>\${browser}</span>
+                                            <span class="badge success">\${count}x</span>
+                                        </li>
+                                    \`;
+                                }).join('')}
+                            </ul>
+                        </div>
+                        
+                        <!-- Plataformas Usadas -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">💻 Plataformas Usadas</h3>
+                            <ul class="detail-list">
+                                \${platforms.map(platform => {
+                                    const count = ipLogs.filter(log => log.platform === platform).length;
+                                    return \`
+                                        <li>
+                                            <span>\${platform}</span>
+                                            <span class="badge warning">\${count}x</span>
+                                        </li>
+                                    \`;
+                                }).join('')}
+                            </ul>
+                        </div>
+                        
+                        <!-- Tentativas Negadas (se houver) -->
+                        \${denied > 0 ? \`
+                            <div class="detail-section">
+                                <h3 class="detail-section-title" style="color: var(--danger);">⚠️ Tentativas de Acesso Negadas</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item" style="border-color: var(--danger);">
+                                        <div class="detail-label">Total de Tentativas Negadas</div>
+                                        <div class="detail-value" style="color: var(--danger);">\${denied}</div>
+                                    </div>
+                                    <div class="detail-item" style="border-color: var(--danger);">
+                                        <div class="detail-label">Taxa de Negação</div>
+                                        <div class="detail-value" style="color: var(--danger);">\${((denied/totalRequests)*100).toFixed(1)}%</div>
+                                    </div>
+                                </div>
+                                <ul class="detail-list">
+                                    \${ipLogs.filter(log => !log.is_authorized).slice(0, 5).map(log => \`
+                                        <li>
+                                            <span>\${log.url || 'N/A'}</span>
+                                            <span style="color: var(--text-muted); font-size: 0.85em;">
+                                                \${new Date(log.timestamp).toLocaleString('pt-BR')}
+                                            </span>
+                                        </li>
+                                    \`).join('')}
+                                    \${denied > 5 ? \`<li><em>... e mais \${denied - 5} tentativas negadas</em></li>\` : ''}
+                                </ul>
+                            </div>
+                        \` : ''}
+                    \`;
+                    
+                    // Mostrar painel de detalhes e rolar até ele
+                    const panel = document.getElementById('ipDetailsPanel');
+                    panel.classList.add('show');
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    
+                } else {
+                    showToast('Nenhum log encontrado para este IP', 'warning');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do IP:', error);
+                showToast('Erro ao carregar detalhes do IP', 'error');
+            }
+        }
+        
+        // Fechar painel de detalhes
+        function closeIPDetails() {
+            document.getElementById('ipDetailsPanel').classList.remove('show');
         }
 
         // Limpar logs
@@ -1035,6 +1391,13 @@ export const getLogsDashboard = (req, res) => {
 
         // Toast notification
         function showToast(message, type = 'info') {
+            // Limitar a 3 toasts simultâneos
+            const existingToasts = document.querySelectorAll('.toast');
+            if (existingToasts.length >= 3) {
+                // Remover o mais antigo
+                existingToasts[0].remove();
+            }
+            
             const icons = {
                 success: '✅',
                 error: '❌',
@@ -1050,14 +1413,25 @@ export const getLogsDashboard = (req, res) => {
                     <div class="toast-title">\${type.charAt(0).toUpperCase() + type.slice(1)}</div>
                     <div class="toast-message">\${message}</div>
                 </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">✖</button>
             \`;
             
             document.body.appendChild(toast);
             
-            setTimeout(() => {
-                toast.style.animation = 'slideInRight 0.3s ease-out reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            // Auto-remover após 5 segundos
+            const autoRemoveTimeout = setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                    setTimeout(() => {
+                        if (toast.parentElement) toast.remove();
+                    }, 300);
+                }
+            }, 5000);
+            
+            // Limpar timeout se removido manualmente
+            toast.addEventListener('click', () => {
+                clearTimeout(autoRemoveTimeout);
+            });
         }
 
         // Toggle auto-refresh
@@ -1094,7 +1468,7 @@ export const getLogsDashboard = (req, res) => {
         }
 
         function resetCountdown() {
-            countdown = 10;
+            countdown = 3;
             document.getElementById('countdown').textContent = countdown;
         }
 

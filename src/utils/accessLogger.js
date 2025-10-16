@@ -105,6 +105,7 @@ class AccessLogger {
         const browsers = {};
         const platforms = {};
         const countries = {};
+        const endpoints = {};  // ← ADICIONADO
 
         this.logs.forEach(log => {
             if (log.browser) {
@@ -115,6 +116,9 @@ class AccessLogger {
             }
             if (log.country) {
                 countries[log.country] = (countries[log.country] || 0) + 1;
+            }
+            if (log.url) {  // ← ADICIONADO
+                endpoints[log.url] = (endpoints[log.url] || 0) + 1;
             }
         });
 
@@ -127,6 +131,7 @@ class AccessLogger {
             top_browsers: browsers,
             top_platforms: platforms,
             top_countries: countries,
+            top_endpoints: endpoints,  // ← ADICIONADO
             last_updated: new Date().toISOString()
         };
     }

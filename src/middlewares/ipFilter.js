@@ -1,12 +1,65 @@
 import { allowedIPs } from '../config/allowedIPs.js';
 import { accessLogger } from '../utils/accessLogger.js';
 
+// Cache de geolocalização (evitar chamadas excessivas à API)
+const geoCache = new Map();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+
+// Função para obter geolocalização do IP
+async function getIPGeolocation(ip) {
+    // IPs locais não precisam de geolocalização
+    if (ip === '127.0.0.1' || ip === 'localhost' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+        return { country: 'Local', city: 'Localhost', countryCode: 'LOCAL' };
+    }
+
+    // Verificar cache
+    const cached = geoCache.get(ip);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        return cached.data;
+    }
+
+    try {
+        // Usar ip-api.com (gratuito, sem necessidade de API key, 45 req/min)
+        const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,query`, {
+            timeout: 3000 // 3 segundos timeout
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                const geoData = {
+                    country: data.country || 'Desconhecido',
+                    city: data.city || 'Desconhecido',
+                    countryCode: data.countryCode || 'XX'
+                };
+                
+                // Armazenar no cache
+                geoCache.set(ip, {
+                    data: geoData,
+                    timestamp: Date.now()
+                });
+                
+                return geoData;
+            }
+        }
+    } catch (error) {
+        console.error(`❌ Erro ao buscar geolocalização para ${ip}:`, error.message);
+    }
+
+    // Fallback se falhar
+    return { country: 'Desconhecido', city: 'Desconhecido', countryCode: 'XX' };
+}
+
 // Middleware para bloquear requisições de IPs não autorizados
-export const ipFilter = (req, res, next) => {
+export const ipFilter = async (req, res, next) => {
     // Pega o IP real considerando proxies/CDN
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
                      req.headers['x-real-ip'] || 
                      req.ip;
+    
+    // Buscar geolocalização do IP
+    const geoData = await getIPGeolocation(clientIp);
     
     // Coletar o máximo de informações do cliente
     const clientInfo = {
@@ -26,9 +79,10 @@ export const ipFilter = (req, res, next) => {
             socket: 'IP da conexão TCP direta'
         },
         
-        // Informações de Localização (se disponível via proxy)
-        country: req.headers['cf-ipcountry'] || req.headers['x-country-code'] || null,
-        city: req.headers['cf-ipcity'] || null,
+        // Informações de Localização (prioriza headers de proxy, depois geolocalização via API)
+        country: req.headers['cf-ipcountry'] || req.headers['x-country-code'] || geoData.country,
+        countryCode: geoData.countryCode,
+        city: req.headers['cf-ipcity'] || geoData.city,
         
         // Informações do Cliente
         user_agent: req.headers['user-agent'] || null,
@@ -71,8 +125,8 @@ export const ipFilter = (req, res, next) => {
     console.log(`   🔀 X-Forwarded-For: ${clientInfo.ip_forwarded_for || 'Not set'}`);
     console.log(`   🔗 X-Real-IP: ${clientInfo.ip_real || 'Not set'}`);
     console.log(`   🔌 Socket: ${clientInfo.ip_socket || 'Not set'}`);
-    console.log(`\n� LOCATION:`);
-    console.log(`   Country: ${clientInfo.country || 'Unknown'}`);
+    console.log(`\n🌍 LOCATION:`);
+    console.log(`   Country: ${clientInfo.country || 'Unknown'} (${clientInfo.countryCode || 'XX'})`);
     console.log(`   City: ${clientInfo.city || 'Unknown'}`);
     console.log(`\n💻 CLIENT:`);
     console.log(`   Browser: ${clientInfo.browser}`);
