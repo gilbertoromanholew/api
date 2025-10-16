@@ -1,4 +1,5 @@
 import { allowedIPs } from '../config/allowedIPs.js';
+import { accessLogger } from '../utils/accessLogger.js';
 
 // Middleware para bloquear requisições de IPs não autorizados
 export const ipFilter = (req, res, next) => {
@@ -84,6 +85,9 @@ export const ipFilter = (req, res, next) => {
     console.log(`   Language: ${clientInfo.accept_language || 'Not specified'}`);
     console.log(`\n✅ AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
     console.log('='.repeat(80) + '\n');
+    
+    // Registrar no sistema de logs
+    accessLogger.addLog(clientInfo);
     
     if (!allowedIPs.includes(clientIp)) {
         return res.status(403).json({ 
