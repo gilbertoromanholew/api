@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { getApiInfo } from './src/routes/index.js';
 import { getApiDocs } from './src/routes/docs.js';
@@ -11,9 +10,6 @@ import pdfRoutes from './src/funcionalidades/pdf/pdfRoutes.js';
 import calculoRoutes from './src/funcionalidades/calculo/calculoRoutes.js';
 
 import config from './src/config/index.js';
-
-// Carregar variáveis de ambiente
-dotenv.config();
 
 const app = express();
 

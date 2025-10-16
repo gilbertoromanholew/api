@@ -1,7 +1,8 @@
 # Dependências
 /node_modules
 
-
+# Variáveis de ambiente (NUNCA COMMITAR)
+.env
 
 # Logs
 /logs

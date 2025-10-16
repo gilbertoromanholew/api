@@ -1,7 +1,3 @@
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 // Carregar IPs autorizados do .env
 const envIPs = process.env.ALLOWED_IPS 
     ? process.env.ALLOWED_IPS.split(',').map(ip => ip.trim())
