@@ -626,6 +626,7 @@ api/
 │   │   │
 │   │   └── pdf/             # Processamento de PDFs
 │   │       ├── pdfController.js
+│   │       ├── pdfParseWrapper.cjs  # Wrapper CommonJS
 │   │       ├── pdfRoutes.js
 │   │       └── README.md
 │   │
@@ -640,9 +641,8 @@ api/
 │   │   ├── logsDashboard.js # Dashboard de logs
 │   │   └── logsRoutes.js    # API de logs
 │   │
-│   └── utils/               # Utilitários
-│       ├── accessLogger.js      # Logger de acessos
-│       └── pdfParseWrapper.cjs  # Wrapper para pdf-parse
+│   └── utils/               # Utilitários genéricos
+│       └── accessLogger.js  # Logger de acessos (global)
 │
 ├── server.js                # Entry point
 ├── package.json             # Dependências

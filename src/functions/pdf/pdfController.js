@@ -2,7 +2,7 @@ import { BaseController } from '../../core/BaseController.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const pdfParse = require('../../utils/pdfParseWrapper.cjs');
+const pdfParse = require('./pdfParseWrapper.cjs');
 
 class PDFController extends BaseController {
     async readPDF(req, res) {
