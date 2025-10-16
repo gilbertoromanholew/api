@@ -16,7 +16,7 @@ export const getApiInfo = (req, res) => {
         },
         version: '2.0',
         status: 'online',
-        autor: 'Gilberto Romanhole',
+        author: 'Gilberto Romanhole',
         
         quick_links: {
             docs: 'https://api.samm.host/docs',
