@@ -1,3 +1,8 @@
+import dotenv from 'dotenv';
+
+// Garantir que o .env seja carregado antes de ler as variáveis
+dotenv.config();
+
 // Carregar IPs autorizados do .env
 const envIPs = process.env.ALLOWED_IPS 
     ? process.env.ALLOWED_IPS.split(',').map(ip => ip.trim())
