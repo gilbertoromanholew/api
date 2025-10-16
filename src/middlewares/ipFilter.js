@@ -9,11 +9,21 @@ export const ipFilter = (req, res, next) => {
     
     // Coletar o máximo de informações do cliente
     const clientInfo = {
-        // Informações de IP
-        ip_detected: clientIp,
-        ip_raw: req.ip,
-        ip_forwarded: req.headers['x-forwarded-for'] || null,
-        ip_real: req.headers['x-real-ip'] || null,
+        // Informações de IP (TODAS as variações)
+        ip_detected: clientIp,                                    // IP que usamos para autorização
+        ip_raw: req.ip,                                           // IP que o Express vê diretamente
+        ip_forwarded_for: req.headers['x-forwarded-for'] || null, // IP(s) passados por proxies
+        ip_real: req.headers['x-real-ip'] || null,               // IP real (header comum em nginx)
+        ip_socket: req.socket.remoteAddress || null,              // IP da conexão do socket
+        
+        // Explicação dos IPs
+        ip_explanation: {
+            detected: 'IP usado para autorização (prioriza headers de proxy)',
+            raw: 'IP que o Express vê diretamente (geralmente o proxy interno)',
+            forwarded_for: 'Header X-Forwarded-For - IP real do cliente passado pelo proxy',
+            real: 'Header X-Real-IP - Alternativa ao X-Forwarded-For',
+            socket: 'IP da conexão TCP direta'
+        },
         
         // Informações de Localização (se disponível via proxy)
         country: req.headers['cf-ipcountry'] || req.headers['x-country-code'] || null,
@@ -54,16 +64,25 @@ export const ipFilter = (req, res, next) => {
     console.log('🔍 IP FILTER - CLIENT ACCESS ATTEMPT');
     console.log('='.repeat(80));
     console.log(`⏰ Time: ${clientInfo.timestamp}`);
-    console.log(`📍 IP: ${clientInfo.ip_detected}`);
-    console.log(`🌍 Country: ${clientInfo.country || 'Unknown'}`);
-    console.log(`🏙️  City: ${clientInfo.city || 'Unknown'}`);
-    console.log(`💻 User Agent: ${clientInfo.user_agent}`);
-    console.log(`🌐 Browser: ${clientInfo.browser}`);
-    console.log(`🖥️  Platform: ${clientInfo.platform}`);
-    console.log(`📄 URL: ${req.method} ${req.url}`);
-    console.log(`🔗 Referer: ${clientInfo.referer || 'Direct access'}`);
-    console.log(`🌍 Language: ${clientInfo.accept_language || 'Not specified'}`);
-    console.log(`✅ Authorized: ${clientInfo.is_authorized ? '✅ YES' : '❌ NO'}`);
+    console.log(`\n📍 IP ANALYSIS:`);
+    console.log(`   🎯 Detected (used for auth): ${clientInfo.ip_detected}`);
+    console.log(`   📦 Raw (req.ip): ${clientInfo.ip_raw}`);
+    console.log(`   🔀 X-Forwarded-For: ${clientInfo.ip_forwarded_for || 'Not set'}`);
+    console.log(`   🔗 X-Real-IP: ${clientInfo.ip_real || 'Not set'}`);
+    console.log(`   🔌 Socket: ${clientInfo.ip_socket || 'Not set'}`);
+    console.log(`\n� LOCATION:`);
+    console.log(`   Country: ${clientInfo.country || 'Unknown'}`);
+    console.log(`   City: ${clientInfo.city || 'Unknown'}`);
+    console.log(`\n💻 CLIENT:`);
+    console.log(`   Browser: ${clientInfo.browser}`);
+    console.log(`   Platform: ${clientInfo.platform}`);
+    console.log(`   User Agent: ${clientInfo.user_agent || 'Not provided'}`);
+    console.log(`\n📄 REQUEST:`);
+    console.log(`   Method: ${req.method}`);
+    console.log(`   URL: ${req.url}`);
+    console.log(`   Referer: ${clientInfo.referer || 'Direct access'}`);
+    console.log(`   Language: ${clientInfo.accept_language || 'Not specified'}`);
+    console.log(`\n✅ AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
     console.log('='.repeat(80) + '\n');
     
     if (!allowedIPs.includes(clientIp)) {
