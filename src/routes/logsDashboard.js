@@ -14,33 +14,33 @@ export const getLogsDashboard = (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            /* Cores Primárias - Azul vibrante */
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --primary-light: #60a5fa;
+            /* Cores Primárias - Sistema mais contrastante */
+            --primary: #2563eb;        /* Azul mais escuro e saturado */
+            --primary-dark: #1e40af;   /* Azul muito escuro para hover */
+            --primary-light: #3b82f6;  /* Azul claro para backgrounds */
             
-            /* Cores Secundárias - Roxo */
-            --secondary: #8b5cf6;
-            --secondary-dark: #7c3aed;
+            /* Cores Secundárias - Roxo escuro */
+            --secondary: #7c3aed;      /* Roxo mais saturado */
+            --secondary-dark: #6d28d9; /* Roxo muito escuro */
             
-            /* Acento - Rosa/Magenta */
-            --accent: #ec4899;
-            --accent-dark: #db2777;
+            /* Acento - Laranja vibrante (mais visível) */
+            --accent: #f97316;         /* Laranja forte */
+            --accent-dark: #ea580c;    
             
             /* Estados */
-            --success: #10b981;
-            --success-dark: #059669;
-            --danger: #ef4444;
-            --danger-dark: #dc2626;
-            --warning: #f59e0b;
-            --warning-dark: #d97706;
-            --info: #06b6d4;
-            --info-dark: #0891b2;
+            --success: #059669;        /* Verde mais escuro */
+            --success-dark: #047857;
+            --danger: #dc2626;         /* Vermelho mais escuro */
+            --danger-dark: #b91c1c;
+            --warning: #d97706;        /* Laranja/Amarelo mais escuro */
+            --warning-dark: #b45309;
+            --info: #0891b2;           /* Ciano mais escuro */
+            --info-dark: #0e7490;
             
-            /* Textos */
-            --text-primary: #1e293b;
-            --text-secondary: #475569;
-            --text-muted: #64748b;
+            /* Textos - Alto contraste */
+            --text-primary: #0f172a;   /* Quase preto */
+            --text-secondary: #334155; /* Cinza escuro */
+            --text-muted: #64748b;     /* Cinza médio */
             
             /* Backgrounds */
             --bg-primary: #ffffff;
