@@ -12,6 +12,7 @@ const envIPs = process.env.ALLOWED_IPS
 export const allowedIPs = [
     '127.0.0.1',           // localhost IPv4
     '::1',                 // localhost IPv6
-    ...envIPs              // IPs adicionais do .env
+    '10.244.0.0/16'       // ZeroTier Network (rede virtual segura)
+    //...envIPs              // IPs adicionais do .env
 ];
 

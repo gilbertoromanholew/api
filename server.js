@@ -7,6 +7,7 @@ import { getApiDocs } from './src/routes/docs.js';
 import { getLogsDashboard } from './src/routes/logsDashboard.js';
 import { autoLoadRoutes } from './src/core/routeLoader.js';
 import logsRoutes from './src/routes/logsRoutes.js';
+import zerotierRoutes from './src/routes/zerotier.js';
 import config from './src/config/index.js';
 
 const app = express();
@@ -23,6 +24,7 @@ app.get('/', getApiInfo);           // JSON com toda documentação
 app.get('/docs', getApiDocs);       // Página HTML bonita
 app.get('/logs', getLogsDashboard); // Dashboard de logs em tempo real
 app.use(logsRoutes);                // API de logs
+app.use('/zerotier', zerotierRoutes); // API ZeroTier (status e info)
 
 // Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
@@ -36,5 +38,6 @@ app.listen(config.server.port, config.server.host, () => {
     console.log(`🚀 Servidor rodando na porta ${config.server.port}`);
     console.log(`📍 Acesse: http://localhost:${config.server.port}`);
     console.log(`📖 Documentação: http://localhost:${config.server.port}/docs`);
-    console.log(`📊 Dashboard: http://localhost:${config.server.port}/logs\n`);
+    console.log(`📊 Dashboard: http://localhost:${config.server.port}/logs`);
+    console.log(`🔐 ZeroTier Status: http://localhost:${config.server.port}/zerotier/status\n`);
 });

@@ -852,6 +852,68 @@ export const getLogsDashboard = (req, res) => {
             </div>
         </div>
 
+        <!-- ZeroTier Status -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleZeroTierSection()">
+                    <span id="zerotier-section-icon">▶</span>
+                    🔐 Rede ZeroTier
+                    <span class="badge badge-success" id="zt-status-badge">Verificando...</span>
+                </h2>
+            </div>
+            <div id="zerotier-section-content" style="display: none; padding-top: 20px;">
+                <div class="stats-grid">
+                    <div class="stat-card info">
+                        <div class="stat-label">🌐 Network ID</div>
+                        <div class="stat-value" style="font-size: 1.2em;">fada62b01530e6b6</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-label">📡 Range IP</div>
+                        <div class="stat-value" style="font-size: 1.5em;">10.244.0.0/16</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">💻 Seu IP ZT</div>
+                        <div class="stat-value" style="font-size: 1.5em;" id="zt-client-ip">--.--.--.--</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">🔒 Status</div>
+                        <div class="stat-value" style="font-size: 1.5em;" id="zt-connection-status">Verificando...</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 12px; border-left: 4px solid var(--info);">
+                    <h3 style="margin: 0 0 15px 0; font-size: 16px; color: var(--info);">📱 Como adicionar novo dispositivo:</h3>
+                    <ol style="margin: 0; padding-left: 25px; font-size: 14px; line-height: 2;">
+                        <li><strong>Instalar ZeroTier</strong> no dispositivo
+                            <br><span style="font-size: 12px; color: var(--text-muted);">
+                                Windows: <a href="https://download.zerotier.com/dist/ZeroTier%20One.msi" target="_blank" style="color: var(--info);">Download MSI</a> | 
+                                Android: <a href="https://play.google.com/store/apps/details?id=com.zerotier.one" target="_blank" style="color: var(--info);">Play Store</a> | 
+                                iOS: <a href="https://apps.apple.com/app/zerotier-one/id1084101492" target="_blank" style="color: var(--info);">App Store</a>
+                            </span>
+                        </li>
+                        <li><strong>Entrar na rede:</strong> <code style="background: var(--dark-bg); padding: 4px 8px; border-radius: 4px;">zerotier-cli join fada62b01530e6b6</code>
+                            <br><span style="font-size: 12px; color: var(--text-muted);">No mobile: digitar o Network ID e clicar em "Join"</span>
+                        </li>
+                        <li><strong>Autorizar</strong> no <a href="https://my.zerotier.com" target="_blank" style="color: var(--info);">Dashboard ZeroTier</a>
+                            <br><span style="font-size: 12px; color: var(--text-muted);">Marcar checkbox "Auth" ✅ para o novo dispositivo</span>
+                        </li>
+                        <li><strong>Pronto!</strong> Acesso automático à API via IP ZeroTier</li>
+                    </ol>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 15px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; border-left: 4px solid var(--success);">
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--success);">✅ Vantagens do ZeroTier:</h4>
+                    <ul style="margin: 0; padding-left: 25px; font-size: 13px; line-height: 1.8; color: var(--text-muted);">
+                        <li><strong>Segurança:</strong> Criptografia ponta-a-ponta automática</li>
+                        <li><strong>Controle:</strong> Você escolhe quem tem acesso (dashboard web)</li>
+                        <li><strong>Mobilidade:</strong> Mesmo IP independente da rede física</li>
+                        <li><strong>Simplicidade:</strong> Um clique para bloquear/desbloquear dispositivos</li>
+                        <li><strong>Performance:</strong> Conexão P2P quando possível (baixa latência)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <!-- Recent Logs -->
         <div class="section">
             <div class="section-header">
@@ -1667,6 +1729,60 @@ export const getLogsDashboard = (req, res) => {
             }
         }
 
+        // Alternar seção ZeroTier
+        function toggleZeroTierSection() {
+            const content = document.getElementById('zerotier-section-content');
+            const icon = document.getElementById('zerotier-section-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // Verificar status do ZeroTier
+        async function checkZeroTierStatus() {
+            try {
+                const response = await fetch('/zerotier/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Atualizar badge de status
+                    const badge = document.getElementById('zt-status-badge');
+                    if (data.client.isZeroTier) {
+                        badge.textContent = '✅ Conectado via ZT';
+                        badge.className = 'badge badge-success';
+                    } else if (data.client.isLocalhost) {
+                        badge.textContent = '🏠 Localhost';
+                        badge.className = 'badge badge-info';
+                    } else {
+                        badge.textContent = '⚠️ Não conectado';
+                        badge.className = 'badge badge-warning';
+                    }
+                    
+                    // Atualizar IP do cliente
+                    document.getElementById('zt-client-ip').textContent = data.client.ip;
+                    
+                    // Atualizar status de conexão
+                    const statusEl = document.getElementById('zt-connection-status');
+                    if (data.client.isZeroTier) {
+                        statusEl.innerHTML = '<span style="color: var(--success);">✅ Conectado</span>';
+                    } else if (data.client.isLocalhost) {
+                        statusEl.innerHTML = '<span style="color: var(--info);">🏠 Local</span>';
+                    } else {
+                        statusEl.innerHTML = '<span style="color: var(--warning);">⚠️ Fora da rede</span>';
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao verificar ZeroTier:', error);
+                document.getElementById('zt-status-badge').textContent = '❌ Erro';
+                document.getElementById('zt-status-badge').className = 'badge badge-danger';
+            }
+        }
+
         // Expandir lista de detalhes (mostrar todos os itens)
         function expandDetailList(listId) {
             const items = document.querySelectorAll(\`.expand-item-\${listId}\`);
@@ -1810,9 +1926,13 @@ export const getLogsDashboard = (req, res) => {
 
         // Inicializar
         detectMyIP(); // Detectar IP do usuário primeiro
+        checkZeroTierStatus(); // Verificar status ZeroTier
         loadAllData();
         startCountdown();
         startRefreshInterval();
+        
+        // Verificar ZeroTier a cada 30 segundos
+        setInterval(checkZeroTierStatus, 30000);
         
         // Toast de boas-vindas
         setTimeout(() => {

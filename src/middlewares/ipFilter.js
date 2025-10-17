@@ -5,6 +5,78 @@ import { accessLogger } from '../utils/accessLogger.js';
 const geoCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
 
+/**
+ * Verifica se um IP está dentro de um range CIDR
+ * Exemplo: isIPInRange('10.244.229.5', '10.244.0.0/16') → true
+ * @param {string} ip - IP a ser verificado
+ * @param {string} cidr - Range CIDR ou IP exato
+ * @returns {boolean}
+ */
+function isIPInRange(ip, cidr) {
+    // Se não tem '/', é IP exato
+    if (!cidr.includes('/')) {
+        return ip === cidr;
+    }
+    
+    const [range, bits] = cidr.split('/');
+    const bitsNum = parseInt(bits);
+    
+    // Converter IP para número
+    const ipToNumber = (ipStr) => {
+        return ipStr.split('.')
+            .reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
+    };
+    
+    // Criar máscara de rede
+    const mask = ~(2 ** (32 - bitsNum) - 1);
+    
+    const ipNum = ipToNumber(ip);
+    const rangeNum = ipToNumber(range);
+    
+    return (ipNum & mask) === (rangeNum & mask);
+}
+
+/**
+ * Identifica a origem da conexão
+ * @param {string} ip - IP do cliente
+ * @returns {object} - { type, network, icon, color }
+ */
+function getConnectionOrigin(ip) {
+    if (ip === '127.0.0.1' || ip === '::1') {
+        return { 
+            type: 'localhost', 
+            network: 'Desenvolvimento Local',
+            icon: '🏠',
+            color: 'blue'
+        };
+    }
+    
+    if (ip.startsWith('10.244.')) {
+        return { 
+            type: 'zerotier', 
+            network: 'ZeroTier VPN',
+            icon: '🔐',
+            color: 'green'
+        };
+    }
+    
+    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
+        return { 
+            type: 'local', 
+            network: 'Rede Local Privada',
+            icon: '🏢',
+            color: 'yellow'
+        };
+    }
+    
+    return { 
+        type: 'public', 
+        network: 'Internet Pública',
+        icon: '🌐',
+        color: 'red'
+    };
+}
+
 // Função para obter geolocalização do IP
 async function getIPGeolocation(ip) {
     // IPs locais não precisam de geolocalização
@@ -158,18 +230,22 @@ export const ipFilter = async (req, res, next) => {
         timestamp: new Date().toISOString(),
         timestamp_unix: Date.now(),
         
-        // Status de Autorização
-        is_authorized: allowedIPs.includes(clientIp),
+        // Status de Autorização (agora suporta CIDR)
+        is_authorized: allowedIPs.some(allowedIP => isIPInRange(clientIp, allowedIP)),
         allowed_ips: allowedIPs
     };
     
+    // Detectar origem da conexão
+    const origin = getConnectionOrigin(clientIp);
+    
     // Log completo no console
     console.log('\n' + '='.repeat(80));
-    console.log('🔍 IP FILTER - CLIENT ACCESS ATTEMPT');
+    console.log(`${origin.icon} IP FILTER - CLIENT ACCESS ATTEMPT`);
     console.log('='.repeat(80));
     console.log(`⏰ Time: ${clientInfo.timestamp}`);
     console.log(`\n📍 IP ANALYSIS:`);
     console.log(`   🎯 Detected (used for auth): ${clientInfo.ip_detected}`);
+    console.log(`   ${origin.icon} Origin: ${origin.network} (${origin.type})`);
     console.log(`   📦 Raw (req.ip): ${clientInfo.ip_raw}`);
     console.log(`   🔀 X-Forwarded-For: ${clientInfo.ip_forwarded_for || 'Not set'}`);
     console.log(`   🔗 X-Real-IP: ${clientInfo.ip_real || 'Not set'}`);
@@ -177,7 +253,13 @@ export const ipFilter = async (req, res, next) => {
     console.log(`\n🌍 LOCATION:`);
     console.log(`   Country: ${clientInfo.country || 'Unknown'} (${clientInfo.countryCode || 'XX'})`);
     console.log(`   City: ${clientInfo.city || 'Unknown'}`);
-    console.log(`\n💻 CLIENT:`);
+    if (origin.type === 'zerotier') {
+        console.log(`\n� ZEROTIER INFO:`);
+        console.log(`   Network: fada62b01530e6b6`);
+        console.log(`   Range: 10.244.0.0/16`);
+        console.log(`   Security: Encrypted P2P connection`);
+    }
+    console.log(`\n�💻 CLIENT:`);
     console.log(`   Browser: ${clientInfo.browser}`);
     console.log(`   Platform: ${clientInfo.platform}`);
     console.log(`   User Agent: ${clientInfo.user_agent || 'Not provided'}`);
@@ -186,7 +268,13 @@ export const ipFilter = async (req, res, next) => {
     console.log(`   URL: ${req.url}`);
     console.log(`   Referer: ${clientInfo.referer || 'Direct access'}`);
     console.log(`   Language: ${clientInfo.accept_language || 'Not specified'}`);
-    console.log(`\n✅ AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
+    console.log(`\n${clientInfo.is_authorized ? '✅' : '❌'} AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
+    if (!clientInfo.is_authorized && origin.type !== 'zerotier') {
+        console.log(`\n💡 TIP: Use ZeroTier para conectar com segurança!`);
+        console.log(`   1. Instalar: https://www.zerotier.com/download/`);
+        console.log(`   2. Executar: zerotier-cli join fada62b01530e6b6`);
+        console.log(`   3. Aguardar autorização do administrador`);
+    }
     console.log('='.repeat(80) + '\n');
     
     // Registrar no sistema de logs APENAS se não for request de API de logs ou assets
@@ -199,12 +287,30 @@ export const ipFilter = async (req, res, next) => {
         accessLogger.addLog(clientInfo);
     }
     
-    if (!allowedIPs.includes(clientIp)) {
+    // Verificar autorização (agora suporta CIDR)
+    if (!clientInfo.is_authorized) {
         return res.status(403).json({ 
-            error: 'Hackers are not allowed here. Please go away ;)',
+            success: false,
+            error: 'Access denied - IP not authorized',
+            yourIP: clientIp,
+            origin: origin.network,
+            message: origin.type === 'zerotier' 
+                ? 'Dispositivo ZeroTier não autorizado. Contate o administrador para liberar acesso.'
+                : origin.type === 'localhost'
+                ? 'Localhost deveria estar autorizado. Verifique a configuração.'
+                : 'Este IP não está autorizado. Use ZeroTier para conectar com segurança: https://www.zerotier.com/',
+            zerotier: origin.type !== 'zerotier' ? {
+                howToConnect: [
+                    '1. Instalar ZeroTier: https://www.zerotier.com/download/',
+                    '2. Executar: zerotier-cli join fada62b01530e6b6',
+                    '3. Aguardar autorização do administrador no dashboard ZeroTier',
+                    '4. Acessar API usando IP ZeroTier (10.244.x.x)'
+                ]
+            } : undefined,
             debug: clientInfo  // Todas as informações do cliente
         });
     }
+    
     next();
 };
 
