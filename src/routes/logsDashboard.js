@@ -3721,63 +3721,6 @@ export const getLogsDashboard = (req, res) => {
             timeline.innerHTML = timelineHTML;
         }
         
-        // MODAL: CONFIRMAÇÃO
-        function confirmWarnIP(ip) {
-            confirmActionData = { action: 'warn', ip: ip, callback: warnIPManually };
-            document.getElementById('confirm-action-title').textContent = '⚠️ Confirmar Aviso';
-            document.getElementById('confirm-action-message').textContent = 
-                'Você tem certeza que deseja adicionar um aviso a este IP? Esta ação registrará uma tentativa de acesso negada.';
-            document.getElementById('confirm-action-ip').textContent = ip;
-            document.getElementById('confirm-action-btn').className = 'btn warning';
-            document.getElementById('confirm-action-btn').textContent = '⚠️ Avisar';
-            document.getElementById('confirmActionModal').style.display = 'flex';
-        }
-        
-        function confirmSuspendIP(ip) {
-            confirmActionData = { action: 'suspend', ip: ip, callback: suspendIPManually };
-            document.getElementById('confirm-action-title').textContent = '⏳ Confirmar Suspensão';
-            document.getElementById('confirm-action-message').textContent = 
-                'Você tem certeza que deseja suspender este IP temporariamente? O IP ficará bloqueado por 60 minutos.';
-            document.getElementById('confirm-action-ip').textContent = ip;
-            document.getElementById('confirm-action-btn').className = 'btn info';
-            document.getElementById('confirm-action-btn').textContent = '⏳ Suspender';
-            document.getElementById('confirmActionModal').style.display = 'flex';
-        }
-        
-        function confirmBlockIP(ip) {
-            confirmActionData = { action: 'block', ip: ip, callback: blockIPManually };
-            document.getElementById('confirm-action-title').textContent = '🚫 Confirmar Bloqueio';
-            document.getElementById('confirm-action-message').textContent = 
-                'Você tem certeza que deseja bloquear este IP permanentemente? Esta ação só pode ser revertida manualmente.';
-            document.getElementById('confirm-action-ip').textContent = ip;
-            document.getElementById('confirm-action-btn').className = 'btn danger';
-            document.getElementById('confirm-action-btn').textContent = '🚫 Bloquear';
-            document.getElementById('confirmActionModal').style.display = 'flex';
-        }
-        
-        function confirmClearIP(ip) {
-            confirmActionData = { action: 'clear', ip: ip, callback: clearIPStatus };
-            document.getElementById('confirm-action-title').textContent = '✅ Confirmar Limpeza de Status';
-            document.getElementById('confirm-action-message').textContent = 
-                'Você tem certeza que deseja limpar o status deste IP? Todos os avisos, suspensões e bloqueios serão removidos.';
-            document.getElementById('confirm-action-ip').textContent = ip;
-            document.getElementById('confirm-action-btn').className = 'btn success';
-            document.getElementById('confirm-action-btn').textContent = '✅ Limpar';
-            document.getElementById('confirmActionModal').style.display = 'flex';
-        }
-        
-        function closeConfirmModal() {
-            document.getElementById('confirmActionModal').style.display = 'none';
-            confirmActionData = { action: null, ip: null, callback: null };
-        }
-        
-        async function executeConfirmedAction() {
-            if (confirmActionData.callback && confirmActionData.ip) {
-                closeConfirmModal();
-                await confirmActionData.callback(confirmActionData.ip);
-            }
-        }
-        
         // FUNÇÕES DE API
         async function warnIPManually(ip) {
             const reason = prompt(\`Avisar IP \${ip}\n\nDigite o motivo do aviso:\`, 'Aviso manual');
@@ -3871,6 +3814,81 @@ export const getLogsDashboard = (req, res) => {
             } catch (error) {
                 console.error('Erro ao limpar status:', error);
                 showToast('❌ Erro de conexão', 'error');
+            }
+        }
+        
+        // MODAL: CONFIRMAÇÃO
+        function confirmWarnIP(ip) {
+            confirmActionData = { action: 'warn', ip: ip, callback: warnIPManually };
+            document.getElementById('confirm-action-title').textContent = '⚠️ Confirmar Aviso';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja adicionar um aviso a este IP? Esta ação registrará uma tentativa de acesso negada.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn warning';
+            document.getElementById('confirm-action-btn').textContent = '⚠️ Avisar';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function confirmSuspendIP(ip) {
+            confirmActionData = { action: 'suspend', ip: ip, callback: suspendIPManually };
+            document.getElementById('confirm-action-title').textContent = '⏳ Confirmar Suspensão';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja suspender este IP temporariamente? O IP ficará bloqueado por 60 minutos.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn info';
+            document.getElementById('confirm-action-btn').textContent = '⏳ Suspender';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function confirmBlockIP(ip) {
+            confirmActionData = { action: 'block', ip: ip, callback: blockIPManually };
+            document.getElementById('confirm-action-title').textContent = '🚫 Confirmar Bloqueio';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja bloquear este IP permanentemente? Esta ação só pode ser revertida manualmente.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn danger';
+            document.getElementById('confirm-action-btn').textContent = '🚫 Bloquear';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function confirmClearIP(ip) {
+            confirmActionData = { action: 'clear', ip: ip, callback: clearIPStatus };
+            document.getElementById('confirm-action-title').textContent = '✅ Confirmar Limpeza de Status';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja limpar o status deste IP? Todos os avisos, suspensões e bloqueios serão removidos.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn success';
+            document.getElementById('confirm-action-btn').textContent = '✅ Limpar';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirmActionModal').style.display = 'none';
+            confirmActionData = { action: null, ip: null, callback: null };
+        }
+        
+        async function executeConfirmedAction() {
+            // Salvar callback antes de fechar o modal
+            const callback = confirmActionData.callback;
+            const ip = confirmActionData.ip;
+            
+            // Fechar modal primeiro
+            document.getElementById('confirmActionModal').style.display = 'none';
+            
+            // Executar callback se existir
+            if (callback && typeof callback === 'function' && ip) {
+                try {
+                    await callback(ip);
+                } catch (error) {
+                    console.error('Erro ao executar ação:', error);
+                    showToast('❌ Erro ao executar ação', 'error');
+                } finally {
+                    // Limpar dados após execução
+                    confirmActionData = { action: null, ip: null, callback: null };
+                }
+            } else {
+                // Limpar se não houver callback válido
+                confirmActionData = { action: null, ip: null, callback: null };
             }
         }
         
