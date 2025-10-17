@@ -3830,7 +3830,10 @@ export const getLogsDashboard = (req, res) => {
         }
         
         function confirmSuspendIP(ip) {
+            console.log('🔍 confirmSuspendIP chamado com IP:', ip);
+            console.log('🔍 suspendIPManually existe?', typeof suspendIPManually);
             confirmActionData = { action: 'suspend', ip: ip, callback: suspendIPManually };
+            console.log('🔍 confirmActionData configurado:', confirmActionData);
             document.getElementById('confirm-action-title').textContent = '⏳ Confirmar Suspensão';
             document.getElementById('confirm-action-message').textContent = 
                 'Você tem certeza que deseja suspender este IP temporariamente? O IP ficará bloqueado por 60 minutos.';
@@ -3841,7 +3844,10 @@ export const getLogsDashboard = (req, res) => {
         }
         
         function confirmBlockIP(ip) {
+            console.log('🔍 confirmBlockIP chamado com IP:', ip);
+            console.log('🔍 blockIPManually existe?', typeof blockIPManually);
             confirmActionData = { action: 'block', ip: ip, callback: blockIPManually };
+            console.log('🔍 confirmActionData configurado:', confirmActionData);
             document.getElementById('confirm-action-title').textContent = '🚫 Confirmar Bloqueio';
             document.getElementById('confirm-action-message').textContent = 
                 'Você tem certeza que deseja bloquear este IP permanentemente? Esta ação só pode ser revertida manualmente.';
@@ -3868,25 +3874,38 @@ export const getLogsDashboard = (req, res) => {
         }
         
         async function executeConfirmedAction() {
+            console.log('🔍 DEBUG executeConfirmedAction chamado');
+            console.log('🔍 confirmActionData:', confirmActionData);
+            console.log('🔍 confirmActionData.callback:', confirmActionData.callback);
+            console.log('🔍 Tipo do callback:', typeof confirmActionData.callback);
+            
             // Salvar callback antes de fechar o modal
             const callback = confirmActionData.callback;
             const ip = confirmActionData.ip;
+            
+            console.log('🔍 Callback salvo:', callback);
+            console.log('🔍 IP salvo:', ip);
             
             // Fechar modal primeiro
             document.getElementById('confirmActionModal').style.display = 'none';
             
             // Executar callback se existir
             if (callback && typeof callback === 'function' && ip) {
+                console.log('✅ Executando callback...');
                 try {
                     await callback(ip);
                 } catch (error) {
-                    console.error('Erro ao executar ação:', error);
+                    console.error('❌ Erro ao executar ação:', error);
                     showToast('❌ Erro ao executar ação', 'error');
                 } finally {
                     // Limpar dados após execução
                     confirmActionData = { action: null, ip: null, callback: null };
                 }
             } else {
+                console.error('❌ Callback inválido ou IP ausente');
+                console.error('❌ callback:', callback);
+                console.error('❌ typeof callback:', typeof callback);
+                console.error('❌ ip:', ip);
                 // Limpar se não houver callback válido
                 confirmActionData = { action: null, ip: null, callback: null };
             }
@@ -4198,6 +4217,18 @@ export const getLogsDashboard = (req, res) => {
         // ============= FIM FUNÇÕES DE SEGURANÇA =============
 
         // Inicializar
+        // DEBUG: Verificar se funções de API existem
+        console.log('🔍 DEBUG: Verificando funções de API...');
+        console.log('🔍 warnIPManually:', typeof warnIPManually);
+        console.log('🔍 suspendIPManually:', typeof suspendIPManually);
+        console.log('🔍 blockIPManually:', typeof blockIPManually);
+        console.log('🔍 clearIPStatus:', typeof clearIPStatus);
+        console.log('🔍 confirmWarnIP:', typeof confirmWarnIP);
+        console.log('🔍 confirmSuspendIP:', typeof confirmSuspendIP);
+        console.log('🔍 confirmBlockIP:', typeof confirmBlockIP);
+        console.log('🔍 executeConfirmedAction:', typeof executeConfirmedAction);
+        console.log('🔍 confirmActionData:', confirmActionData);
+        
         detectMyIP(); // Detectar IP do usuário primeiro
         checkZeroTierStatus(); // Verificar status ZeroTier
         loadAllData();
