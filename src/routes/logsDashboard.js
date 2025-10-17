@@ -1921,6 +1921,9 @@ export const getLogsDashboard = (req, res) => {
                         <button class="btn-add-ip" onclick="openAddIPModal()">
                             ➕ Adicionar IP
                         </button>
+                        <button class="btn-add-ip" onclick="openAuthorizeIPModal()" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            🔓 Autorizar Acesso
+                        </button>
                         <button class="btn-refresh" onclick="loadUnifiedList()">
                             🔄 Atualizar
                         </button>
@@ -2060,6 +2063,62 @@ export const getLogsDashboard = (req, res) => {
                     </button>
                     <button class="btn success" onclick="submitAddIP()">
                         ✅ Adicionar IP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Autorizar IP -->
+        <div id="authorizeIPModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>🔓 Autorizar IP para Acesso à API</h2>
+                    <button class="modal-close" onclick="closeAuthorizeIPModal()">✖</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 20px;">
+                        <label for="authorize-ip-address">
+                            📍 Endereço IP:
+                        </label>
+                        <input type="text" 
+                               id="authorize-ip-address" 
+                               placeholder="Ex: 192.168.1.100"
+                        />
+                        <small>
+                            Digite o IP que você deseja autorizar a fazer requisições à API
+                        </small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label for="authorize-ip-reason">
+                            📝 Motivo (opcional):
+                        </label>
+                        <textarea id="authorize-ip-reason" 
+                                  placeholder="Ex: Servidor de produção, desenvolvedor aprovado, etc." 
+                                  rows="3" 
+                                  style="resize: vertical;"
+                        ></textarea>
+                        <small>
+                            Adicione uma descrição para identificar este IP no futuro
+                        </small>
+                    </div>
+
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 15px; margin-top: 15px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="font-size: 1.3em;">✅</span>
+                            <strong style="color: #10b981;">O que isso faz?</strong>
+                        </div>
+                        <small style="color: rgba(255, 255, 255, 0.7); line-height: 1.5;">
+                            Este IP será <strong>adicionado à lista de IPs autorizados</strong> e poderá fazer requisições normalmente à API, sem ser bloqueado pelo sistema de segurança.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn secondary" onclick="closeAuthorizeIPModal()">
+                        ❌ Cancelar
+                    </button>
+                    <button class="btn success" onclick="submitAuthorizeIP()">
+                        🔓 Autorizar
                     </button>
                 </div>
             </div>
@@ -3447,6 +3506,11 @@ export const getLogsDashboard = (req, res) => {
                 actions.unshift({ type: 'clear', icon: '✅', label: 'Limpar Status', handler: 'confirmClearIP' });
             }
             
+            // Adicionar opção de autorizar para todos os IPs (exceto próprio IP)
+            if (!isOwnIP) {
+                actions.push({ type: 'authorize', icon: '🔓', label: 'Autorizar API', handler: 'confirmAuthorizeIPFromCard' });
+            }
+            
             return actions;
         }
         
@@ -3682,6 +3746,57 @@ export const getLogsDashboard = (req, res) => {
             }
         }
         
+        // MODAL: AUTORIZAR IP
+        function openAuthorizeIPModal() {
+            const modal = document.getElementById('authorizeIPModal');
+            modal.style.display = 'flex';
+            document.getElementById('authorize-ip-address').value = '';
+            document.getElementById('authorize-ip-reason').value = '';
+            document.getElementById('authorize-ip-address').focus();
+        }
+        
+        function closeAuthorizeIPModal() {
+            const modal = document.getElementById('authorizeIPModal');
+            modal.style.display = 'none';
+        }
+        
+        async function submitAuthorizeIP() {
+            const ip = document.getElementById('authorize-ip-address').value.trim();
+            const reason = document.getElementById('authorize-ip-reason').value.trim();
+            
+            if (!ip) {
+                showToast('❌ Digite um endereço IP', 'error');
+                return;
+            }
+            
+            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (!ipPattern.test(ip)) {
+                showToast('❌ Formato de IP inválido', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/security/authorize-ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip, reason: reason || 'IP autorizado manualmente' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(\`🔓 IP \${ip} autorizado com sucesso!\`, 'success');
+                    closeAuthorizeIPModal();
+                    // Opcional: recarregar lista se houver uma lista de IPs autorizados
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao autorizar IP:', error);
+                showToast('❌ Erro de conexão com o servidor', 'error');
+            }
+        }
+
         // MODAL: HISTÓRICO
         async function openHistoryModal(ip) {
             const modal = document.getElementById('historyModal');
@@ -3970,6 +4085,41 @@ export const getLogsDashboard = (req, res) => {
             document.getElementById('confirm-action-btn').className = 'btn success';
             document.getElementById('confirm-action-btn').textContent = '✅ Limpar';
             document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+
+        function confirmAuthorizeIPFromCard(ip) {
+            confirmActionData = { action: 'authorize', ip: ip, callback: authorizeIPFromCard };
+            document.getElementById('confirm-action-title').textContent = '🔓 Autorizar Acesso à API';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja autorizar este IP a fazer requisições à API? O IP será adicionado à lista de IPs permitidos (allowlist).';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn success';
+            document.getElementById('confirm-action-btn').textContent = '🔓 Autorizar';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+
+        async function authorizeIPFromCard(ip) {
+            try {
+                const response = await fetch('/api/security/authorize-ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        ip, 
+                        reason: 'IP autorizado via dashboard de segurança' 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(\`🔓 IP \${ip} autorizado com sucesso!\`, 'success');
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao autorizar IP:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
         }
         
         function closeConfirmModal() {

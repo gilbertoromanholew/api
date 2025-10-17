@@ -639,4 +639,115 @@ router.post('/add-ip', (req, res) => {
     }
 });
 
+/**
+ * GET /api/security/allowed-ips
+ * Listar todos os IPs autorizados
+ */
+router.get('/allowed-ips', async (req, res) => {
+    try {
+        const { getAllowedIPsList } = await import('../config/allowedIPs.js');
+        const list = getAllowedIPsList();
+        
+        res.json({
+            success: true,
+            ...list,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/security/authorize-ip
+ * Adicionar IP à lista de autorizados (allowlist)
+ * Body: { ip: string, reason?: string }
+ */
+router.post('/authorize-ip', async (req, res) => {
+    try {
+        const { ip, reason } = req.body;
+
+        // Validar que o IP foi fornecido
+        if (!ip) {
+            return res.status(400).json({
+                success: false,
+                error: 'IP address is required'
+            });
+        }
+
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        // Validar octetos do IP (0-255)
+        const octets = ip.split('.');
+        const validOctets = octets.every(octet => {
+            const num = parseInt(octet, 10);
+            return num >= 0 && num <= 255;
+        });
+
+        if (!validOctets) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address: octets must be between 0-255'
+            });
+        }
+
+        const { addAllowedIP } = await import('../config/allowedIPs.js');
+        const result = addAllowedIP(ip, reason);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/security/unauthorize-ip/:ip
+ * Remover IP da lista de autorizados (allowlist)
+ */
+router.post('/unauthorize-ip/:ip', async (req, res) => {
+    try {
+        const { ip } = req.params;
+
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        const { removeAllowedIP } = await import('../config/allowedIPs.js');
+        const result = removeAllowedIP(ip);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 export default router;
