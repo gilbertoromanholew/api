@@ -16,39 +16,79 @@ const permanentIPs = [
 ];
 
 // IPs dinâmicos (apenas em memória - resetam ao reiniciar)
+// Estrutura: [{ ip: string, level: 'guest' | 'trusted', reason: string, authorizedAt: string }]
 let dynamicIPs = [];
 
 // Lista de IPs autorizados (combinação de todos)
 export let allowedIPs = [
     ...permanentIPs,
     ...envIPs,
-    ...dynamicIPs
+    ...dynamicIPs.map(entry => entry.ip)
 ];
 
-// Adicionar IP à allowlist
-export function addAllowedIP(ip, reason = '') {
-    // Verificar se já existe
-    if (allowedIPs.includes(ip)) {
-        return { success: false, error: 'IP já está na lista de autorizados' };
+// Adicionar IP à allowlist com nível de acesso
+export function addAllowedIP(ip, reason = '', level = 'guest') {
+    // Validar nível
+    if (!['guest', 'trusted'].includes(level)) {
+        return { success: false, error: 'Nível inválido. Use "guest" ou "trusted"' };
     }
     
-    // Adicionar aos IPs dinâmicos (apenas em memória)
-    dynamicIPs.push(ip);
+    // Verificar se já existe (apenas o IP)
+    const existingIndex = dynamicIPs.findIndex(entry => entry.ip === ip);
+    
+    if (existingIndex !== -1) {
+        // Atualizar nível e razão do IP existente
+        dynamicIPs[existingIndex] = {
+            ip: ip,
+            level: level,
+            reason: reason,
+            authorizedAt: new Date().toISOString()
+        };
+        
+        return { 
+            success: true, 
+            message: `IP ${ip} atualizado para nível ${level}`,
+            ip: ip,
+            level: level,
+            reason: reason,
+            timestamp: new Date().toISOString()
+        };
+    }
+    
+    // Adicionar novo IP aos IPs dinâmicos
+    dynamicIPs.push({
+        ip: ip,
+        level: level,
+        reason: reason,
+        authorizedAt: new Date().toISOString()
+    });
     
     // Atualizar lista combinada
     allowedIPs = [
         ...permanentIPs,
         ...envIPs,
-        ...dynamicIPs
+        ...dynamicIPs.map(entry => entry.ip)
     ];
     
     return { 
         success: true, 
-        message: `IP ${ip} adicionado à lista de autorizados`,
+        message: `IP ${ip} adicionado à lista de autorizados com nível ${level}`,
         ip: ip,
+        level: level,
         reason: reason,
         timestamp: new Date().toISOString()
     };
+}
+
+// Obter nível de acesso de um IP dinâmico
+export function getDynamicIPLevel(ip) {
+    const entry = dynamicIPs.find(e => e.ip === ip);
+    return entry ? entry.level : null;
+}
+
+// Obter informações completas de um IP dinâmico
+export function getDynamicIPInfo(ip) {
+    return dynamicIPs.find(e => e.ip === ip) || null;
 }
 
 // Remover IP da allowlist
@@ -64,18 +104,19 @@ export function removeAllowedIP(ip) {
     }
     
     // Verificar se existe nos dinâmicos
-    if (!dynamicIPs.includes(ip)) {
+    const dynamicIndex = dynamicIPs.findIndex(entry => entry.ip === ip);
+    if (dynamicIndex === -1) {
         return { success: false, error: 'IP não encontrado na lista de autorizados dinâmicos' };
     }
     
     // Remover dos IPs dinâmicos (apenas em memória)
-    dynamicIPs = dynamicIPs.filter(existingIP => existingIP !== ip);
+    dynamicIPs = dynamicIPs.filter(entry => entry.ip !== ip);
     
     // Atualizar lista combinada
     allowedIPs = [
         ...permanentIPs,
         ...envIPs,
-        ...dynamicIPs
+        ...dynamicIPs.map(entry => entry.ip)
     ];
     
     return { 

@@ -22,7 +22,7 @@ const permanentIPs = [
  */
 export async function getIPAccessLevel(ip) {
     // Carregar configurações dinamicamente
-    const { getAllowedIPsList } = await import('../config/allowedIPs.js');
+    const { getAllowedIPsList, getDynamicIPLevel } = await import('../config/allowedIPs.js');
     const ipList = getAllowedIPsList();
     
     // Admin: IPs permanentes
@@ -30,14 +30,15 @@ export async function getIPAccessLevel(ip) {
         return 'admin';
     }
     
-    // Trusted: IPs do .env
+    // Trusted: IPs do .env OU IPs dinâmicos com nível 'trusted'
     if (ipList.fromEnv.includes(ip)) {
         return 'trusted';
     }
     
-    // Guest: IPs autorizados temporariamente
-    if (ipList.dynamic.includes(ip)) {
-        return 'guest';
+    // Verificar se é IP dinâmico e obter seu nível
+    const dynamicLevel = getDynamicIPLevel(ip);
+    if (dynamicLevel) {
+        return dynamicLevel; // 'guest' ou 'trusted'
     }
     
     return 'unauthorized';
@@ -73,18 +74,27 @@ export async function canAccessRoute(ip, method, path) {
         return { allowed: true, level: 'trusted' };
     }
     
-    // Guest: só /docs e home
+    // Guest: /docs + endpoints das funções disponíveis (exceto _TEMPLATE)
     if (level === 'guest') {
-        const allowedPaths = ['/', '/docs', '/health'];
+        const allowedPaths = ['/', '/docs', '/health', '/api/functions'];
         
+        // Permitir caminhos básicos
         if (allowedPaths.includes(path) || path === '/') {
             return { allowed: true, level: 'guest' };
+        }
+        
+        // Permitir endpoints de funções (exceto _TEMPLATE)
+        if (path.startsWith('/api/') && !path.startsWith('/api/security') && !path.startsWith('/api/logs')) {
+            // Verificar se não é _TEMPLATE
+            if (!path.includes('/_TEMPLATE/') && !path.includes('/template')) {
+                return { allowed: true, level: 'guest' };
+            }
         }
         
         return { 
             allowed: false, 
             level: 'guest', 
-            reason: 'Guest access limited to documentation only' 
+            reason: 'Guest access limited to documentation and function endpoints' 
         };
     }
     

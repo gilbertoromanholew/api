@@ -334,7 +334,7 @@ router.get('/unified', async (req, res) => {
         const warnings = ipBlockingSystem.getWarningIPs();
         
         // Obter IPs autorizados
-        const { getAllowedIPsList } = await import('../config/allowedIPs.js');
+        const { getAllowedIPsList, getDynamicIPInfo } = await import('../config/allowedIPs.js');
         const allowedIPsData = getAllowedIPsList();
         const authorizedIPs = allowedIPsData.dynamic || []; // Apenas IPs dinâmicos
 
@@ -379,23 +379,28 @@ router.get('/unified', async (req, res) => {
             });
         });
         
-        // Adicionar autorizados
+        // Adicionar autorizados COM NÍVEL DE ACESSO
         // ✅ INCLUIR TODOS OS IPs AUTORIZADOS, mesmo sem histórico
-        authorizedIPs.forEach(ip => {
+        authorizedIPs.forEach(ipEntry => {
+            const ipAddress = typeof ipEntry === 'string' ? ipEntry : ipEntry.ip;
+            const ipInfo = getDynamicIPInfo(ipAddress);
+            
             // ✅ AUTORIZAÇÃO SOBRESCREVE QUALQUER STATUS
-            securityMap.set(ip, {
+            securityMap.set(ipAddress, {
                 status: 'authorized',
                 securityInfo: {
-                    authorizedAt: new Date().toISOString(),
-                    source: 'dynamic'
+                    authorizedAt: ipInfo?.authorizedAt || new Date().toISOString(),
+                    source: 'dynamic',
+                    accessLevel: ipInfo?.level || 'guest',
+                    reason: ipInfo?.reason || ''
                 }
             });
             
             // Se o IP não existe nos stats, adicionar
-            const ipExists = allIPStats.some(stat => stat.ip === ip);
+            const ipExists = allIPStats.some(stat => stat.ip === ipAddress);
             if (!ipExists) {
                 allIPStats.push({
-                    ip: ip,
+                    ip: ipAddress,
                     total_attempts: 0,
                     authorized: 0,
                     denied: 0,
@@ -407,6 +412,16 @@ router.get('/unified', async (req, res) => {
         // Combinar dados de IPs com status de segurança
         let unifiedIPs = allIPStats.map(ipData => {
             const security = securityMap.get(ipData.ip);
+            
+            // Determinar nível de acesso do IP
+            let accessLevel = null;
+            if (allowedIPsData.permanent.includes(ipData.ip)) {
+                accessLevel = 'admin';
+            } else if (allowedIPsData.fromEnv.includes(ipData.ip)) {
+                accessLevel = 'trusted';
+            } else if (security && security.securityInfo.accessLevel) {
+                accessLevel = security.securityInfo.accessLevel;
+            }
             
             // Extrair informações de geolocalização do primeiro log disponível
             const logs = accessLogger.getAllLogs().filter(log => log.ip_detected === ipData.ip);
@@ -421,9 +436,13 @@ router.get('/unified', async (req, res) => {
                     denied: ipData.denied,
                     lastSeen: ipData.last_seen
                 },
-                security: security ? security.securityInfo : {
+                security: security ? {
+                    ...security.securityInfo,
+                    accessLevel: accessLevel
+                } : {
                     attempts: 0,
-                    remainingAttempts: 5
+                    remainingAttempts: 5,
+                    accessLevel: accessLevel
                 },
                 geo: {
                     country: firstLog.country || 'Desconhecido',
@@ -610,7 +629,7 @@ router.post('/clear-status/:ip', (req, res) => {
  * POST /api/security/add-ip
  * Adicionar IP manualmente com status inicial
  */
-router.post('/add-ip', (req, res) => {
+router.post('/add-ip', async (req, res) => {
     try {
         const { ip, status, reason = 'Manual addition by admin', duration = 3600000 } = req.body;
 
@@ -636,6 +655,19 @@ router.post('/add-ip', (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: `Status must be one of: ${validStatuses.join(', ')}`
+            });
+        }
+
+        // 🔒 PROTEÇÃO: Trusted não pode bloquear/suspender/avisar IPs permanentes (admin)
+        const { getIPAccessLevel } = await import('../middlewares/accessLevel.js');
+        const targetLevel = await getIPAccessLevel(ip);
+        const requesterIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket.remoteAddress;
+        const requesterLevel = await getIPAccessLevel(requesterIP);
+        
+        if (targetLevel === 'admin' && requesterLevel !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Cannot block/suspend admin IPs. Only admins can manage admin IPs.'
             });
         }
 
@@ -695,11 +727,11 @@ router.get('/allowed-ips', async (req, res) => {
 /**
  * POST /api/security/authorize-ip
  * Adicionar IP à lista de autorizados (allowlist)
- * Body: { ip: string, reason?: string }
+ * Body: { ip: string, level?: 'guest' | 'trusted', reason?: string }
  */
 router.post('/authorize-ip', async (req, res) => {
     try {
-        const { ip, reason } = req.body;
+        const { ip, level, reason } = req.body;
 
         // Validar que o IP foi fornecido
         if (!ip) {
@@ -732,8 +764,17 @@ router.post('/authorize-ip', async (req, res) => {
             });
         }
 
+        // Validar nível (padrão 'guest' se não fornecido)
+        const accessLevel = level || 'guest';
+        if (!['guest', 'trusted'].includes(accessLevel)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid access level. Use "guest" or "trusted"'
+            });
+        }
+
         const { addAllowedIP } = await import('../config/allowedIPs.js');
-        const result = addAllowedIP(ip, reason);
+        const result = addAllowedIP(ip, reason, accessLevel);
 
         if (!result.success) {
             return res.status(400).json(result);

@@ -1037,6 +1037,152 @@ export const getLogsDashboard = (req, res) => {
             border-top: 1px solid rgba(255, 255, 255, 0.15);
         }
 
+        /* Modal de Histórico */
+        .modal-history {
+            max-width: 1000px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-history .modal-header {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .modal-history .modal-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sistema de Abas */
+        .tabs-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs-header {
+            display: flex;
+            gap: 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px 10px 0 0;
+            padding: 8px 8px 0 8px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            color: var(--text-muted);
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-light);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.15);
+            box-shadow: 0 -2px 10px rgba(59, 130, 246, 0.2);
+        }
+
+        .tab-btn.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-icon {
+            font-size: 1.2em;
+        }
+
+        .tab-label {
+            font-weight: 600;
+        }
+
+        .tabs-content {
+            width: 100%;
+            flex: 1;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+            height: 100%;
+            animation: fadeInSlide 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 20px);
+        }
+
+        .history-scroll-area::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .history-scroll-area::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+
+        .history-scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 5px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .history-scroll-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.7);
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* Estilos de Formulário do Modal */
         .modal-body input[type="text"],
         .modal-body select,
@@ -1466,6 +1612,38 @@ export const getLogsDashboard = (req, res) => {
             background: rgba(16, 185, 129, 0.25);
             color: #10b981;
             border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        /* Access Level Badges */
+        .access-level-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+        }
+
+        .access-level-badge.level-admin {
+            background: rgba(239, 68, 68, 0.25);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .access-level-badge.level-trusted {
+            background: rgba(16, 185, 129, 0.25);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .access-level-badge.level-guest {
+            background: rgba(59, 130, 246, 0.25);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.4);
         }
 
         .unified-ip-header-right {
@@ -1937,14 +2115,8 @@ export const getLogsDashboard = (req, res) => {
                 <!-- CONTROLS: Botões de Ação -->
                 <div class="unified-controls">
                     <div class="unified-controls-left">
-                        <button class="btn-add-ip" onclick="openAddIPModal()">
-                            ➕ Adicionar IP
-                        </button>
                         <button class="btn-add-ip" onclick="openAuthorizeIPModal()" style="background: linear-gradient(135deg, #10b981, #059669);">
-                            🔓 Autorizar Acesso
-                        </button>
-                        <button class="btn-add-ip" onclick="openAccessLevelsModal()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
-                            🔑 Níveis de Acesso
+                            ➕ Autorizar IP
                         </button>
                         <button class="btn-refresh" onclick="loadUnifiedList()">
                             🔄 Atualizar
@@ -1953,7 +2125,7 @@ export const getLogsDashboard = (req, res) => {
                     <div class="unified-controls-right">
                         <div class="auto-refresh-toggle">
                             <span>Auto-refresh:</span>
-                            <div class="toggle-switch" id="unified-auto-refresh-toggle" onclick="toggleUnifiedAutoRefresh()"></div>
+                            <div class="toggle-switch active" id="unified-auto-refresh-toggle" onclick="toggleUnifiedAutoRefresh()"></div>
                             <span id="unified-countdown">10s</span>
                         </div>
                     </div>
@@ -2041,62 +2213,9 @@ export const getLogsDashboard = (req, res) => {
         </div>
 
         <!-- Modal: Adicionar IP Manualmente -->
-        <div id="addIPModal" class="modal">
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header">
-                    <h2>➕ Adicionar IP Manualmente</h2>
-                    <button class="modal-close" onclick="closeAddIPModal()">✖</button>
-                </div>
-                <div class="modal-body">
-                    <div style="margin-bottom: 20px;">
-                        <label for="add-ip-address">
-                            📍 Endereço IP:
-                        </label>
-                        <input type="text" 
-                               id="add-ip-address" 
-                               placeholder="Ex: 192.168.1.100"
-                        />
-                        <small>
-                            Digite um endereço IPv4 válido
-                        </small>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <label for="add-ip-status">
-                            🎯 Status Inicial:
-                        </label>
-                        <select id="add-ip-status">
-                            <option value="warning">⚠️ Aviso (Preventivo)</option>
-                            <option value="suspended">⏳ Suspenso (Bloqueio Temporário)</option>
-                            <option value="blocked">🚫 Bloqueado (Bloqueio Permanente)</option>
-                        </select>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <label for="add-ip-reason">
-                            📝 Motivo:
-                        </label>
-                        <textarea id="add-ip-reason" 
-                                  placeholder="Ex: IP suspeito de ataque" 
-                                  rows="3" 
-                                  style="resize: vertical;"
-                        ></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn" onclick="closeAddIPModal()">
-                        ❌ Cancelar
-                    </button>
-                    <button class="btn success" onclick="submitAddIP()">
-                        ✅ Adicionar IP
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <!-- Modal: Autorizar IP -->
         <div id="authorizeIPModal" class="modal">
-            <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-content" style="max-width: 550px;">
                 <div class="modal-header">
                     <h2>🔓 Autorizar IP para Acesso à API</h2>
                     <button class="modal-close" onclick="closeAuthorizeIPModal()">✖</button>
@@ -2116,11 +2235,24 @@ export const getLogsDashboard = (req, res) => {
                     </div>
                     
                     <div style="margin-bottom: 20px;">
+                        <label for="authorize-ip-level">
+                            🎚️ Nível de Acesso:
+                        </label>
+                        <select id="authorize-ip-level" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--dark-border); background: var(--card-bg); color: var(--text-light); font-size: 0.95em;">
+                            <option value="guest">👤 Guest - Documentação + Funções</option>
+                            <option value="trusted">🤝 Trusted - API Completa (não pode gerenciar segurança)</option>
+                        </select>
+                        <small id="level-description" style="display: block; margin-top: 8px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px;">
+                            <strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis (ex: /api/exemplo, /api/pdf). Ideal para testar a API.
+                        </small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
                         <label for="authorize-ip-reason">
                             📝 Motivo (opcional):
                         </label>
                         <textarea id="authorize-ip-reason" 
-                                  placeholder="Ex: Servidor de produção, desenvolvedor aprovado, etc." 
+                                  placeholder="Ex: Servidor de produção, desenvolvedor aprovado, cliente X, etc." 
                                   rows="3" 
                                   style="resize: vertical;"
                         ></textarea>
@@ -2135,7 +2267,7 @@ export const getLogsDashboard = (req, res) => {
                             <strong style="color: #10b981;">Autorização Temporária</strong>
                         </div>
                         <small style="color: rgba(255, 255, 255, 0.7); line-height: 1.5;">
-                            Este IP será <strong>autorizado apenas em memória</strong> e poderá fazer requisições à API normalmente. <strong style="color: #fbbf24;">Ao reiniciar o servidor, esta autorização será perdida.</strong>
+                            Este IP será <strong>autorizado apenas em memória</strong> e poderá fazer requisições à API conforme o nível selecionado. <strong style="color: #fbbf24;">Ao reiniciar o servidor, esta autorização será perdida.</strong>
                         </small>
                     </div>
                 </div>
@@ -2150,198 +2282,58 @@ export const getLogsDashboard = (req, res) => {
             </div>
         </div>
 
-        <!-- Modal: Níveis de Acesso -->
-        <div id="accessLevelsModal" class="modal">
-            <div class="modal-content" style="max-width: 900px;">
-                <div class="modal-header">
-                    <h2>🔑 Níveis de Acesso e Permissões</h2>
-                    <button class="modal-close" onclick="closeAccessLevelsModal()">✖</button>
-                </div>
-                <div class="modal-body">
-                    <!-- Explicação -->
-                    <div style="background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="font-size: 1.3em;">🛡️</span>
-                            <strong style="color: #a78bfa;">Sistema de Segurança em 3 Níveis</strong>
-                        </div>
-                        <small style="color: rgba(255, 255, 255, 0.7); line-height: 1.5;">
-                            A API possui 3 níveis hierárquicos de permissão. Cada IP autorizado recebe um nível específico que determina o que pode acessar.
-                        </small>
-                    </div>
-
-                    <!-- NÍVEL 1: ADMIN -->
-                    <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1)); border: 2px solid #ef4444; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                            <span style="font-size: 2em;">🔑</span>
-                            <div>
-                                <h3 style="color: #ef4444; margin: 0; font-size: 1.3em;">NÍVEL 1: ADMIN</h3>
-                                <small style="color: rgba(255, 255, 255, 0.6);">IPs Permanentes (Localhost + ZeroTier)</small>
-                            </div>
-                        </div>
-                        
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <strong style="color: #ef4444;">📍 IPs Neste Nível:</strong>
-                            <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
-                                <li><code>127.0.0.1</code> - Localhost IPv4</li>
-                                <li><code>::1</code> - Localhost IPv6</li>
-                                <li><code>10.244.0.0/16</code> - ZeroTier VPN</li>
-                            </ul>
-                        </div>
-
-                        <strong style="color: #10b981;">✅ Permissões Completas:</strong>
-                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
-                            <li>✅ Ver dashboard <code>/logs</code></li>
-                            <li>✅ Gerenciar segurança <code>/api/security/*</code></li>
-                            <li>✅ Bloquear/desbloquear IPs</li>
-                            <li>✅ Autorizar/desautorizar IPs</li>
-                            <li>✅ Acessar todos os endpoints da API</li>
-                            <li>✅ Sem rate limiting</li>
-                            <li>✅ Não pode ser bloqueado</li>
-                        </ul>
-                    </div>
-
-                    <!-- NÍVEL 2: TRUSTED -->
-                    <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1)); border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                            <span style="font-size: 2em;">🤝</span>
-                            <div>
-                                <h3 style="color: #3b82f6; margin: 0; font-size: 1.3em;">NÍVEL 2: TRUSTED</h3>
-                                <small style="color: rgba(255, 255, 255, 0.6);">IPs do arquivo .env (ALLOWED_IPS)</small>
-                            </div>
-                        </div>
-                        
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <strong style="color: #3b82f6;">📝 Como Adicionar:</strong>
-                            <p style="margin-top: 10px; color: rgba(255, 255, 255, 0.8);">
-                                Edite o arquivo <code>.env</code> na raiz do projeto:
-                            </p>
-                            <code style="display: block; background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 4px; margin-top: 8px; color: #10b981;">
-                                ALLOWED_IPS=203.0.113.50,198.51.100.25
-                            </code>
-                        </div>
-
-                        <strong style="color: #10b981;">✅ Permissões:</strong>
-                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
-                            <li>✅ Acessar documentação <code>/docs</code></li>
-                            <li>✅ Usar endpoints da API normalmente</li>
-                            <li>✅ Fazer requisições de negócio</li>
-                        </ul>
-
-                        <strong style="color: #ef4444; margin-top: 15px; display: block;">❌ Bloqueado:</strong>
-                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
-                            <li>❌ Dashboard <code>/logs</code></li>
-                            <li>❌ Gerenciar segurança <code>/api/security/*</code></li>
-                            <li>❌ Bloquear/desbloquear IPs</li>
-                        </ul>
-                    </div>
-
-                    <!-- NÍVEL 3: GUEST -->
-                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1)); border: 2px solid #fbbf24; border-radius: 12px; padding: 20px;">
-                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                            <span style="font-size: 2em;">👤</span>
-                            <div>
-                                <h3 style="color: #fbbf24; margin: 0; font-size: 1.3em;">NÍVEL 3: GUEST</h3>
-                                <small style="color: rgba(255, 255, 255, 0.6);">IPs Autorizados Temporariamente (via /logs)</small>
-                            </div>
-                        </div>
-                        
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <strong style="color: #fbbf24;">⚡ Como Funciona:</strong>
-                            <p style="margin-top: 10px; color: rgba(255, 255, 255, 0.8);">
-                                Quando você autoriza um IP pelo botão <strong>"🔓 Autorizar Acesso"</strong>, ele recebe este nível. 
-                                São autorizações <strong>temporárias em memória</strong> que resetam ao reiniciar o servidor.
-                            </p>
-                        </div>
-
-                        <strong style="color: #10b981;">✅ Permissões Mínimas:</strong>
-                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
-                            <li>✅ Acessar documentação <code>/docs</code></li>
-                            <li>✅ Ver página inicial <code>/</code></li>
-                        </ul>
-
-                        <strong style="color: #ef4444; margin-top: 15px; display: block;">❌ Tudo Mais Bloqueado:</strong>
-                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
-                            <li>❌ Dashboard <code>/logs</code> → 403 Forbidden</li>
-                            <li>❌ Gerenciar segurança <code>/api/security/*</code> → 403 Forbidden</li>
-                            <li>❌ Endpoints da API <code>/api/*</code> → 403 Forbidden</li>
-                            <li>❌ Qualquer outra rota → 403 Forbidden</li>
-                        </ul>
-
-                        <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin-top: 15px;">
-                            <strong style="color: #ef4444;">🚨 Sistema de 3 Strikes:</strong>
-                            <p style="margin-top: 8px; color: rgba(255, 255, 255, 0.8);">
-                                Se um IP guest tentar acessar rotas bloqueadas <strong>3 vezes</strong>, ele será <strong>desautorizado automaticamente</strong>.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Comparação Rápida -->
-                    <div style="margin-top: 25px; overflow-x: auto;">
-                        <strong style="color: #a78bfa; display: block; margin-bottom: 15px; font-size: 1.1em;">📊 Comparação Rápida:</strong>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                            <thead>
-                                <tr style="background: rgba(124, 58, 237, 0.2);">
-                                    <th style="padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.1);">Recurso</th>
-                                    <th style="padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1); color: #ef4444;">🔑 Admin</th>
-                                    <th style="padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1); color: #3b82f6;">🤝 Trusted</th>
-                                    <th style="padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1); color: #fbbf24;">👤 Guest</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/docs</code></td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                </tr>
-                                <tr style="background: rgba(255,255,255,0.02);">
-                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/logs</code></td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/api/security/*</code></td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
-                                </tr>
-                                <tr style="background: rgba(255,255,255,0.02);">
-                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/api/*</code> (outros)</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
-                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn primary" onclick="closeAccessLevelsModal()">
-                        ✅ Entendi
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <!-- Modal: Histórico de Status -->
         <div id="historyModal" class="modal">
-            <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-content modal-history">
                 <div class="modal-header">
-                    <h2>📜 Histórico de Status</h2>
+                    <div>
+                        <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.3em;">📜</span>
+                            <span>Histórico do IP</span>
+                        </h2>
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--text-muted); font-size: 0.9em;">Endereço:</span>
+                            <span id="history-ip-address" style="font-family: 'Courier New', monospace; color: var(--primary); font-weight: 600; font-size: 1.05em;"></span>
+                        </div>
+                    </div>
                     <button class="modal-close" onclick="closeHistoryModal()">✖</button>
                 </div>
-                <div class="modal-body">
-                    <div style="margin-bottom: 15px;">
-                        <strong>IP:</strong> <span id="history-ip-address" style="font-family: 'Courier New', monospace; color: var(--primary);"></span>
-                    </div>
-                    <div id="history-timeline" style="max-height: 400px; overflow-y: auto;">
-                        <!-- Timeline será preenchida dinamicamente -->
+                
+                <div class="modal-body" style="padding: 0;">
+                    <!-- Sistema de Abas -->
+                    <div class="tabs-container">
+                        <div class="tabs-header">
+                            <button class="tab-btn active" onclick="switchHistoryTab('changes')" id="tab-changes">
+                                <span class="tab-icon">🔄</span>
+                                <span class="tab-label">Alterações de Status</span>
+                            </button>
+                            <button class="tab-btn" onclick="switchHistoryTab('endpoints')" id="tab-endpoints">
+                                <span class="tab-icon">🌐</span>
+                                <span class="tab-label">Endpoints Acessados</span>
+                            </button>
+                        </div>
+                        
+                        <div class="tabs-content">
+                            <!-- Aba: Alterações de Status -->
+                            <div id="tab-content-changes" class="tab-content active">
+                                <div id="history-timeline" class="history-scroll-area">
+                                    <!-- Timeline será preenchida dinamicamente -->
+                                </div>
+                            </div>
+                            
+                            <!-- Aba: Endpoints Acessados -->
+                            <div id="tab-content-endpoints" class="tab-content">
+                                <div id="history-endpoints" class="history-scroll-area">
+                                    <!-- Logs de acesso serão preenchidos dinamicamente -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn" onclick="closeHistoryModal()">
-                        Fechar
+                
+                <div class="modal-footer" style="background: rgba(255, 255, 255, 0.02); border-top: 2px solid rgba(255, 255, 255, 0.1);">
+                    <button class="btn secondary" onclick="closeHistoryModal()" style="min-width: 120px;">
+                        ✖ Fechar
                     </button>
                 </div>
             </div>
@@ -3022,6 +3014,79 @@ export const getLogsDashboard = (req, res) => {
                             \` : ''}
                         </div>
                         
+                        <!-- Logs de Acesso Recentes -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('recent-logs-\${ip}')">
+                                <span id="recent-logs-\${ip}-icon">▼</span> 📋 Logs de Acesso Recentes (últimos 15)
+                            </h3>
+                            <div id="recent-logs-\${ip}" style="max-height: 500px; overflow-y: auto;">
+                                \${ipLogs.slice(0, 15).map((log, index) => {
+                                    const statusColor = log.is_authorized ? '#10b981' : '#ef4444';
+                                    const statusIcon = log.is_authorized ? '✅' : '❌';
+                                    const timestamp = new Date(log.timestamp).toLocaleString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit'
+                                    });
+                                    
+                                    return \`
+                                        <div style="background: rgba(255, 255, 255, 0.03); border-left: 3px solid \${statusColor}; padding: 12px; margin-bottom: 8px; border-radius: 6px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                                        <span style="font-size: 1.1em;">\${statusIcon}</span>
+                                                        <code style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; font-size: 0.85em; color: #3b82f6;">\${log.method || 'GET'}</code>
+                                                        <span style="font-family: 'Courier New', monospace; font-size: 0.9em; color: var(--text-light);">\${log.url || '/'}</span>
+                                                    </div>
+                                                    <div style="font-size: 0.8em; color: var(--text-muted); margin-left: 32px;">
+                                                        🕐 \${timestamp}
+                                                    </div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <span style="background: \${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">
+                                                        \${log.is_authorized ? 'AUTORIZADO' : 'NEGADO'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85em;">
+                                                \${log.browser ? \`
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <span style="color: var(--text-muted);">🌐</span>
+                                                        <span style="color: var(--text-light);">\${log.browser}</span>
+                                                    </div>
+                                                \` : ''}
+                                                \${log.platform ? \`
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <span style="color: var(--text-muted);">💻</span>
+                                                        <span style="color: var(--text-light);">\${log.platform}</span>
+                                                    </div>
+                                                \` : ''}
+                                                \${log.country ? \`
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <span style="color: var(--text-muted);">🌍</span>
+                                                        <span style="color: var(--text-light);">\${log.country}</span>
+                                                    </div>
+                                                \` : ''}
+                                            </div>
+                                        </div>
+                                    \`;
+                                }).join('')}
+                                \${ipLogs.length > 15 ? \`
+                                    <div style="text-align: center; padding: 12px; color: var(--text-muted); font-size: 0.9em;">
+                                        ... e mais \${ipLogs.length - 15} acessos anteriores
+                                    </div>
+                                \` : ''}
+                                \${ipLogs.length === 0 ? \`
+                                    <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                                        Nenhum log de acesso encontrado
+                                    </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                        
                         <!-- Navegadores Usados -->
                         <div class="detail-section">
                             <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('browsers-\${ip}')">
@@ -3085,6 +3150,80 @@ export const getLogsDashboard = (req, res) => {
                                 </ul>
                             </div>
                         \` : ''}
+                        
+                        <!-- Logs de Acesso Recentes -->
+                        <div class="detail-section">
+                            <h3 class="detail-section-title" style="cursor: pointer; user-select: none;" onclick="toggleDetailSection('recent-logs-\${ip}')">
+                                <span id="recent-logs-\${ip}-icon">▼</span> 📋 Logs de Acesso Recentes
+                            </h3>
+                            <div id="recent-logs-\${ip}" style="max-height: 500px; overflow-y: auto;">
+                                \${ipLogs.slice(0, 20).reverse().map((log, index) => {
+                                    const statusColor = log.is_authorized ? '#10b981' : '#ef4444';
+                                    const statusIcon = log.is_authorized ? '✅' : '❌';
+                                    const statusText = log.is_authorized ? 'AUTORIZADO' : 'NEGADO';
+                                    const timestamp = new Date(log.timestamp).toLocaleString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit'
+                                    });
+                                    
+                                    return \`
+                                        <div style="background: rgba(255, 255, 255, 0.03); border-left: 3px solid \${statusColor}; padding: 12px; margin-bottom: 8px; border-radius: 6px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                                                        <span style="font-size: 1.1em;">\${statusIcon}</span>
+                                                        <code style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; font-size: 0.85em; color: #3b82f6; font-weight: 600;">\${log.method || 'GET'}</code>
+                                                        <span style="font-family: 'Courier New', monospace; font-size: 0.9em; color: var(--text-light); word-break: break-all;">\${log.url || '/'}</span>
+                                                    </div>
+                                                    <div style="font-size: 0.8em; color: var(--text-muted); margin-left: 32px;">
+                                                        🕐 \${timestamp}
+                                                    </div>
+                                                </div>
+                                                <div style="text-align: right; margin-left: 12px;">
+                                                    <span style="background: \${statusColor}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75em; font-weight: 600; white-space: nowrap;">
+                                                        \${statusText}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85em;">
+                                                \${log.browser && log.browser !== 'Desconhecido' ? \`
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <span style="color: var(--text-muted);">🌐</span>
+                                                        <span style="color: var(--text-light);">\${log.browser}</span>
+                                                    </div>
+                                                \` : ''}
+                                                \${log.platform && log.platform !== 'Desconhecido' ? \`
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <span style="color: var(--text-muted);">💻</span>
+                                                        <span style="color: var(--text-light);">\${log.platform}</span>
+                                                    </div>
+                                                \` : ''}
+                                                \${log.country && log.country !== 'Desconhecido' ? \`
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <span style="color: var(--text-muted);">🌍</span>
+                                                        <span style="color: var(--text-light);">\${log.country}</span>
+                                                    </div>
+                                                \` : ''}
+                                            </div>
+                                        </div>
+                                    \`;
+                                }).join('')}
+                                \${ipLogs.length > 20 ? \`
+                                    <div style="text-align: center; padding: 12px; color: var(--text-muted); font-size: 0.9em; background: rgba(255,255,255,0.02); border-radius: 6px; margin-top: 8px;">
+                                        📊 Mostrando os últimos 20 de \${ipLogs.length} acessos totais
+                                    </div>
+                                \` : ''}
+                                \${ipLogs.length === 0 ? \`
+                                    <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                                        Nenhum log de acesso encontrado
+                                    </div>
+                                \` : ''}
+                            </div>
+                        </div>
                     \`;
                     
                     // Rolar até o painel (apenas na primeira abertura)
@@ -3354,9 +3493,9 @@ export const getLogsDashboard = (req, res) => {
             currentFilter: 'all',
             currentSort: 'lastSeen',
             searchTerm: '',
-            autoRefresh: true,
+            autoRefresh: true, // ✅ Ligado por padrão
             autoRefreshInterval: null,
-            autoRefreshSeconds: 30, // ⏱️ Aumentado de 10s para 30s
+            autoRefreshSeconds: 10, // ✅ Reduzido para 10s
             expandedCards: {}, // 💾 Preservar cards expandidos: { 'IP': true/false }
             scrollPosition: 0, // 💾 Preservar posição do scroll
             lastInteraction: Date.now(), // ⏸️ Para pausar refresh em interação
@@ -3537,6 +3676,14 @@ export const getLogsDashboard = (req, res) => {
                 authorized: { icon: '🔓', label: 'Autorizado', color: 'success' }
             }[status] || { icon: '❓', label: 'Desconhecido', color: 'secondary' };
             
+            // Obter nível de acesso (se for IP autorizado)
+            const accessLevel = security?.accessLevel || null;
+            const accessLevelInfo = accessLevel ? {
+                admin: { icon: '🔑', label: 'Admin', color: 'level-admin' },
+                trusted: { icon: '🤝', label: 'Trusted', color: 'level-trusted' },
+                guest: { icon: '👤', label: 'Guest', color: 'level-guest' }
+            }[accessLevel] : null;
+            
             const actions = getAvailableActions(status, ip); // Passar o IP para verificar se é o próprio
             
             // Extrair informações de geolocalização
@@ -3571,9 +3718,16 @@ export const getLogsDashboard = (req, res) => {
                                 <div style="font-size: 0.75em; color: rgba(255,255,255,0.6); margin-top: 2px;">
                                     📍 \${locationStr}
                                 </div>
-                                <span class="unified-ip-status-badge status-\${status}">
-                                    \${statusInfo.label}
-                                </span>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                    <span class="unified-ip-status-badge status-\${status}">
+                                        \${statusInfo.label}
+                                    </span>
+                                    \${accessLevelInfo ? \`
+                                        <span class="access-level-badge \${accessLevelInfo.color}">
+                                            \${accessLevelInfo.icon} \${accessLevelInfo.label}
+                                        </span>
+                                    \` : ''}
+                                </div>
                             </div>
                         </div>
                         <div class="unified-ip-header-right">
@@ -3695,27 +3849,34 @@ export const getLogsDashboard = (req, res) => {
                 ];
             }
             
+            // 🔒 Ações de Segurança (Bloquear/Suspender/Avisar)
             if (status === 'normal') {
+                actions.unshift({ type: 'block', icon: '🚫', label: 'Bloquear', handler: 'confirmBlockIP' });
+                actions.unshift({ type: 'suspend', icon: '⏳', label: 'Suspender', handler: 'confirmSuspendIP' });
                 actions.unshift({ type: 'warn', icon: '⚠️', label: 'Avisar', handler: 'confirmWarnIP' });
             }
             
-            if (status === 'normal' || status === 'warning') {
-                actions.unshift({ type: 'suspend', icon: '⏳', label: 'Suspender', handler: 'confirmSuspendIP' });
+            if (status === 'warning') {
                 actions.unshift({ type: 'block', icon: '🚫', label: 'Bloquear', handler: 'confirmBlockIP' });
+                actions.unshift({ type: 'suspend', icon: '⏳', label: 'Suspender', handler: 'confirmSuspendIP' });
+                actions.unshift({ type: 'clear', icon: '✅', label: 'Limpar Aviso', handler: 'confirmClearIP' });
             }
             
-            if (status === 'warning' || status === 'suspended' || status === 'blocked') {
-                actions.unshift({ type: 'clear', icon: '✅', label: 'Limpar Status', handler: 'confirmClearIP' });
+            if (status === 'suspended') {
+                actions.unshift({ type: 'block', icon: '🚫', label: 'Bloquear', handler: 'confirmBlockIP' });
+                actions.unshift({ type: 'clear', icon: '✅', label: 'Remover Suspensão', handler: 'confirmClearIP' });
             }
             
-            // Adicionar opção de autorizar/desautorizar para todos os IPs (exceto próprio IP)
+            if (status === 'blocked') {
+                actions.unshift({ type: 'clear', icon: '✅', label: 'Desbloquear', handler: 'confirmClearIP' });
+            }
+            
+            // 🔓 Autorização de Acesso (apenas para IPs não próprios)
             if (!isOwnIP) {
                 if (status === 'authorized') {
-                    // Se já está autorizado, mostrar botão de desautorizar
-                    actions.push({ type: 'unauthorize', icon: '🔒', label: 'Desautorizar API', handler: 'confirmUnauthorizeIPFromCard' });
+                    actions.push({ type: 'unauthorize', icon: '🔒', label: 'Revogar Acesso', handler: 'confirmUnauthorizeIPFromCard' });
                 } else {
-                    // Se não está autorizado, mostrar botão de autorizar
-                    actions.push({ type: 'authorize', icon: '🔓', label: 'Autorizar API', handler: 'confirmAuthorizeIPFromCard' });
+                    actions.push({ type: 'authorize', icon: '🔓', label: 'Autorizar Acesso', handler: 'confirmAuthorizeIPFromCard' });
                 }
             }
             
@@ -3954,33 +4115,45 @@ export const getLogsDashboard = (req, res) => {
             }
         }
         
-        // MODAL: NÍVEIS DE ACESSO
-        function openAccessLevelsModal() {
-            const modal = document.getElementById('accessLevelsModal');
-            modal.style.display = 'flex';
-        }
-        
-        function closeAccessLevelsModal() {
-            const modal = document.getElementById('accessLevelsModal');
-            modal.style.display = 'none';
-        }
-        
         // MODAL: AUTORIZAR IP
         function openAuthorizeIPModal() {
             const modal = document.getElementById('authorizeIPModal');
             modal.style.display = 'flex';
             document.getElementById('authorize-ip-address').value = '';
+            document.getElementById('authorize-ip-level').value = 'guest';
             document.getElementById('authorize-ip-reason').value = '';
             document.getElementById('authorize-ip-address').focus();
+            
+            // Listener para mudar descrição do nível
+            document.getElementById('authorize-ip-level').addEventListener('change', function() {
+                const level = this.value;
+                const description = document.getElementById('level-description');
+                
+                if (level === 'guest') {
+                    description.innerHTML = '<strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis (ex: <code>/api/exemplo</code>, <code>/api/pdf</code>). Ideal para testar a API.';
+                    description.style.borderColor = '#3b82f6';
+                    description.style.background = 'rgba(59, 130, 246, 0.1)';
+                } else if (level === 'trusted') {
+                    description.innerHTML = '<strong>🤝 Trusted:</strong> API completa, incluindo todas as funções. <strong>Bloqueio:</strong> não pode acessar <code>/logs</code>, <code>/api/security</code> nem bloquear IPs admin.';
+                    description.style.borderColor = '#10b981';
+                    description.style.background = 'rgba(16, 185, 129, 0.1)';
+                }
+            });
         }
         
         function closeAuthorizeIPModal() {
             const modal = document.getElementById('authorizeIPModal');
             modal.style.display = 'none';
+            // Desbloquear campo de IP ao fechar e resetar estilos
+            const ipField = document.getElementById('authorize-ip-address');
+            ipField.readOnly = false;
+            ipField.style.background = '';
+            ipField.style.cursor = '';
         }
         
         async function submitAuthorizeIP() {
             const ip = document.getElementById('authorize-ip-address').value.trim();
+            const level = document.getElementById('authorize-ip-level').value;
             const reason = document.getElementById('authorize-ip-reason').value.trim();
             
             if (!ip) {
@@ -3988,27 +4161,35 @@ export const getLogsDashboard = (req, res) => {
                 return;
             }
             
-            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
-            if (!ipPattern.test(ip)) {
-                showToast('❌ Formato de IP inválido', 'error');
+            // Validação básica - backend fará validação completa
+            if (ip.length < 7) {
+                showToast('❌ IP muito curto', 'error');
                 return;
             }
+            
+            const levelIcon = level === 'guest' ? '👤' : '🤝';
+            const levelName = level === 'guest' ? 'Guest' : 'Trusted';
+            const defaultReason = 'IP autorizado como ' + levelName;
             
             try {
                 const response = await fetch('/api/security/authorize-ip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ip, reason: reason || 'IP autorizado manualmente' })
+                    body: JSON.stringify({ 
+                        ip, 
+                        level,
+                        reason: reason || defaultReason
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showToast(\`🔓 IP \${ip} autorizado com sucesso!\`, 'success');
+                    showToast(levelIcon + ' IP ' + ip + ' autorizado como ' + levelName + '!', 'success');
                     closeAuthorizeIPModal();
-                    // Opcional: recarregar lista se houver uma lista de IPs autorizados
+                    loadUnifiedList(); // Recarregar lista para mostrar o nível
                 } else {
-                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                    showToast('❌ Erro: ' + data.error, 'error');
                 }
             } catch (error) {
                 console.error('Erro ao autorizar IP:', error);
@@ -4022,6 +4203,9 @@ export const getLogsDashboard = (req, res) => {
             modal.style.display = 'flex';
             document.getElementById('history-ip-address').textContent = ip;
             
+            // Resetar para a primeira aba
+            switchHistoryTab('changes');
+            
             const timeline = document.getElementById('history-timeline');
             timeline.innerHTML = \`
                 <div style="text-align: center; padding: 40px;">
@@ -4030,12 +4214,225 @@ export const getLogsDashboard = (req, res) => {
                 </div>
             \`;
             
-            await loadIPHistory(ip);
+            const endpoints = document.getElementById('history-endpoints');
+            endpoints.innerHTML = \`
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: var(--dark-text-muted);">Carregando logs de acesso...</p>
+                </div>
+            \`;
+            
+            await Promise.all([
+                loadIPHistory(ip),
+                loadIPEndpointsHistory(ip)
+            ]);
+        }
+        
+        function switchHistoryTab(tabName) {
+            // Remover classe active de todas as abas
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Adicionar classe active na aba selecionada
+            document.getElementById(\`tab-\${tabName}\`).classList.add('active');
+            document.getElementById(\`tab-content-\${tabName}\`).classList.add('active');
         }
         
         function closeHistoryModal() {
             const modal = document.getElementById('historyModal');
             modal.style.display = 'none';
+        }
+        
+        async function loadIPEndpointsHistory(ip) {
+            try {
+                const response = await fetch(\`/api/logs?ip=\${encodeURIComponent(ip)}\`);
+                const data = await response.json();
+                
+                if (data.success && data.logs && data.logs.length > 0) {
+                    renderEndpointsHistory(data.logs);
+                } else {
+                    document.getElementById('history-endpoints').innerHTML = \`
+                        <div style="text-align: center; padding: 40px; color: var(--dark-text-muted);">
+                            <div style="font-size: 3em; margin-bottom: 15px;">📊</div>
+                            <p><strong>Nenhum acesso registrado</strong></p>
+                            <p style="margin-top: 10px;">Este IP ainda não realizou acessos</p>
+                        </div>
+                    \`;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar logs de endpoints:', error);
+                document.getElementById('history-endpoints').innerHTML = \`
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        <div style="font-size: 3em; margin-bottom: 15px;">❌</div>
+                        <p><strong>Erro ao carregar logs</strong></p>
+                    </div>
+                \`;
+            }
+        }
+        
+        function renderEndpointsHistory(logs) {
+            const container = document.getElementById('history-endpoints');
+            
+            const logsHTML = logs.slice(0, 50).map((log, index) => {
+                const statusColor = log.is_authorized ? '#10b981' : '#ef4444';
+                const statusBg = log.is_authorized ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                const statusIcon = log.is_authorized ? '✅' : '❌';
+                const statusText = log.is_authorized ? 'AUTORIZADO' : 'NEGADO';
+                const timestamp = new Date(log.timestamp).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                return \`
+                    <div class="log-card" style="
+                        background: linear-gradient(135deg, \${statusBg} 0%, rgba(255, 255, 255, 0.02) 100%);
+                        border-left: 4px solid \${statusColor};
+                        padding: 16px;
+                        margin-bottom: 12px;
+                        border-radius: 8px;
+                        transition: all 0.3s;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    " onmouseenter="this.style.transform='translateX(4px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.2)'"
+                       onmouseleave="this.style.transform='translateX(0)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.1)'">
+                        
+                        <!-- Cabeçalho do Log -->
+                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 12px;">
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
+                                    <span style="font-size: 1.3em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">\${statusIcon}</span>
+                                    <code style="
+                                        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+                                        padding: 6px 12px;
+                                        border-radius: 6px;
+                                        font-size: 0.85em;
+                                        color: #60a5fa;
+                                        font-weight: 700;
+                                        border: 1px solid rgba(59, 130, 246, 0.3);
+                                        letter-spacing: 0.5px;
+                                    ">\${log.method || 'GET'}</code>
+                                    <span style="
+                                        font-family: 'Courier New', monospace;
+                                        font-size: 0.95em;
+                                        color: var(--text-light);
+                                        word-break: break-all;
+                                        font-weight: 500;
+                                    ">\${log.url || '/'}</span>
+                                </div>
+                                <div style="
+                                    font-size: 0.85em;
+                                    color: var(--text-muted);
+                                    margin-left: 42px;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                ">
+                                    <span style="filter: grayscale(0.3);">🕐</span>
+                                    <span>\${timestamp}</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right; flex-shrink: 0;">
+                                <span style="
+                                    background: \${statusColor};
+                                    color: white;
+                                    padding: 6px 14px;
+                                    border-radius: 6px;
+                                    font-size: 0.75em;
+                                    font-weight: 700;
+                                    white-space: nowrap;
+                                    text-transform: uppercase;
+                                    letter-spacing: 0.5px;
+                                    box-shadow: 0 2px 8px \${statusColor}40;
+                                ">\${statusText}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Informações Adicionais -->
+                        <div style="
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                            gap: 10px;
+                            padding-top: 12px;
+                            border-top: 1px solid rgba(255,255,255,0.08);
+                            font-size: 0.88em;
+                        ">
+                            \${log.browser && log.browser !== 'Desconhecido' ? \`
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                    background: rgba(255, 255, 255, 0.03);
+                                    padding: 6px 10px;
+                                    border-radius: 6px;
+                                ">
+                                    <span style="font-size: 1.1em;">🌐</span>
+                                    <span style="color: var(--text-light); font-weight: 500;">\${log.browser}</span>
+                                </div>
+                            \` : ''}
+                            \${log.platform && log.platform !== 'Desconhecido' ? \`
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                    background: rgba(255, 255, 255, 0.03);
+                                    padding: 6px 10px;
+                                    border-radius: 6px;
+                                ">
+                                    <span style="font-size: 1.1em;">💻</span>
+                                    <span style="color: var(--text-light); font-weight: 500;">\${log.platform}</span>
+                                </div>
+                            \` : ''}
+                            \${log.country && log.country !== 'Desconhecido' ? \`
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                    background: rgba(255, 255, 255, 0.03);
+                                    padding: 6px 10px;
+                                    border-radius: 6px;
+                                ">
+                                    <span style="font-size: 1.1em;">🌍</span>
+                                    <span style="color: var(--text-light); font-weight: 500;">\${log.country}</span>
+                                </div>
+                            \` : ''}
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+            
+            container.innerHTML = \`
+                \${logsHTML}
+                \${logs.length > 50 ? \`
+                    <div style="
+                        text-align: center;
+                        padding: 20px;
+                        color: var(--text-muted);
+                        font-size: 0.95em;
+                        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%);
+                        border-radius: 8px;
+                        margin-top: 16px;
+                        border: 1px solid rgba(59, 130, 246, 0.2);
+                    ">
+                        <div style="font-size: 2em; margin-bottom: 8px;">📊</div>
+                        <strong style="color: var(--primary);">Mostrando os últimos 50 de \${logs.length} acessos totais</strong>
+                    </div>
+                \` : \`
+                    <div style="
+                        text-align: center;
+                        padding: 16px;
+                        color: var(--text-muted);
+                        font-size: 0.9em;
+                        background: rgba(255, 255, 255, 0.02);
+                        border-radius: 6px;
+                        margin-top: 12px;
+                    ">
+                        <strong>Total de \${logs.length} acesso\${logs.length !== 1 ? 's' : ''} registrado\${logs.length !== 1 ? 's' : ''}</strong>
+                    </div>
+                \`}
+            \`;
         }
         
         async function loadIPHistory(ip) {
@@ -4307,39 +4704,23 @@ export const getLogsDashboard = (req, res) => {
         }
 
         function confirmAuthorizeIPFromCard(ip) {
-            confirmActionData = { action: 'authorize', ip: ip, callback: authorizeIPFromCard };
-            document.getElementById('confirm-action-title').textContent = '🔓 Autorizar Acesso à API';
-            document.getElementById('confirm-action-message').textContent = 
-                'Você tem certeza que deseja autorizar este IP a fazer requisições à API? O IP será adicionado à lista de IPs permitidos (allowlist).';
-            document.getElementById('confirm-action-ip').textContent = ip;
-            document.getElementById('confirm-action-btn').className = 'btn success';
-            document.getElementById('confirm-action-btn').textContent = '🔓 Autorizar';
-            document.getElementById('confirmActionModal').style.display = 'flex';
-        }
-
-        async function authorizeIPFromCard(ip) {
-            try {
-                const response = await fetch('/api/security/authorize-ip', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        ip, 
-                        reason: 'IP autorizado via dashboard de segurança' 
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showToast(\`🔓 IP \${ip} autorizado com sucesso!\`, 'success');
-                    loadUnifiedList(); // Recarregar lista para mostrar status atualizado
-                } else {
-                    showToast(\`❌ Erro: \${data.error}\`, 'error');
-                }
-            } catch (error) {
-                console.error('Erro ao autorizar IP:', error);
-                showToast('❌ Erro de conexão', 'error');
-            }
+            // Abrir modal de autorização diretamente (sem confirmação prévia)
+            const ipField = document.getElementById('authorize-ip-address');
+            ipField.value = ip;
+            ipField.readOnly = true; // Bloquear edição do IP (mas mantém valor)
+            ipField.style.background = 'rgba(255, 255, 255, 0.05)'; // Visual de readonly
+            ipField.style.cursor = 'not-allowed';
+            
+            document.getElementById('authorize-ip-level').value = 'guest';
+            document.getElementById('authorize-ip-reason').value = '';
+            document.getElementById('authorizeIPModal').style.display = 'flex';
+            
+            // Atualizar descrição do nível
+            const description = document.getElementById('level-description');
+            description.innerHTML = '<strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis. Ideal para testar a API.';
+            description.style.borderColor = '#3b82f6';
+            
+            document.getElementById('authorize-ip-reason').focus();
         }
 
         function confirmUnauthorizeIPFromCard(ip) {
