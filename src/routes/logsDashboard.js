@@ -2207,8 +2207,6 @@ export const getLogsDashboard = (req, res) => {
         
         // Trocar aba de segurança
         function switchSecurityTab(tab) {
-            console.log('Switching to tab:', tab); // Debug
-            
             // Remover active de todos os botões
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
