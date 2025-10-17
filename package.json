@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "type": "module",
   "description": "API modular com sistema unificado de segurança e logs avançados",
   "main": "server.js",

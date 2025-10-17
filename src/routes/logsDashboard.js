@@ -254,19 +254,21 @@ export const getLogsDashboard = (req, res) => {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 9px 18px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 0.88em;
+            font-weight: 500;
             transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         
         .btn:hover {
             background: var(--primary-dark);
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
         }
         
         .btn.danger {
@@ -275,6 +277,7 @@ export const getLogsDashboard = (req, res) => {
         
         .btn.danger:hover {
             background: #dc2626;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
         }
         
         .btn.success {
@@ -283,6 +286,18 @@ export const getLogsDashboard = (req, res) => {
         
         .btn.success:hover {
             background: #059669;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+        }
+
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: var(--text-light);
+        }
+
+        .btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .auto-refresh-info {
@@ -941,12 +956,14 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .modal-content {
-            background: var(--bg-primary);
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 15px;
             width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
+            max-width: 550px;
+            max-height: 85vh;
             overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             animation: modalSlideIn 0.3s ease;
         }
@@ -966,29 +983,33 @@ export const getLogsDashboard = (req, res) => {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 25px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .modal-header h2 {
             margin: 0;
-            font-size: 1.5em;
+            font-size: 1.3em;
             color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .modal-close {
             background: rgba(255, 255, 255, 0.1);
             color: var(--text-light);
             border: none;
-            width: 35px;
-            height: 35px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1.2em;
+            font-size: 1.1em;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s;
+            flex-shrink: 0;
         }
 
         .modal-close:hover {
@@ -997,15 +1018,23 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .modal-body {
-            padding: 25px;
+            padding: 22px;
+        }
+
+        .modal-body > div {
+            margin-bottom: 18px;
+        }
+
+        .modal-body > div:last-child {
+            margin-bottom: 0;
         }
 
         .modal-footer {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
-            padding: 20px 25px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 18px 22px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         /* Estilos de Formulário do Modal */
@@ -1013,13 +1042,14 @@ export const getLogsDashboard = (req, res) => {
         .modal-body select,
         .modal-body textarea {
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             color: var(--text-light);
-            padding: 12px 15px;
+            padding: 10px 14px;
             border-radius: 8px;
-            font-size: 1em;
+            font-size: 0.95em;
             transition: all 0.3s;
             width: 100%;
+            box-sizing: border-box;
         }
 
         .modal-body input[type="text"]:focus,
@@ -1028,26 +1058,28 @@ export const getLogsDashboard = (req, res) => {
             outline: none;
             border-color: var(--primary);
             background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
         .modal-body input[type="text"]::placeholder,
         .modal-body textarea::placeholder {
-            color: var(--dark-text-muted);
+            color: rgba(255, 255, 255, 0.4);
         }
 
         .modal-body label {
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
+            font-size: 0.9em;
             color: var(--text-light);
         }
 
         .modal-body small {
-            color: var(--dark-text-muted);
+            color: rgba(255, 255, 255, 0.5);
             display: block;
             margin-top: 5px;
-            font-size: 0.85em;
+            font-size: 0.8em;
+            line-height: 1.4;
         }
 
         /* ===========================================
