@@ -245,21 +245,28 @@ router.post('/suspend-manual/:ip', (req, res) => {
     try {
         const { ip } = req.params;
         
-        // Forçar suspensão criando tentativas artificiais
-        for (let i = 0; i < 5; i++) {
-            ipBlockingSystem.recordUnauthorizedAttempt(ip, {
-                url: '/admin-suspend',
-                method: 'MANUAL',
-                userAgent: 'Admin Dashboard',
-                country: 'Admin Action',
-                origin: 'Manual Suspension'
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
             });
+        }
+        
+        // Usar método direto de suspensão manual
+        const result = ipBlockingSystem.suspendIPManually(ip);
+        
+        if (!result.success) {
+            return res.status(400).json(result);
         }
         
         res.json({
             success: true,
-            message: `IP ${ip} has been suspended for 1 hour`,
+            message: result.message,
             ip: ip,
+            until: result.until,
+            suspensionNumber: result.suspensionNumber,
             timestamp: new Date().toISOString()
         });
     } catch (error) {
@@ -278,21 +285,24 @@ router.post('/block-manual/:ip', (req, res) => {
     try {
         const { ip } = req.params;
         
-        // Forçar bloqueio criando tentativas artificiais até atingir o limite
-        for (let i = 0; i < 10; i++) {
-            ipBlockingSystem.recordUnauthorizedAttempt(ip, {
-                url: '/admin-block',
-                method: 'MANUAL',
-                userAgent: 'Admin Dashboard',
-                country: 'Admin Action',
-                origin: 'Manual Block'
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
             });
         }
         
+        // Usar método direto de bloqueio manual
+        const result = ipBlockingSystem.blockIPManually(ip);
+        
         res.json({
             success: true,
-            message: `IP ${ip} has been permanently blocked`,
+            message: result.message,
             ip: ip,
+            previousState: result.previousState,
+            action: 'permanently_blocked',
             timestamp: new Date().toISOString()
         });
     } catch (error) {

@@ -305,6 +305,89 @@ class IPBlockingSystem {
 
         return cleaned;
     }
+    
+    /**
+     * Bloqueia um IP manualmente (ação administrativa direta)
+     * @param {string} ip - Endereço IP
+     * @returns {Object} Resultado da operação
+     */
+    blockIPManually(ip) {
+        // Remover suspensão se existir
+        if (this.suspendedIPs.has(ip)) {
+            this.suspendedIPs.delete(ip);
+        }
+        
+        // Adicionar ao conjunto de bloqueados
+        this.blockedIPs.add(ip);
+        
+        // Atualizar registro
+        if (!this.unauthorizedAttempts.has(ip)) {
+            this.unauthorizedAttempts.set(ip, {
+                count: 10, // Marcar como bloqueado manualmente
+                attempts: [],
+                suspensions: 0
+            });
+        } else {
+            const record = this.unauthorizedAttempts.get(ip);
+            record.count = 10; // Garantir que está marcado
+        }
+        
+        return {
+            success: true,
+            message: `IP ${ip} has been permanently blocked (manual action)`,
+            previousState: this.suspendedIPs.has(ip) ? 'suspended' : 'active'
+        };
+    }
+    
+    /**
+     * Suspende um IP manualmente (ação administrativa direta)
+     * @param {string} ip - Endereço IP
+     * @param {number} duration - Duração em milissegundos (padrão: 1 hora)
+     * @returns {Object} Resultado da operação
+     */
+    suspendIPManually(ip, duration = null) {
+        // Não suspender se já está bloqueado permanentemente
+        if (this.blockedIPs.has(ip)) {
+            return {
+                success: false,
+                message: `IP ${ip} is permanently blocked and cannot be suspended`,
+                reason: 'already_blocked'
+            };
+        }
+        
+        const suspensionDuration = duration || this.config.suspensionDuration;
+        const until = Date.now() + suspensionDuration;
+        
+        // Criar ou atualizar suspensão
+        const previousSuspension = this.suspendedIPs.get(ip);
+        const suspensionCount = previousSuspension ? previousSuspension.count + 1 : 1;
+        
+        this.suspendedIPs.set(ip, {
+            since: Date.now(),
+            until: until,
+            count: suspensionCount,
+            attempts: 5 // Marcar como suspenso manualmente
+        });
+        
+        // Atualizar registro
+        if (!this.unauthorizedAttempts.has(ip)) {
+            this.unauthorizedAttempts.set(ip, {
+                count: 0,
+                attempts: [],
+                suspensions: suspensionCount
+            });
+        } else {
+            const record = this.unauthorizedAttempts.get(ip);
+            record.suspensions = suspensionCount;
+        }
+        
+        return {
+            success: true,
+            message: `IP ${ip} has been suspended for ${Math.ceil(suspensionDuration / 1000 / 60)} minutes (manual action)`,
+            until: new Date(until).toISOString(),
+            suspensionNumber: suspensionCount
+        };
+    }
 }
 
 // Instância global do sistema de bloqueio
