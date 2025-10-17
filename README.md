@@ -2,7 +2,7 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![Version](https://img.shields.io/badge/Version-2.1.2-blue.svg)](https://github.com/gilbertoromanholew/api)
+[![Version](https://img.shields.io/badge/Version-2.1.4-blue.svg)](https://github.com/gilbertoromanholew/api)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-success.svg)](https://api.samm.host)
 
@@ -51,10 +51,12 @@
 ### 📊 Monitoramento & Documentação
 - 📝 **Documentação Automática Interativa** (`/docs`)
   - Interface limpa com seções colapsáveis
+  - 🔍 **Campo de busca em tempo real** (v2.1.4) - Filtro dinâmico para funções e endpoints
+  - 📊 **Ordenação alfabética A-Z** (v2.1.4) - Navegação previsível e consistente
+  - 🎯 **Expansão individual de endpoints** (v2.1.4) - Clique em cada endpoint separadamente
   - Detecção automática de IP público
-  - Cards de funções clicáveis com exemplos integrados
   - Explorador de API embutido para testes diretos
-  - Exemplos de código em múltiplas linguagens
+  - Exemplos de código em múltiplas linguagens (cURL, JavaScript, Python)
   
 - 🎯 **Dashboard de Logs em Tempo Real** (`/logs`)
   - Métricas gerais (requisições, uptime, IPs únicos)
@@ -1061,7 +1063,7 @@ api/
 │       └── ipBlockingSystem.js  # Sistema de bloqueio automático
 │
 ├── server.js                # Entry point
-├── package.json             # Dependências (v2.1.2)
+├── package.json             # Dependências (v2.1.4)
 ├── README.md                # Documentação principal
 ├── SISTEMA_BLOQUEIO.md      # Documentação do sistema de bloqueio
 ├── IMPLEMENTACAO_BLOQUEIO.md # Resumo executivo da implementação

@@ -602,7 +602,21 @@ export const allowedIPs = [
         <!-- Funções Disponíveis -->
         <div class="info-box">
             <h2>📦 Funções Disponíveis</h2>
-            <p style="margin-bottom: 20px;">Esta API possui <strong id="functionsCount">...</strong> funções carregadas dinamicamente. Clique em uma função para expandir os detalhes:</p>
+            <p style="margin-bottom: 20px;">Esta API possui <strong id="functionsCount">...</strong> funções carregadas dinamicamente.</p>
+            
+            <!-- Campo de Pesquisa -->
+            <div style="margin-bottom: 20px;">
+                <input 
+                    type="text" 
+                    id="searchFunctions" 
+                    placeholder="🔍 Pesquisar funções ou endpoints..." 
+                    style="width: 100%; padding: 12px 20px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1em; transition: all 0.3s;"
+                    oninput="filterFunctions()"
+                    onfocus="this.style.borderColor='var(--primary)'"
+                    onblur="this.style.borderColor='#dee2e6'"
+                >
+            </div>
+            
             <div id="functionsList">
                 <div style="text-align: center; padding: 40px;">
                     <div class="loading"></div>
@@ -687,38 +701,13 @@ export const allowedIPs = [
                 const data = await response.json();
                 
                 if (data.success && data.functions.length > 0) {
-                    allFunctionsData = data.functions;
-                    document.getElementById('functionsCount').textContent = data.functions.length;
+                    // Ordenar funções alfabeticamente (A-Z)
+                    allFunctionsData = data.functions.sort((a, b) => 
+                        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+                    );
                     
-                    const html = data.functions.map((func, index) => \`
-                        <div class="function-card" id="func-card-\${index}" style="transition: all 0.3s ease;">
-                            <div onclick="toggleFunctionDetails(\${index})" style="cursor: pointer;">
-                                <div class="function-name">
-                                    <span id="func-icon-\${index}">▶</span> 📦 \${func.name}
-                                </div>
-                                <div class="function-desc">\${func.description}</div>
-                                \${func.endpoints.length > 0 ? \`
-                                    <div class="endpoints-list" style="margin-top: 10px;">
-                                        \${func.endpoints.map(ep => \`
-                                            <span class="endpoint-badge method-\${ep.method.toLowerCase()}">
-                                                \${ep.method} \${ep.path}
-                                            </span>
-                                        \`).join('')}
-                                    </div>
-                                \` : '<p style="color: #999; font-size: 0.9em;">Nenhum endpoint encontrado</p>'}
-                                <div style="margin-top: 10px; color: var(--primary); font-size: 0.9em; font-weight: 600;">
-                                    👆 Clique para expandir detalhes
-                                </div>
-                            </div>
-                            
-                            <!-- Detalhes inline (inicialmente oculto) -->
-                            <div id="func-details-\${index}" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #dee2e6;">
-                                <!-- Será preenchido dinamicamente -->
-                            </div>
-                        </div>
-                    \`).join('');
-                    
-                    document.getElementById('functionsList').innerHTML = html;
+                    document.getElementById('functionsCount').textContent = allFunctionsData.length;
+                    renderFunctions(allFunctionsData);
                 } else {
                     document.getElementById('functionsCount').textContent = '0';
                     document.getElementById('functionsList').innerHTML = '<p style="text-align: center; color: #999;">Nenhuma função encontrada</p>';
@@ -728,105 +717,183 @@ export const allowedIPs = [
                 document.getElementById('functionsList').innerHTML = '<p style="text-align: center; color: #ef4444;">Erro ao carregar funções</p>';
             }
         }
-
-        // Toggle detalhes de uma função (expansão inline)
-        function toggleFunctionDetails(funcIndex) {
+        
+        // Renderizar funções na tela
+        function renderFunctions(functions) {
+            const html = functions.map((func, index) => \`
+                <div class="function-card" id="func-card-\${index}" data-function-name="\${func.name.toLowerCase()}" style="transition: all 0.3s ease;">
+                    <div class="function-name" style="cursor: default; user-select: text;">
+                        📦 \${func.name}
+                    </div>
+                    <div class="function-desc">\${func.description}</div>
+                    
+                    \${func.endpoints.length > 0 ? \`
+                        <div style="margin-top: 15px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 0.95em;">
+                                � Endpoints (\${func.endpoints.length})
+                            </h4>
+                            \${func.endpoints.map((ep, epIndex) => \`
+                                <div class="endpoint-item" style="margin-bottom: 10px; border-left: 3px solid var(--primary); padding-left: 15px; background: #f8f9fa; border-radius: 5px;">
+                                    <div 
+                                        onclick="toggleEndpointDetails(\${index}, \${epIndex})" 
+                                        style="cursor: pointer; padding: 12px 10px; display: flex; align-items: center; gap: 10px;"
+                                    >
+                                        <span id="endpoint-icon-\${index}-\${epIndex}" style="color: var(--primary); font-weight: bold;">▶</span>
+                                        <span class="endpoint-badge method-\${ep.method.toLowerCase()}" style="margin: 0;">
+                                            \${ep.method}
+                                        </span>
+                                        <span style="font-family: 'Courier New', monospace; font-size: 0.95em; flex: 1;">
+                                            \${ep.path}
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- Detalhes do endpoint (inicialmente oculto) -->
+                                    <div id="endpoint-details-\${index}-\${epIndex}" style="display: none; padding: 20px 10px; border-top: 1px solid #dee2e6; background: white;">
+                                        <!-- Será preenchido dinamicamente -->
+                                    </div>
+                                </div>
+                            \`).join('')}
+                        </div>
+                    \` : '<p style="color: #999; font-size: 0.9em; margin-top: 15px;">Nenhum endpoint encontrado</p>'}
+                </div>
+            \`).join('');
+            
+            document.getElementById('functionsList').innerHTML = html;
+        }
+        
+        // Filtrar funções pela pesquisa
+        function filterFunctions() {
+            const searchTerm = document.getElementById('searchFunctions').value.toLowerCase();
+            const cards = document.querySelectorAll('.function-card');
+            let visibleCount = 0;
+            
+            cards.forEach(card => {
+                const functionName = card.getAttribute('data-function-name');
+                const cardText = card.textContent.toLowerCase();
+                
+                if (functionName.includes(searchTerm) || cardText.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Atualizar contador
+            if (searchTerm) {
+                document.getElementById('functionsCount').textContent = \`\${visibleCount} de \${allFunctionsData.length}\`;
+            } else {
+                document.getElementById('functionsCount').textContent = allFunctionsData.length;
+            }
+        }
+        
+        // Toggle detalhes de um endpoint específico
+        function toggleEndpointDetails(funcIndex, endpointIndex) {
             const func = allFunctionsData[funcIndex];
-            const detailsDiv = document.getElementById('func-details-' + funcIndex);
-            const icon = document.getElementById('func-icon-' + funcIndex);
+            const endpoint = func.endpoints[endpointIndex];
+            const detailsDiv = document.getElementById(\`endpoint-details-\${funcIndex}-\${endpointIndex}\`);
+            const icon = document.getElementById(\`endpoint-icon-\${funcIndex}-\${endpointIndex}\`);
             
             // Se já está expandido, colapsar
-            if (expandedFunctions[funcIndex]) {
+            if (detailsDiv.style.display === 'block') {
                 detailsDiv.style.display = 'none';
                 icon.textContent = '▶';
-                expandedFunctions[funcIndex] = false;
                 return;
             }
             
             // Expandir e gerar conteúdo
-            expandedFunctions[funcIndex] = true;
             icon.textContent = '▼';
             
-            // Gerar exemplos
-            let examplesHtml = '<h3 style="color: var(--primary); margin-bottom: 15px;">📡 Exemplos de Uso</h3>';
-            func.endpoints.forEach((endpoint, idx) => {
-                const uniqueId = \`endpoint-\${funcIndex}-\${idx}\`;
-                examplesHtml += generateExampleCard(endpoint, func, uniqueId);
-            });
+            const uniqueId = \`endpoint-\${funcIndex}-\${endpointIndex}\`;
+            const method = endpoint.method.toUpperCase();
+            const path = endpoint.path;
+            const fullUrl = \`https://api.samm.host\${path}\`;
+            const exampleBody = getExampleBody(path, method);
+            const isFileUpload = path.includes('pdf') || path.includes('upload') || path.includes('file');
             
-            // Gerar explorador
-            const explorerHtml = \`
-                <h3 style="color: var(--primary); margin: 30px 0 15px 0;">🔬 Testar API</h3>
-                <div class="api-explorer">
+            detailsDiv.innerHTML = \`
+                <h4 style="color: var(--primary); margin-bottom: 15px;">📋 Exemplos de Uso</h4>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, '\${uniqueId}-curl')">cURL</button>
+                    <button class="tab" onclick="switchTab(event, '\${uniqueId}-js')">JavaScript</button>
+                    <button class="tab" onclick="switchTab(event, '\${uniqueId}-python')">Python</button>
+                </div>
+                
+                <div id="\${uniqueId}-curl" class="tab-content active">
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">cURL</span>
+                            <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+                        </div>
+                        <pre><code>\${generateCurlExample(method, fullUrl, exampleBody, isFileUpload)}</code></pre>
+                    </div>
+                </div>
+                
+                <div id="\${uniqueId}-js" class="tab-content">
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">JavaScript (fetch)</span>
+                            <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+                        </div>
+                        <pre><code>\${generateJavaScriptExample(method, fullUrl, exampleBody, isFileUpload)}</code></pre>
+                    </div>
+                </div>
+                
+                <div id="\${uniqueId}-python" class="tab-content">
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">Python (requests)</span>
+                            <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+                        </div>
+                        <pre><code>\${generatePythonExample(method, fullUrl, exampleBody, isFileUpload)}</code></pre>
+                    </div>
+                </div>
+                
+                <h4 style="color: var(--primary); margin: 25px 0 15px 0; cursor: pointer;" onclick="toggleTestForm('\${uniqueId}')">
+                    <span id="test-form-icon-\${uniqueId}">▶</span> 🔬 Testar Endpoint
+                </h4>
+                <div id="test-form-\${uniqueId}" class="api-explorer" style="display: none;">
                     <div class="explorer-form">
                         <div class="form-group">
                             <label class="form-label">Endpoint:</label>
-                            <select class="form-select" id="explorer-endpoint-\${funcIndex}" onchange="updateExplorerForm(\${funcIndex})">
-                                \${func.endpoints.map(ep => \`
-                                    <option value="\${ep.path}" data-method="\${ep.method}">
-                                        \${ep.method} \${ep.path}
-                                    </option>
-                                \`).join('')}
-                            </select>
+                            <input type="text" class="form-input" value="\${path}" readonly style="background: #f8f9fa;">
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">Método:</label>
-                            <input type="text" class="form-input" id="explorer-method-\${funcIndex}" readonly>
+                            <input type="text" class="form-input" value="\${method}" readonly style="background: #f8f9fa;">
                         </div>
                         
-                        <div class="form-group" id="explorer-body-group-\${funcIndex}" style="display: none;">
-                            <label class="form-label">Body (JSON):</label>
-                            <textarea class="form-textarea" id="explorer-body-\${funcIndex}" rows="6" placeholder="{ }"></textarea>
-                        </div>
+                        \${(method !== 'GET' && method !== 'DELETE') ? \`
+                            <div class="form-group">
+                                <label class="form-label">Body (JSON):</label>
+                                <textarea class="form-textarea" id="explorer-body-\${uniqueId}" rows="6">\${JSON.stringify(exampleBody, null, 2)}</textarea>
+                            </div>
+                        \` : ''}
                         
-                        <button class="btn-primary" onclick="executeRequest(\${funcIndex})">
+                        <button class="btn-primary" onclick="executeEndpointRequest('\${uniqueId}', '\${path}', '\${method}')">
                             🚀 Executar Requisição
                         </button>
                     </div>
                     
                     <div class="explorer-response">
                         <h3 style="margin-bottom: 15px; color: #333;">📋 Resposta:</h3>
-                        <pre id="explorer-response-\${funcIndex}" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; min-height: 150px; overflow: auto;">Aguardando requisição...</pre>
+                        <pre id="explorer-response-\${uniqueId}" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; min-height: 150px; overflow: auto;">Aguardando requisição...</pre>
                     </div>
                 </div>
             \`;
             
-            detailsDiv.innerHTML = examplesHtml + explorerHtml;
             detailsDiv.style.display = 'block';
             
-            // Inicializar formulário do explorador
-            updateExplorerForm(funcIndex);
-            
-            // Scroll suave até o card expandido
-            document.getElementById('func-card-' + funcIndex).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Scroll suave até o endpoint expandido
+            detailsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
-
-        // Atualizar formulário do explorador inline
-        function updateExplorerForm(funcIndex) {
-            const select = document.getElementById('explorer-endpoint-' + funcIndex);
-            const selectedOption = select.options[select.selectedIndex];
-            const method = selectedOption.getAttribute('data-method');
-            
-            document.getElementById('explorer-method-' + funcIndex).value = method;
-            
-            const bodyGroup = document.getElementById('explorer-body-group-' + funcIndex);
-            if (method === 'GET' || method === 'DELETE') {
-                bodyGroup.style.display = 'none';
-            } else {
-                bodyGroup.style.display = 'block';
-                const endpoint = selectedOption.value;
-                const exampleBody = getExampleBody(endpoint, method);
-                document.getElementById('explorer-body-' + funcIndex).value = JSON.stringify(exampleBody, null, 2);
-            }
-        }
-
-        // Executar requisição inline
-        async function executeRequest(funcIndex) {
-            const endpoint = document.getElementById('explorer-endpoint-' + funcIndex).value;
-            const method = document.getElementById('explorer-method-' + funcIndex).value;
-            const bodyTextarea = document.getElementById('explorer-body-' + funcIndex);
-            const responseContent = document.getElementById('explorer-response-' + funcIndex);
+        
+        // Executar requisição de um endpoint específico
+        async function executeEndpointRequest(uniqueId, endpoint, method) {
+            const bodyTextarea = document.getElementById(\`explorer-body-\${uniqueId}\`);
+            const responseContent = document.getElementById(\`explorer-response-\${uniqueId}\`);
             
             responseContent.textContent = 'Executando requisição...';
             
@@ -836,7 +903,7 @@ export const allowedIPs = [
                     headers: {}
                 };
                 
-                if (method !== 'GET' && bodyTextarea && bodyTextarea.value.trim() !== '{}') {
+                if (method !== 'GET' && method !== 'DELETE' && bodyTextarea) {
                     try {
                         const body = JSON.parse(bodyTextarea.value);
                         fetchOptions.headers['Content-Type'] = 'application/json';
@@ -1017,17 +1084,36 @@ response = requests.\${method.toLowerCase()}(url)
 print(response.json())\`;
         }
 
+        // Toggle do formulário de teste
+        function toggleTestForm(uniqueId) {
+            const testForm = document.getElementById(\`test-form-\${uniqueId}\`);
+            const icon = document.getElementById(\`test-form-icon-\${uniqueId}\`);
+            
+            if (testForm.style.display === 'none') {
+                testForm.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                testForm.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
         // Switch de tabs
         function switchTab(event, tabId) {
-            const parent = event.target.closest('.endpoint');
+            // Encontrar o container de tabs mais próximo
+            const tabsContainer = event.target.parentElement;
+            const parent = tabsContainer.parentElement;
             
-            // Desativar todas as tabs
-            parent.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            // Desativar todas as tabs e conteúdos dentro deste container
+            tabsContainer.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             parent.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
             // Ativar tab clicada
             event.target.classList.add('active');
-            parent.querySelector('#' + tabId).classList.add('active');
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
         }
 
         // Copiar código
