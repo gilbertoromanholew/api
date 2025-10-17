@@ -64,12 +64,24 @@ class IPBlockingSystem {
         }
 
         // Registrar tentativa
-        if (!this.unauthorizedAttempts.has(ip)) {
+        const isFirstTime = !this.unauthorizedAttempts.has(ip);
+        
+        if (isFirstTime) {
             this.unauthorizedAttempts.set(ip, {
                 count: 0,
                 attempts: [],
                 suspensions: 0
             });
+            
+            // Registrar no histórico que o IP foi detectado pela primeira vez
+            this.recordStatusChange(
+                ip,
+                null,
+                'normal',
+                'IP registrado no sistema após primeiro acesso',
+                'system',
+                { isInitialRecord: true }
+            );
         }
 
         const record = this.unauthorizedAttempts.get(ip);
@@ -448,7 +460,43 @@ class IPBlockingSystem {
      * @returns {Array} Lista de mudanças
      */
     getIPHistory(ip) {
-        return this.statusHistory.get(ip) || [];
+        let history = this.statusHistory.get(ip) || [];
+        
+        // Se não houver histórico mas o IP já foi visto, criar registro inicial
+        if (history.length === 0) {
+            // Verificar se IP tem algum registro (tentativas, suspensões, bloqueios)
+            const hasUnauthorized = this.unauthorizedAttempts.has(ip);
+            const isSuspended = this.suspendedIPs.has(ip);
+            const isBlocked = this.blockedIPs.has(ip);
+            
+            if (hasUnauthorized || isSuspended || isBlocked) {
+                // Determinar quando foi o primeiro registro
+                let firstTimestamp = new Date().toISOString();
+                
+                if (hasUnauthorized) {
+                    const attempts = this.unauthorizedAttempts.get(ip).attempts;
+                    if (attempts && attempts.length > 0) {
+                        firstTimestamp = new Date(attempts[0].timestamp).toISOString();
+                    }
+                }
+                
+                // Criar registro inicial
+                const initialRecord = {
+                    timestamp: firstTimestamp,
+                    fromStatus: null,
+                    toStatus: 'normal',
+                    reason: 'IP registrado no sistema após primeiro acesso',
+                    triggeredBy: 'system',
+                    isInitialRecord: true
+                };
+                
+                // Adicionar ao histórico
+                history = [initialRecord];
+                this.statusHistory.set(ip, history);
+            }
+        }
+        
+        return history;
     }
 
     /**

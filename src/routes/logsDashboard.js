@@ -3020,6 +3020,13 @@ export const getLogsDashboard = (req, res) => {
 
         // ============= LISTA UNIFICADA DE SEGURANÇA E IPs =============
         
+        // Variável global para modal de confirmação
+        let confirmActionData = {
+            action: null,
+            ip: null,
+            callback: null
+        };
+        
         // Estado global da lista unificada
         const unifiedListState = {
             allData: [],
@@ -3715,12 +3722,6 @@ export const getLogsDashboard = (req, res) => {
         }
         
         // MODAL: CONFIRMAÇÃO
-        let confirmActionData = {
-            action: null,
-            ip: null,
-            callback: null
-        };
-        
         function confirmWarnIP(ip) {
             confirmActionData = { action: 'warn', ip: ip, callback: warnIPManually };
             document.getElementById('confirm-action-title').textContent = '⚠️ Confirmar Aviso';
