@@ -10,24 +10,65 @@ export const getApiDocs = (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #667eea;
-            --primary-dark: #5568d3;
-            --secondary: #764ba2;
+            /* Cores Primárias - Azul vibrante */
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #60a5fa;
+            
+            /* Cores Secundárias - Roxo */
+            --secondary: #8b5cf6;
+            --secondary-dark: #7c3aed;
+            
+            /* Acento - Rosa/Magenta */
+            --accent: #ec4899;
+            --accent-dark: #db2777;
+            
+            /* Estados */
             --success: #10b981;
+            --success-dark: #059669;
             --danger: #ef4444;
+            --danger-dark: #dc2626;
             --warning: #f59e0b;
-            --info: #3b82f6;
+            --warning-dark: #d97706;
+            --info: #06b6d4;
+            --info-dark: #0891b2;
+            
+            /* Métodos HTTP */
+            --method-get: #06b6d4;
+            --method-get-bg: #cffafe;
+            --method-post: #10b981;
+            --method-post-bg: #d1fae5;
+            --method-put: #f59e0b;
+            --method-put-bg: #fef3c7;
+            --method-delete: #ef4444;
+            --method-delete-bg: #fee2e2;
+            
+            /* Textos */
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            
+            /* Backgrounds */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            
+            /* Bordas */
+            --border: #e2e8f0;
+            --border-dark: #cbd5e1;
+            
+            /* Modo Escuro */
             --dark-bg: #0f172a;
             --card-bg: #1e293b;
+            --dark-border: #334155;
             --text-light: #e2e8f0;
-            --text-muted: #94a3b8;
-            --border: #334155;
+            --dark-text-muted: #94a3b8;
         }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: #333;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            color: var(--text-primary);
             line-height: 1.6;
             padding-bottom: 50px;
         }
@@ -225,7 +266,7 @@ export const getApiDocs = (req, res) => {
         }
         
         .function-desc {
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 15px;
         }
         
@@ -245,14 +286,14 @@ export const getApiDocs = (req, res) => {
             font-family: 'Courier New', monospace;
         }
         
-        .method-get { background: #e3f2fd; color: #1565c0; }
-        .method-post { background: #e8f5e9; color: #2e7d32; }
-        .method-put { background: #fff3e0; color: #e65100; }
-        .method-delete { background: #ffebee; color: #c62828; }
+        .method-get { background: var(--method-get-bg); color: var(--method-get); font-weight: 600; }
+        .method-post { background: var(--method-post-bg); color: var(--method-post); font-weight: 600; }
+        .method-put { background: var(--method-put-bg); color: var(--method-put); font-weight: 600; }
+        .method-delete { background: var(--method-delete-bg); color: var(--method-delete); font-weight: 600; }
         
         /* Endpoint Section */
         .endpoint {
-            background: #f8f9fa;
+            background: var(--bg-secondary);
             padding: 25px;
             border-radius: 10px;
             margin-bottom: 20px;
@@ -287,13 +328,13 @@ export const getApiDocs = (req, res) => {
         .endpoint-path {
             font-family: 'Courier New', monospace;
             font-size: 1.2em;
-            color: #333;
+            color: var(--text-primary);
             font-weight: bold;
         }
         
         .endpoint-desc {
             margin: 15px 0;
-            color: #666;
+            color: var(--text-secondary);
         }
         
         /* Code Block */
@@ -319,7 +360,7 @@ export const getApiDocs = (req, res) => {
         }
         
         .code-lang {
-            color: #888;
+            color: var(--dark-text-muted);
             font-size: 0.85em;
             text-transform: uppercase;
         }
@@ -348,7 +389,7 @@ export const getApiDocs = (req, res) => {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid var(--border);
         }
         
         .tab {
@@ -357,7 +398,7 @@ export const getApiDocs = (req, res) => {
             border: none;
             cursor: pointer;
             font-size: 1em;
-            color: #666;
+            color: var(--text-secondary);
             border-bottom: 3px solid transparent;
             transition: all 0.3s;
         }
@@ -620,7 +661,7 @@ export const allowedIPs = [
             <div id="functionsList">
                 <div style="text-align: center; padding: 40px;">
                     <div class="loading"></div>
-                    <p style="margin-top: 15px; color: #666;">Carregando funções...</p>
+                    <p style="margin-top: 15px; color: var(--text-secondary);">Carregando funções...</p>
                 </div>
             </div>
         </div>
@@ -710,7 +751,7 @@ export const allowedIPs = [
                     renderFunctions(allFunctionsData);
                 } else {
                     document.getElementById('functionsCount').textContent = '0';
-                    document.getElementById('functionsList').innerHTML = '<p style="text-align: center; color: #999;">Nenhuma função encontrada</p>';
+                    document.getElementById('functionsList').innerHTML = '<p style="text-align: center; color: var(--text-muted);">Nenhuma função encontrada</p>';
                 }
             } catch (error) {
                 console.error('Erro ao carregar funções:', error);
@@ -754,7 +795,7 @@ export const allowedIPs = [
                                 </div>
                             \`).join('')}
                         </div>
-                    \` : '<p style="color: #999; font-size: 0.9em; margin-top: 15px;">Nenhum endpoint encontrado</p>'}
+                    \` : '<p style="color: var(--text-muted); font-size: 0.9em; margin-top: 15px;">Nenhum endpoint encontrado</p>'}
                 </div>
             \`).join('');
             
@@ -878,7 +919,7 @@ export const allowedIPs = [
                     </div>
                     
                     <div class="explorer-response">
-                        <h3 style="margin-bottom: 15px; color: #333;">📋 Resposta:</h3>
+                        <h3 style="margin-bottom: 15px; color: var(--text-primary);">📋 Resposta:</h3>
                         <pre id="explorer-response-\${uniqueId}" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; min-height: 150px; overflow: auto;">Aguardando requisição...</pre>
                     </div>
                 </div>

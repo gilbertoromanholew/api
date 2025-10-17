@@ -2,7 +2,7 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![Version](https://img.shields.io/badge/Version-2.1.4-blue.svg)](https://github.com/gilbertoromanholew/api)
+[![Version](https://img.shields.io/badge/Version-2.1.5-blue.svg)](https://github.com/gilbertoromanholew/api)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-success.svg)](https://api.samm.host)
 
@@ -1063,7 +1063,7 @@ api/
 │       └── ipBlockingSystem.js  # Sistema de bloqueio automático
 │
 ├── server.js                # Entry point
-├── package.json             # Dependências (v2.1.4)
+├── package.json             # Dependências (v2.1.5)
 ├── README.md                # Documentação principal
 ├── SISTEMA_BLOQUEIO.md      # Documentação do sistema de bloqueio
 ├── IMPLEMENTACAO_BLOQUEIO.md # Resumo executivo da implementação

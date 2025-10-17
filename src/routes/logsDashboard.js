@@ -14,18 +14,49 @@ export const getLogsDashboard = (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #667eea;
-            --primary-dark: #5568d3;
-            --secondary: #764ba2;
+            /* Cores Primárias - Azul vibrante */
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #60a5fa;
+            
+            /* Cores Secundárias - Roxo */
+            --secondary: #8b5cf6;
+            --secondary-dark: #7c3aed;
+            
+            /* Acento - Rosa/Magenta */
+            --accent: #ec4899;
+            --accent-dark: #db2777;
+            
+            /* Estados */
             --success: #10b981;
+            --success-dark: #059669;
             --danger: #ef4444;
+            --danger-dark: #dc2626;
             --warning: #f59e0b;
-            --info: #3b82f6;
+            --warning-dark: #d97706;
+            --info: #06b6d4;
+            --info-dark: #0891b2;
+            
+            /* Textos */
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            
+            /* Backgrounds */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            
+            /* Bordas */
+            --border: #e2e8f0;
+            --border-dark: #cbd5e1;
+            
+            /* Modo Escuro */
             --dark-bg: #0f172a;
             --card-bg: #1e293b;
+            --dark-border: #334155;
             --text-light: #e2e8f0;
-            --text-muted: #94a3b8;
-            --border: #334155;
+            --dark-text-muted: #94a3b8;
         }
         
         body {
