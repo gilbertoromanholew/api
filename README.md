@@ -2,18 +2,18 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![Version](https://img.shields.io/badge/Version-2.1.5-blue.svg)](https://github.com/gilbertoromanholew/api)
+[![Version](https://img.shields.io/badge/Version-2.2.0-blue.svg)](https://github.com/gilbertoromanholew/api)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-success.svg)](https://api.samm.host)
 
-> **API REST modular com auto-descoberta de rotas, validação centralizada, dashboard de monitoramento em tempo real, sistema de bloqueio automático de IPs e templates para desenvolvimento rápido.**
+> **API REST modular com auto-descoberta de rotas, validação centralizada, dashboard de monitoramento em tempo real com lista unificada de IPs, sistema inteligente de bloqueio automático com preservação de estado, e templates para desenvolvimento rápido.**
 
 **🌐 URL de Produção:** https://api.samm.host
 
 **📚 Documentação Adicional:**
-- 🛡️ [Sistema de Bloqueio de IPs](./SISTEMA_BLOQUEIO.md) - Documentação técnica completa
-- 📊 [Implementação do Sistema](./IMPLEMENTACAO_BLOQUEIO.md) - Resumo executivo
-- 🔍 [Auditoria Completa](./AUDITORIA_COMPLETA.md) - Relatório de auditoria do código
+- � [Correções de Bugs (17/10/2025)](./.github/docs/CORRECOES_BUGS_17_10_2025.md) - Últimas correções e melhorias
+- � [Preservação de Estado](./.github/saves/PRESERVAR_ESTADO_AUTO_REFRESH.md) - Padrão de preservação durante auto-refresh
+- � [Cheat Sheet de Estado](./.github/saves/CHEAT_SHEET_ESTADO.md) - Guia rápido de implementação
 
 ---
 
@@ -271,7 +271,70 @@ class ExemploController extends BaseController {
 | `POST` | `/api/logs/clear` | Limpar todos os logs |
 | `GET` | `/api/functions` | Funções auto-descobertas (cache 5min) |
 
-### 👥 Usuários (CRUD Completo)
+### �️ API de Segurança (v2.2.0)
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `GET` | `/api/security/unified` | Lista unificada de IPs com filtros |
+| `GET` | `/api/security/history/:ip` | Histórico de mudanças de status |
+| `GET` | `/api/security/stats` | Estatísticas do sistema de bloqueio |
+| `GET` | `/api/security/blocked` | Lista de IPs bloqueados |
+| `GET` | `/api/security/suspended` | Lista de IPs suspensos |
+| `GET` | `/api/security/warnings` | Lista de IPs com avisos |
+| `POST` | `/api/security/warn-manual/:ip` | Adicionar aviso manualmente |
+| `POST` | `/api/security/suspend-manual/:ip` | Suspender IP manualmente |
+| `POST` | `/api/security/block-manual/:ip` | Bloquear IP permanentemente |
+| `POST` | `/api/security/clear-status/:ip` | Limpar status de IP |
+| `POST` | `/api/security/unblock/:ip` | Desbloquear IP |
+| `POST` | `/api/security/unsuspend/:ip` | Remover suspensão |
+
+**Query params para `/api/security/unified`:**
+```
+?page=1              # Número da página (padrão: 1)
+?limit=20            # IPs por página (padrão: 20)
+?filter=all          # Filtro: all|normal|warning|suspended|blocked
+?sort=lastSeen       # Ordenação (padrão: lastSeen)
+?search=192.168      # Busca por IP parcial
+```
+
+**Resposta da API Unificada:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "ip": "192.168.1.100",
+      "status": "warning",
+      "stats": {
+        "totalAttempts": 15,
+        "authorized": 12,
+        "denied": 3,
+        "lastSeen": "2025-10-17T14:30:00.000Z"
+      },
+      "security": {
+        "attempts": 3,
+        "remainingAttempts": 2
+      },
+      "isSuspicious": false
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 45,
+    "totalPages": 3
+  },
+  "summary": {
+    "total": 45,
+    "normal": 38,
+    "warning": 5,
+    "suspended": 1,
+    "blocked": 1
+  }
+}
+```
+
+### �👥 Usuários (CRUD Completo)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
@@ -458,7 +521,7 @@ Acesse **http://localhost:3000/docs** para uma experiência completa:
 
 Acesse **http://localhost:3000/logs** para monitoramento avançado:
 
-#### Estatísticas Gerais (Auto-refresh 10s)
+#### Estatísticas Gerais (Auto-refresh 30s)
 - ✅ **Total de Requisições** - Contador global
 - ✔️ **Requisições Autorizadas** - Acessos permitidos
 - 🌍 **IPs Únicos** - Contagem de visitantes diferentes
@@ -471,18 +534,52 @@ Cada card mostra **Top 3** + botão "Ver todos":
 - 💻 **Plataformas Mais Usadas** (Windows, Linux, macOS, Android, etc.)
 - 🌍 **Países Mais Frequentes** (com bandeiras)
 
-#### Estatísticas Detalhadas por IP
-- 🏠 **Seu IP fixado no topo** com badge "VOCÊ" e borda verde
+#### 🛡️ Lista Unificada de Segurança e IPs (v2.2.0)
+**Nova Interface Unificada** que combina logs de acesso + gerenciamento de segurança:
+
+- 🏠 **Seu IP fixado no topo** com badge "VOCÊ 🏠" e borda verde
 - **Paginação inteligente:** 12 IPs visíveis + botão "Ver todos"
 - **Cards com informações ricas:**
   - Endereço IP + bandeira do país
+  - Status de segurança (Normal, Aviso, Suspenso, Bloqueado)
   - Total de requisições
   - Primeira e última requisição
   - Navegador e plataforma
-  - Botão para ver detalhes completos
+  - Botões de ação contextual (Avisar, Suspender, Bloquear, Restaurar)
+
+**Gerenciamento de Segurança:**
+- ➕ **Adicionar IP Manualmente** - Modal para adicionar IPs com status e motivo
+- 🔍 **Filtros Dinâmicos:**
+  - Status: Todos, Normal, Aviso, Suspenso, Bloqueado
+  - Origem: Todos, Acessos, Adicionado Manualmente
+  - Filtros aplicam instantaneamente (sem recarregar página)
+- 🎯 **Ações Rápidas:**
+  - Avisar IP (⚠️) - Marca IP como suspeito
+  - Suspender IP (⏸️) - Bloqueia temporariamente
+  - Bloquear IP (🚫) - Bloqueia permanentemente
+  - Restaurar IP (✅) - Remove restrições
+  - Ver Detalhes (👁️) - Modal com informações completas
+  - Remover IP (🗑️) - Exclui registro (apenas IPs adicionados manualmente)
+- 🔒 **Proteção do Próprio IP:**
+  - Detecta automaticamente seu IP atual
+  - Desabilita botões de ação no seu IP
+  - Badge "🏠 Seu IP (Não pode modificar)"
+  - Aviso toast ao tentar modificar
+
+**Preservação Inteligente de Estado:**
+- 💾 Auto-salva filtros ativos no localStorage
+- 🔄 Restaura estado após refresh da página
+- 📍 Mantém posição de scroll
+- ⚡ Restauração instantânea (< 100ms)
 
 #### Modal de Detalhes de IP (Auto-refresh 3s)
 Ao clicar em um IP, veja:
+- 🛡️ **Status de Segurança:**
+  - Status atual (Normal, Aviso, Suspenso, Bloqueado)
+  - Motivo da restrição (se aplicável)
+  - Data/hora da última modificação
+  - Origem do registro (acesso ou manual)
+  
 - 🌍 **Geolocalização Completa:**
   - País, cidade, região/estado, CEP
   - Timezone com relógio
@@ -501,7 +598,7 @@ Ao clicar em um IP, veja:
   - Navegadores usados
   - Plataformas detectadas
 
-- � **Logs Detalhados (Expansível):**
+- 📋 **Logs Detalhados (Expansível):**
   - Horário preciso de cada acesso
   - Endpoint requisitado
   - Status de autorização
@@ -525,16 +622,18 @@ Ao clicar em um IP, veja:
 - **Performance:** Máximo de 45 requisições/minuto respeitado
 
 #### Recursos Especiais:
-- 🔄 **Auto-refresh seletivo:**
-  - Stats gerais: 10s
+- 🔄 **Auto-refresh otimizado (v2.2.0):**
+  - Stats gerais: 30s (otimizado de 10s)
+  - Lista de IPs: 30s (preserva estado e scroll)
   - Modal aberto: 3s
   - Resto da página: estático
-- 🏠 **Detecção automática do seu IP** (pinado no topo)
+- 🏠 **Detecção automática do seu IP** (pinado no topo + proteção)
 - 🎨 **Interface escalável** (testada com 100+ IPs)
 - 📱 **Design responsivo**
-- � **Animações suaves**
+- ✨ **Animações suaves**
 - 🔔 **Toast notifications** (máx. 3 simultâneos)
 - 🌍 **Bandeiras de países** (emojis nativos)
+- 🎨 **Tema dark otimizado** (v2.2.0 - paleta de cores consistente)
 
 ---
 
@@ -962,9 +1061,74 @@ Para documentação completa sobre a implementação ZeroTier, consulte:
 
 ---
 
-## 🆕 Novas Implementações (v2.1.0+)
+## 🆕 Novas Implementações (v2.2.0) - 17/10/2025
 
-### ⚡ Otimizações de Performance
+### 🎯 Lista Unificada de Segurança e IPs
+
+**Nova Interface Consolidada**:
+- 📋 **Lista única** substituindo 3 seções separadas (bloqueados/suspensos/avisos)
+- 🔍 **Filtros inteligentes**: All, Normal, Avisos, Suspensos, Bloqueados
+- 📊 **Cards de estatísticas** em tempo real (contadores por status)
+- 📄 **Paginação** com 20 IPs por página
+- 🔄 **Auto-refresh otimizado** (30s com pausa em interação)
+- 💾 **Preservação de estado**: cards expandidos e scroll mantidos durante refresh
+
+**Endpoints da API**:
+- `GET /api/security/unified` - Lista unificada com filtros e paginação
+- `GET /api/security/history/:ip` - Histórico de mudanças de status
+- `POST /api/security/warn-manual/:ip` - Adicionar aviso manualmente
+- `POST /api/security/clear-status/:ip` - Limpar status de IP
+- `POST /api/security/add-ip` - Adicionar IP ao sistema manualmente
+
+### 🧠 Sistema Inteligente de Preservação de Estado
+
+**Problema Resolvido**: Auto-refresh não perde mais a visualização do usuário
+
+**Implementação**:
+- Cards expandidos permanecem abertos durante refresh
+- Posição do scroll é preservada
+- Filtro selecionado mantido
+- ⏸️ Auto-refresh pausa por 5s quando usuário interage
+
+**Padrão de Implementação**:
+```javascript
+// 1. Salvar estado antes do refresh
+unifiedListState.expandedCards[ip] = true;
+unifiedListState.scrollPosition = container.scrollTop;
+
+// 2. Reconstruir UI com novos dados
+renderUnifiedCards(data);
+
+// 3. Restaurar estado salvo
+Object.keys(expandedCards).forEach(ip => {
+    card.classList.add('expanded');
+});
+container.scrollTop = savedPosition;
+```
+
+### 🐛 Correções Críticas de Bugs
+
+1. **Contagem Incorreta de IPs** ✅
+   - Summary agora calcula ANTES dos filtros
+   - Contadores sempre mostram totais corretos
+   - Fix no backend `/api/security/unified`
+
+2. **Proteção do Próprio IP** ✅
+   - Impossível bloquear o próprio IP acidentalmente
+   - Badge 🏠 "Seu IP (Não pode modificar)"
+   - Toast de aviso ao tentar ações perigosas
+
+3. **Paleta de Cores do Modal** ✅
+   - Inputs, selects e textareas com tema dark
+   - Focus states consistentes
+   - Placeholders legíveis
+
+4. **Auto-refresh Excessivo** ✅
+   - Reduzido de 10s → 30s
+   - Pausa automática em interações
+   - Feedback visual sutil (não destrutivo)
+
+### ⚡ Otimizações de Performance (v2.1.0+)
 
 1. **Cache Inteligente de Rotas (5min TTL)**
    - GET `/api/functions` agora usa cache

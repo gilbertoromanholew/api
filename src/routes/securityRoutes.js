@@ -313,4 +313,308 @@ router.post('/block-manual/:ip', (req, res) => {
     }
 });
 
+/**
+ * GET /api/security/unified
+ * Lista unificada de IPs com paginação, filtros e busca
+ * Query params: page, limit, filter (all|normal|warning|suspended|blocked), search
+ */
+router.get('/unified', async (req, res) => {
+    try {
+        const { page = 1, limit = 20, filter = 'all', search = '' } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+
+        // Importar accessLogger para obter dados de IPs
+        const { accessLogger } = await import('../utils/accessLogger.js');
+        
+        // Obter todos os IPs do sistema
+        const allIPStats = accessLogger.getIPStats();
+        const blocked = ipBlockingSystem.getBlockedIPs();
+        const suspended = ipBlockingSystem.getSuspendedIPs();
+        const warnings = ipBlockingSystem.getWarningIPs();
+
+        // Criar mapa de status de segurança por IP
+        const securityMap = new Map();
+        
+        // Adicionar bloqueados
+        blocked.forEach(item => {
+            securityMap.set(item.ip, {
+                status: 'blocked',
+                securityInfo: {
+                    blockedAt: item.blockedAt,
+                    blockedReason: item.reason || 'Multiple violations',
+                    attempts: item.attempts || 0
+                }
+            });
+        });
+
+        // Adicionar suspensos
+        suspended.forEach(item => {
+            securityMap.set(item.ip, {
+                status: 'suspended',
+                securityInfo: {
+                    suspendedUntil: item.until,
+                    remainingMinutes: item.remainingMinutes,
+                    attempts: item.attempts,
+                    suspensionCount: item.suspensionCount
+                }
+            });
+        });
+
+        // Adicionar avisos
+        warnings.forEach(item => {
+            securityMap.set(item.ip, {
+                status: 'warning',
+                securityInfo: {
+                    attempts: item.attempts,
+                    remainingAttempts: item.remainingAttempts,
+                    suspensions: item.suspensions,
+                    lastAttempt: item.lastAttempt
+                }
+            });
+        });
+
+        // Combinar dados de IPs com status de segurança
+        let unifiedIPs = allIPStats.map(ipData => {
+            const security = securityMap.get(ipData.ip);
+            return {
+                ip: ipData.ip,
+                status: security ? security.status : 'normal',
+                stats: {
+                    totalAttempts: ipData.total_attempts,
+                    authorized: ipData.authorized,
+                    denied: ipData.denied,
+                    lastSeen: ipData.last_seen
+                },
+                security: security ? security.securityInfo : {
+                    attempts: 0,
+                    remainingAttempts: 5
+                },
+                isSuspicious: ipData.denied > 5 || (ipData.denied / ipData.total_attempts) > 0.5
+            };
+        });
+
+        // ⚠️ CALCULAR SUMMARY ANTES DE BUSCA E FILTRO (para mostrar contagens corretas de todos os IPs)
+        // Isso garante que as contagens nos cards de estatísticas sejam sempre corretas,
+        // independente do filtro ou busca aplicada
+        const allIPsCount = unifiedIPs.length;
+        const summaryBeforeFilter = {
+            total: allIPsCount,
+            normal: unifiedIPs.filter(ip => ip.status === 'normal').length,
+            warning: unifiedIPs.filter(ip => ip.status === 'warning').length,
+            suspended: unifiedIPs.filter(ip => ip.status === 'suspended').length,
+            blocked: unifiedIPs.filter(ip => ip.status === 'blocked').length
+        };
+
+        // Aplicar busca (não afeta summary)
+        if (search) {
+            unifiedIPs = unifiedIPs.filter(ip => ip.ip.includes(search));
+        }
+
+        // Aplicar filtro por status (não afeta summary)
+        if (filter !== 'all') {
+            unifiedIPs = unifiedIPs.filter(ip => ip.status === filter);
+        }
+
+        // Ordenar por total de tentativas (decrescente)
+        unifiedIPs.sort((a, b) => b.stats.totalAttempts - a.stats.totalAttempts);
+
+        // Calcular paginação (AGORA com IPs filtrados)
+        const totalIPs = unifiedIPs.length;
+        const totalPages = Math.ceil(totalIPs / limitNum);
+        const startIndex = (pageNum - 1) * limitNum;
+        const endIndex = startIndex + limitNum;
+        const paginatedIPs = unifiedIPs.slice(startIndex, endIndex);
+
+        res.json({
+            success: true,
+            data: paginatedIPs,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total: totalIPs,
+                totalPages: totalPages
+            },
+            filter: filter,
+            search: search,
+            summary: summaryBeforeFilter, // ✅ Usar contagens de TODOS os IPs, não filtrados
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/security/history/:ip
+ * Histórico de mudanças de status de um IP
+ */
+router.get('/history/:ip', (req, res) => {
+    try {
+        const { ip } = req.params;
+
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        const history = ipBlockingSystem.getIPHistory(ip);
+
+        res.json({
+            success: true,
+            ip: ip,
+            totalChanges: history.length,
+            history: history,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/security/warn-manual/:ip
+ * Colocar IP em aviso manualmente
+ */
+router.post('/warn-manual/:ip', (req, res) => {
+    try {
+        const { ip } = req.params;
+        const { reason = 'Manual warning by admin' } = req.body;
+
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        const result = ipBlockingSystem.warnIPManually(ip, reason);
+
+        res.json({
+            success: true,
+            message: result.message,
+            ip: ip,
+            attempts: result.attempts,
+            remainingAttempts: result.remainingAttempts,
+            reason: reason,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/security/clear-status/:ip
+ * Limpar status do IP (voltar ao normal)
+ */
+router.post('/clear-status/:ip', (req, res) => {
+    try {
+        const { ip } = req.params;
+
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        const result = ipBlockingSystem.clearIPStatus(ip);
+
+        res.json({
+            success: true,
+            message: result.message,
+            ip: ip,
+            previousStatus: result.previousStatus,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/security/add-ip
+ * Adicionar IP manualmente com status inicial
+ */
+router.post('/add-ip', (req, res) => {
+    try {
+        const { ip, status, reason = 'Manual addition by admin', duration = 3600000 } = req.body;
+
+        // Validar IP
+        if (!ip) {
+            return res.status(400).json({
+                success: false,
+                error: 'IP address is required'
+            });
+        }
+
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        // Validar status
+        const validStatuses = ['warning', 'suspended', 'blocked'];
+        if (!status || !validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                error: `Status must be one of: ${validStatuses.join(', ')}`
+            });
+        }
+
+        let result;
+
+        switch (status) {
+            case 'warning':
+                result = ipBlockingSystem.warnIPManually(ip, reason);
+                break;
+            case 'suspended':
+                result = ipBlockingSystem.suspendIPManually(ip, reason, duration);
+                break;
+            case 'blocked':
+                result = ipBlockingSystem.blockIPManually(ip, reason);
+                break;
+        }
+
+        res.json({
+            success: true,
+            message: `IP ${ip} added with status: ${status}`,
+            ip: ip,
+            status: status,
+            reason: reason,
+            details: result,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 export default router;

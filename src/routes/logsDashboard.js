@@ -777,6 +777,17 @@ export const getLogsDashboard = (req, res) => {
             }
         }
         
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+        
         .details-header {
             display: flex;
             justify-content: space-between;
@@ -911,6 +922,817 @@ export const getLogsDashboard = (req, res) => {
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ===========================================
+           MODAIS - FASE 6
+           =========================================== */
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: 15px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: var(--text-light);
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: var(--danger);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 20px 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Estilos de Formulário do Modal */
+        .modal-body input[type="text"],
+        .modal-body select,
+        .modal-body textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-light);
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .modal-body input[type="text"]:focus,
+        .modal-body select:focus,
+        .modal-body textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .modal-body input[type="text"]::placeholder,
+        .modal-body textarea::placeholder {
+            color: var(--dark-text-muted);
+        }
+
+        .modal-body label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .modal-body small {
+            color: var(--dark-text-muted);
+            display: block;
+            margin-top: 5px;
+            font-size: 0.85em;
+        }
+
+        /* ===========================================
+           SEÇÃO UNIFICADA DE SEGURANÇA E IPs - FASE 3
+           =========================================== */
+
+        .unified-security-section {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        /* HEADER - Estatísticas Globais */
+        .unified-header {
+            margin-bottom: 30px;
+        }
+
+        .unified-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .unified-stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .unified-stat-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .unified-stat-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .unified-stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .unified-stat-label {
+            color: var(--dark-text-muted);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* STATUS COLORS */
+        .unified-stat-card.status-normal .unified-stat-value {
+            color: var(--success);
+        }
+
+        .unified-stat-card.status-warning .unified-stat-value {
+            color: var(--warning);
+        }
+
+        .unified-stat-card.status-suspended .unified-stat-value {
+            color: var(--info);
+        }
+
+        .unified-stat-card.status-blocked .unified-stat-value {
+            color: var(--danger);
+        }
+
+        /* CONTROLS - Botões de Ação */
+        .unified-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .unified-controls-left {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .unified-controls-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-add-ip {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-add-ip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-refresh {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-refresh:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .auto-refresh-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-light);
+            font-size: 0.9em;
+        }
+
+        .auto-refresh-toggle .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .auto-refresh-toggle .toggle-switch.active {
+            background: var(--success);
+        }
+
+        .auto-refresh-toggle .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: all 0.3s;
+        }
+
+        .auto-refresh-toggle .toggle-switch.active::after {
+            left: 27px;
+        }
+
+        /* FILTERS - Filtros e Busca */
+        .unified-filters {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .filter-tab {
+            background: transparent;
+            color: var(--dark-text-muted);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .filter-tab .count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .filter-tab.active .count {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-search-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-search {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .filter-search input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-light);
+            font-size: 1em;
+            outline: none;
+        }
+
+        .filter-search input::placeholder {
+            color: var(--dark-text-muted);
+        }
+
+        .filter-search-icon {
+            color: var(--dark-text-muted);
+            font-size: 1.2em;
+        }
+
+        .filter-sort {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-sort select {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        /* LIST - Cards de IPs */
+        .unified-list {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .unified-ip-card {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 5px solid var(--border);
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .unified-ip-card:hover {
+            background: rgba(15, 23, 42, 0.8);
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* STATUS BORDERS */
+        .unified-ip-card.status-normal {
+            border-left-color: var(--success);
+        }
+
+        .unified-ip-card.status-warning {
+            border-left-color: var(--warning);
+        }
+
+        .unified-ip-card.status-suspended {
+            border-left-color: var(--info);
+        }
+
+        .unified-ip-card.status-blocked {
+            border-left-color: var(--danger);
+        }
+
+        /* CARD HEADER */
+        .unified-ip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .unified-ip-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .unified-ip-icon {
+            font-size: 2em;
+        }
+
+        .unified-ip-address {
+            font-family: 'Courier New', monospace;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .unified-ip-status-badge {
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .unified-ip-status-badge.status-normal {
+            background: rgba(5, 150, 105, 0.2);
+            color: var(--success);
+        }
+
+        .unified-ip-status-badge.status-warning {
+            background: rgba(217, 119, 6, 0.2);
+            color: var(--warning);
+        }
+
+        .unified-ip-status-badge.status-suspended {
+            background: rgba(8, 145, 178, 0.2);
+            color: var(--info);
+        }
+
+        .unified-ip-status-badge.status-blocked {
+            background: rgba(220, 38, 38, 0.2);
+            color: var(--danger);
+        }
+
+        .unified-ip-header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .expand-icon {
+            color: var(--dark-text-muted);
+            font-size: 1.5em;
+            transition: transform 0.3s;
+        }
+
+        .unified-ip-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* CARD STATS (Inline) */
+        .unified-ip-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .unified-ip-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--dark-text-muted);
+            font-size: 0.9em;
+        }
+
+        .unified-ip-stat-icon {
+            font-size: 1.1em;
+        }
+
+        .unified-ip-stat-value {
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        /* CARD ACTIONS */
+        .unified-ip-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding-top: 15px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .action-btn[disabled],
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .action-btn.btn-warning {
+            border-color: var(--warning);
+            color: var(--warning);
+            background: rgba(217, 119, 6, 0.1);
+        }
+
+        .action-btn.btn-warn {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .action-btn.btn-warn:hover {
+            background: rgba(217, 119, 6, 0.2);
+        }
+
+        .action-btn.btn-suspend {
+            border-color: var(--info);
+            color: var(--info);
+        }
+
+        .action-btn.btn-suspend:hover {
+            background: rgba(8, 145, 178, 0.2);
+        }
+
+        .action-btn.btn-block {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .action-btn.btn-block:hover {
+            background: rgba(220, 38, 38, 0.2);
+        }
+
+        .action-btn.btn-clear {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .action-btn.btn-clear:hover {
+            background: rgba(5, 150, 105, 0.2);
+        }
+
+        .action-btn.btn-history {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .action-btn.btn-history:hover {
+            background: rgba(37, 99, 235, 0.2);
+        }
+
+        /* CARD DETAILS (Expandido) */
+        .unified-ip-details {
+            display: none;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 15px;
+        }
+
+        .unified-ip-card.expanded .unified-ip-details {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 1000px;
+            }
+        }
+
+        .unified-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .unified-detail-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .unified-detail-title {
+            color: var(--text-light);
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .unified-detail-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .unified-detail-list li {
+            padding: 8px 0;
+            color: var(--dark-text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .unified-detail-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* PAGINATION */
+        .unified-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .pagination-info {
+            color: var(--dark-text-muted);
+            font-size: 0.95em;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-page {
+            color: var(--text-light);
+            font-weight: 600;
+            padding: 0 15px;
+        }
+
+        /* EMPTY STATE */
+        .unified-empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--dark-text-muted);
+        }
+
+        .unified-empty-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .unified-empty-message {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .unified-empty-hint {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        /* LOADING STATE */
+        .unified-loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .unified-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .unified-controls-left,
+            .unified-controls-right {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .filter-tabs {
+                justify-content: center;
+            }
+            
+            .filter-search-row {
+                flex-direction: column;
+            }
+            
+            .unified-ip-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .unified-ip-actions {
+                justify-content: center;
+            }
+            
+            .unified-pagination {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -997,136 +1819,239 @@ export const getLogsDashboard = (req, res) => {
         </div>
 
         <!-- IP Stats -->
+        <!-- SEÇÃO UNIFICADA: Segurança + Estatísticas de IPs -->
         <div class="section">
             <div class="section-header">
-                <h2 class="section-title">📊 Estatísticas por IP</h2>
-                <div class="controls">
-                    <span class="auto-refresh-info">
-                        Auto-refresh: <strong id="countdown">10</strong>s
-                    </span>
-                    <button class="btn success" id="toggleAutoRefresh">
-                        🔄 Auto ON (10s)
-                    </button>
-                    <button class="btn" onclick="loadAllData()">
-                        ↻ Atualizar
-                    </button>
-                    <button class="btn danger" onclick="clearLogs()">
-                        🗑️ Limpar Logs
-                    </button>
-                </div>
-            </div>
-            <div class="ip-stats-grid" id="ipStatsGrid">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Carregando estatísticas...
-                </div>
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleUnifiedSection()">
+                    <span id="unified-section-icon">▼</span>
+                    🛡️ Gerenciamento de Segurança e IPs
+                    <span class="badge badge-success" id="unified-status-badge">Sistema Ativo</span>
+                </h2>
             </div>
             
-            <!-- Painel de Detalhes do IP -->
-            <div class="ip-details-panel" id="ipDetailsPanel">
-                <div class="details-header">
-                    <h2 class="details-title">
-                        <span>🔍</span>
-                        <span id="detailsIPAddress">Detalhes do IP</span>
-                    </h2>
-                    <button class="details-close" onclick="closeIPDetails()">✖ Fechar</button>
+            <div id="unified-section-content" class="unified-security-section" style="display: block;">
+                
+                <!-- HEADER: Estatísticas Globais -->
+                <div class="unified-header">
+                    <div class="unified-stats-grid">
+                        <div class="unified-stat-card status-normal">
+                            <div class="unified-stat-icon">✅</div>
+                            <div class="unified-stat-value" id="unified-count-normal">0</div>
+                            <div class="unified-stat-label">Normal</div>
+                        </div>
+                        <div class="unified-stat-card status-warning">
+                            <div class="unified-stat-icon">⚠️</div>
+                            <div class="unified-stat-value" id="unified-count-warning">0</div>
+                            <div class="unified-stat-label">Avisos</div>
+                        </div>
+                        <div class="unified-stat-card status-suspended">
+                            <div class="unified-stat-icon">⏳</div>
+                            <div class="unified-stat-value" id="unified-count-suspended">0</div>
+                            <div class="unified-stat-label">Suspensos</div>
+                        </div>
+                        <div class="unified-stat-card status-blocked">
+                            <div class="unified-stat-icon">🚫</div>
+                            <div class="unified-stat-value" id="unified-count-blocked">0</div>
+                            <div class="unified-stat-label">Bloqueados</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="details-body" id="detailsBody">
-                    <!-- Conteúdo será preenchido dinamicamente -->
+
+                <!-- CONTROLS: Botões de Ação -->
+                <div class="unified-controls">
+                    <div class="unified-controls-left">
+                        <button class="btn-add-ip" onclick="openAddIPModal()">
+                            ➕ Adicionar IP
+                        </button>
+                        <button class="btn-refresh" onclick="loadUnifiedList()">
+                            🔄 Atualizar
+                        </button>
+                    </div>
+                    <div class="unified-controls-right">
+                        <div class="auto-refresh-toggle">
+                            <span>Auto-refresh:</span>
+                            <div class="toggle-switch" id="unified-auto-refresh-toggle" onclick="toggleUnifiedAutoRefresh()"></div>
+                            <span id="unified-countdown">10s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FILTERS: Filtros e Busca -->
+                <div class="unified-filters">
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all" onclick="changeUnifiedFilter('all')">
+                            🌐 Todos
+                            <span class="count" id="filter-count-all">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="normal" onclick="changeUnifiedFilter('normal')">
+                            ✅ Normal
+                            <span class="count" id="filter-count-normal">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="warning" onclick="changeUnifiedFilter('warning')">
+                            ⚠️ Avisos
+                            <span class="count" id="filter-count-warning">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="suspended" onclick="changeUnifiedFilter('suspended')">
+                            ⏳ Suspensos
+                            <span class="count" id="filter-count-suspended">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="blocked" onclick="changeUnifiedFilter('blocked')">
+                            🚫 Bloqueados
+                            <span class="count" id="filter-count-blocked">0</span>
+                        </button>
+                    </div>
+                    
+                    <div class="filter-search-row">
+                        <div class="filter-search">
+                            <span class="filter-search-icon">🔍</span>
+                            <input type="text" 
+                                   id="unified-search-input" 
+                                   placeholder="Buscar por endereço IP..." 
+                                   onkeyup="searchUnifiedList()"
+                            />
+                        </div>
+                        <div class="filter-sort">
+                            <label for="unified-sort-select">Ordenar:</label>
+                            <select id="unified-sort-select" onchange="sortUnifiedList()">
+                                <option value="lastSeen">Mais Recente</option>
+                                <option value="attempts">Tentativas (Maior)</option>
+                                <option value="ip">IP (A-Z)</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIST: Cards de IPs -->
+                <div id="unified-list" class="unified-list">
+                    <!-- Loading inicial -->
+                    <div class="unified-loading">
+                        <div class="spinner"></div>
+                        <p>Carregando lista de IPs...</p>
+                    </div>
+                </div>
+
+                <!-- PAGINATION: Controles de Paginação -->
+                <div id="unified-pagination" class="unified-pagination" style="display: none;">
+                    <div class="pagination-info">
+                        Mostrando <strong id="pagination-start">1</strong> - <strong id="pagination-end">20</strong> 
+                        de <strong id="pagination-total">0</strong> IPs
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" id="pagination-prev" onclick="changePage('prev')" disabled>
+                            ◀ Anterior
+                        </button>
+                        <div class="pagination-page">
+                            Página <strong id="pagination-current">1</strong> / <strong id="pagination-pages">1</strong>
+                        </div>
+                        <button class="pagination-btn" id="pagination-next" onclick="changePage('next')">
+                            Próxima ▶
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Modal: Adicionar IP Manualmente -->
+        <div id="addIPModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>➕ Adicionar IP Manualmente</h2>
+                    <button class="modal-close" onclick="closeAddIPModal()">✖</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 20px;">
+                        <label for="add-ip-address">
+                            📍 Endereço IP:
+                        </label>
+                        <input type="text" 
+                               id="add-ip-address" 
+                               placeholder="Ex: 192.168.1.100"
+                        />
+                        <small>
+                            Digite um endereço IPv4 válido
+                        </small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label for="add-ip-status">
+                            🎯 Status Inicial:
+                        </label>
+                        <select id="add-ip-status">
+                            <option value="warning">⚠️ Aviso (Preventivo)</option>
+                            <option value="suspended">⏳ Suspenso (Bloqueio Temporário)</option>
+                            <option value="blocked">🚫 Bloqueado (Bloqueio Permanente)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label for="add-ip-reason">
+                            📝 Motivo:
+                        </label>
+                        <textarea id="add-ip-reason" 
+                                  placeholder="Ex: IP suspeito de ataque" 
+                                  rows="3" 
+                                  style="resize: vertical;"
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeAddIPModal()">
+                        ❌ Cancelar
+                    </button>
+                    <button class="btn success" onclick="submitAddIP()">
+                        ✅ Adicionar IP
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Security & Blocking System -->
-        <div class="section">
-            <div class="section-header">
-                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleSecuritySection()">
-                    <span id="security-section-icon">▼</span>
-                    🛡️ Sistema de Segurança
-                    <span class="badge badge-info" id="security-status-badge">Carregando...</span>
-                </h2>
+        <!-- Modal: Histórico de Status -->
+        <div id="historyModal" class="modal">
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2>📜 Histórico de Status</h2>
+                    <button class="modal-close" onclick="closeHistoryModal()">✖</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 15px;">
+                        <strong>IP:</strong> <span id="history-ip-address" style="font-family: 'Courier New', monospace; color: var(--primary);"></span>
+                    </div>
+                    <div id="history-timeline" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Timeline será preenchida dinamicamente -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeHistoryModal()">
+                        Fechar
+                    </button>
+                </div>
             </div>
-            <div id="security-section-content" style="display: block; padding-top: 20px;">
-                
-                <!-- Estatísticas de Segurança -->
-                <div class="stats-grid" style="margin-bottom: 30px;">
-                    <div class="stat-card danger">
-                        <div class="stat-label">🚫 IPs Bloqueados</div>
-                        <div class="stat-value" id="security-blocked-count">0</div>
-                        <div class="stat-description">Bloqueio permanente</div>
-                    </div>
-                    <div class="stat-card warning">
-                        <div class="stat-label">⏳ IPs Suspensos</div>
-                        <div class="stat-value" id="security-suspended-count">0</div>
-                        <div class="stat-description">Suspensão temporária</div>
-                    </div>
-                    <div class="stat-card info">
-                        <div class="stat-label">⚠️ IPs com Avisos</div>
-                        <div class="stat-value" id="security-warnings-count">0</div>
-                        <div class="stat-description">Tentativas registradas</div>
-                    </div>
-                    <div class="stat-card success">
-                        <div class="stat-label">✅ Status do Sistema</div>
-                        <div class="stat-value" style="font-size: 1.5em;">ATIVO</div>
-                        <div class="stat-description">Proteção automática</div>
+        </div>
+
+        <!-- Modal: Confirmação de Ação -->
+        <div id="confirmActionModal" class="modal">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h2 id="confirm-action-title">⚠️ Confirmar Ação</h2>
+                    <button class="modal-close" onclick="closeConfirmModal()">✖</button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-action-message" style="font-size: 1.1em; line-height: 1.6;"></p>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                        <strong>IP:</strong> 
+                        <span id="confirm-action-ip" style="font-family: 'Courier New', monospace; color: var(--primary);"></span>
                     </div>
                 </div>
-
-                <!-- Configurações do Sistema -->
-                <div class="info-box" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1)); border-left: 4px solid var(--info);">
-                    <h3 style="margin-bottom: 15px; font-size: 1.2em;">⚙️ Configurações de Proteção</h3>
-                    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                        <div>
-                            <div style="color: var(--text-muted); font-size: 0.9em;">Tentativas antes de suspensão</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: var(--warning);" id="security-config-max-attempts">5</div>
-                        </div>
-                        <div>
-                            <div style="color: var(--text-muted); font-size: 0.9em;">Duração da suspensão</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: var(--warning);" id="security-config-suspension">60 min</div>
-                        </div>
-                        <div>
-                            <div style="color: var(--text-muted); font-size: 0.9em;">Suspensões antes de bloqueio</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: var(--danger);" id="security-config-max-suspensions">3</div>
-                        </div>
-                        <div>
-                            <div style="color: var(--text-muted); font-size: 0.9em;">Tentativas para bloqueio direto</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: var(--danger);" id="security-config-block-attempts">10</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tabs para diferentes categorias -->
-                <div class="tabs-container" style="margin-bottom: 20px;">
-                    <button class="tab-btn active" data-tab="blocked" onclick="switchSecurityTab('blocked')">
-                        🚫 Bloqueados (<span id="tab-blocked-count">0</span>)
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeConfirmModal()">
+                        ❌ Cancelar
                     </button>
-                    <button class="tab-btn" data-tab="suspended" onclick="switchSecurityTab('suspended')">
-                        ⏳ Suspensos (<span id="tab-suspended-count">0</span>)
-                    </button>
-                    <button class="tab-btn" data-tab="warnings" onclick="switchSecurityTab('warnings')">
-                        ⚠️ Avisos (<span id="tab-warnings-count">0</span>)
+                    <button class="btn" id="confirm-action-btn" onclick="executeConfirmedAction()">
+                        ✅ Confirmar
                     </button>
                 </div>
-
-                <!-- Conteúdo das tabs -->
-                <div id="security-tab-blocked" class="security-tab-content" style="display: block;">
-                    <div id="blocked-ips-list" class="security-list">
-                        <!-- Será preenchido dinamicamente -->
-                    </div>
-                </div>
-
-                <div id="security-tab-suspended" class="security-tab-content" style="display: none;">
-                    <div id="suspended-ips-list" class="security-list">
-                        <!-- Será preenchido dinamicamente -->
-                    </div>
-                </div>
-
-                <div id="security-tab-warnings" class="security-tab-content" style="display: none;">
-                    <div id="warnings-ips-list" class="security-list">
-                        <!-- Será preenchido dinamicamente -->
-                    </div>
-                </div>
-
             </div>
         </div>
 
@@ -1449,129 +2374,10 @@ export const getLogsDashboard = (req, res) => {
 
         // Carregar estatísticas por IP
         async function loadIPStats() {
-            try {
-                const response = await fetch('/api/logs/ips');
-                const data = await response.json();
-                
-                if (data.success && data.ips.length > 0) {
-                    let allIPs = data.ips;
-                    
-                    // Separar meu IP do resto
-                    let myIPData = null;
-                    let otherIPs = [];
-                    
-                    allIPs.forEach(ip => {
-                        if (ip.ip === myIP) {
-                            myIPData = ip;
-                        } else {
-                            otherIPs.push(ip);
-                        }
-                    });
-                    
-                    // Se meu IP foi identificado, colocar no topo
-                    if (myIPData) {
-                        allIPs = [myIPData, ...otherIPs];
-                    } else {
-                        allIPs = otherIPs;
-                    }
-                    
-                    const visibleIPs = showAllIPs ? allIPs : allIPs.slice(0, ipStatsLimit);
-                    const hasMoreIPs = allIPs.length > ipStatsLimit;
-                    
-                    document.getElementById('ipStatsGrid').innerHTML = visibleIPs.map(ip => {
-                        const isSuspicious = ip.denied > 5 || (ip.denied / ip.total_attempts) > 0.5;
-                        const isMyIP = ip.ip === myIP;
-                        
-                        return \`
-                            <div class="ip-card \${isSuspicious ? 'suspicious' : ''} \${isMyIP ? 'my-ip' : ''}" style="\${isMyIP ? 'border: 2px solid var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);' : ''}">
-                                <div style="cursor: pointer;" onclick="showIPDetails('\${ip.ip}')">
-                                    <div class="ip-address">
-                                        \${isMyIP ? '🏠 ' : ''}\${isSuspicious ? '⚠️ ' : ''}
-                                        \${ip.ip}
-                                        \${isMyIP ? '<span class="badge success" style="margin-left: 8px; font-size: 0.75em;">VOCÊ</span>' : ''}
-                                    </div>
-                                    <div class="ip-stat">
-                                        <span class="ip-stat-label">Total:</span>
-                                        <span class="ip-stat-value">\${ip.total_attempts}</span>
-                                    </div>
-                                    <div class="ip-stat">
-                                        <span class="ip-stat-label">✅ Autorizado:</span>
-                                        <span class="ip-stat-value">\${ip.authorized}</span>
-                                    </div>
-                                    <div class="ip-stat">
-                                        <span class="ip-stat-label">❌ Negado:</span>
-                                        <span class="ip-stat-value">\${ip.denied}</span>
-                                    </div>
-                                    <div class="ip-stat">
-                                        <span class="ip-stat-label">🌍 País:</span>
-                                        <span class="ip-stat-value">\${ip.countries && ip.countries.length > 0 ? ip.countries.join(', ') : 'Desconhecido'}</span>
-                                    </div>
-                                    <div class="ip-stat">
-                                        <span class="ip-stat-label">⏰ Último:</span>
-                                        <span class="ip-stat-value">\${formatTime(ip.last_seen)}</span>
-                                    </div>
-                                    \${isSuspicious ? '<span class="badge danger" style="margin-top: 10px;">⚠️ Suspeito</span>' : ''}
-                                </div>
-                                \${!isMyIP ? \`
-                                    <div class="ip-card-actions" style="display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
-                                        <button 
-                                            onclick="event.stopPropagation(); suspendIPManual('\${ip.ip}')" 
-                                            class="ip-action-btn suspend"
-                                            style="flex: 1; padding: 8px; background: var(--warning); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: all 0.3s;"
-                                            onmouseover="this.style.background='#d97706'"
-                                            onmouseout="this.style.background='var(--warning)'"
-                                            title="Suspender por 1 hora"
-                                        >
-                                            ⏳ Suspender
-                                        </button>
-                                        <button 
-                                            onclick="event.stopPropagation(); blockIPManual('\${ip.ip}')" 
-                                            class="ip-action-btn block"
-                                            style="flex: 1; padding: 8px; background: var(--danger); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: all 0.3s;"
-                                            onmouseover="this.style.background='#dc2626'"
-                                            onmouseout="this.style.background='var(--danger)'"
-                                            title="Bloquear permanentemente"
-                                        >
-                                            🚫 Bloquear
-                                        </button>
-                                    </div>
-                                \` : ''}
-                            </div>
-                        \`;
-                    }).join('') + (hasMoreIPs && !showAllIPs ? \`
-                        <button 
-                            class="btn-expand-ips" 
-                            onclick="toggleAllIPs(event)"
-                            style="grid-column: 1 / -1; padding: 15px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%); border: 2px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; color: #fff; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px;"
-                            onmouseover="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.5)'"
-                            onmouseout="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.3)'"
-                        >
-                            <span style="font-size: 1.2em;">▼</span>
-                            Ver todos os \${allIPs.length} IPs
-                        </button>
-                    \` : hasMoreIPs ? \`
-                        <button 
-                            class="btn-expand-ips" 
-                            onclick="toggleAllIPs(event)"
-                            style="grid-column: 1 / -1; padding: 15px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%); border: 2px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; color: #fff; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px;"
-                            onmouseover="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.5)'"
-                            onmouseout="this.style.background='linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)'; this.style.borderColor='rgba(99, 102, 241, 0.3)'"
-                        >
-                            <span style="font-size: 1.2em;">▲</span>
-                            Ver menos (mostrar apenas \${ipStatsLimit})
-                        </button>
-                    \` : '');
-                    
-                    // Se o modal está aberto, atualizar também
-                    if (currentOpenIP) {
-                        refreshIPDetails(currentOpenIP);
-                    }
-                } else {
-                    document.getElementById('ipStatsGrid').innerHTML = '<div class="loading">Nenhuma estatística disponível</div>';
-                }
-            } catch (error) {
-                console.error('Erro ao carregar IP stats:', error);
-            }
+            // NOTA: Estatísticas de IP foram movidas para a "Lista Unificada de Segurança"
+            // Esta função é mantida vazia para compatibilidade com loadAllData()
+            // Os dados de IP agora são carregados via loadUnifiedList()
+            return;
         }
 
         // Alternar visualização de todos os IPs
@@ -1654,15 +2460,18 @@ export const getLogsDashboard = (req, res) => {
             }
         }
 
-        // Infinite Scroll
-        document.getElementById('tableContainer').addEventListener('scroll', function() {
-            if (this.scrollTop + this.clientHeight >= this.scrollHeight - 100) {
-                if (hasMoreLogs && !isLoadingMore) {
-                    logsPage++;
-                    loadLogs(true);
+        // Infinite Scroll (somente se o elemento existir)
+        const tableContainer = document.getElementById('tableContainer');
+        if (tableContainer) {
+            tableContainer.addEventListener('scroll', function() {
+                if (this.scrollTop + this.clientHeight >= this.scrollHeight - 100) {
+                    if (hasMoreLogs && !isLoadingMore) {
+                        logsPage++;
+                        loadLogs(true);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // Formatar data/hora
         function formatDateTime(timestamp) {
@@ -2164,52 +2973,37 @@ export const getLogsDashboard = (req, res) => {
             });
         }
 
-        // Toggle auto-refresh
-        document.getElementById('toggleAutoRefresh').addEventListener('click', function() {
-            autoRefresh = !autoRefresh;
-            this.textContent = autoRefresh ? '🔄 Auto ON (10s)' : '⏸️ Auto OFF';
-            this.className = autoRefresh ? 'btn success' : 'btn';
-            
-            if (autoRefresh) {
-                resetCountdown();
-                startCountdown();
-                startRefreshInterval();
-            } else {
-                stopCountdown();
-                stopRefreshInterval();
-            }
-        });
-
-        // Countdown
-        function startCountdown() {
-            countdownInterval = setInterval(() => {
-                countdown--;
-                document.getElementById('countdown').textContent = countdown;
+        // Toggle auto-refresh (somente se o elemento existir - compatibilidade com versão antiga)
+        const toggleAutoRefreshBtn = document.getElementById('toggleAutoRefresh');
+        if (toggleAutoRefreshBtn) {
+            toggleAutoRefreshBtn.addEventListener('click', function() {
+                autoRefresh = !autoRefresh;
+                this.textContent = autoRefresh ? '🔄 Auto ON (10s)' : '⏸️ Auto OFF';
+                this.className = autoRefresh ? 'btn success' : 'btn';
                 
-                if (countdown <= 0) {
-                    loadAllData();
+                if (autoRefresh) {
+                    resetCountdown();
+                    startCountdown();
+                    startRefreshInterval();
+                } else {
+                    stopCountdown();
+                    stopRefreshInterval();
                 }
-            }, 1000);
+            });
         }
 
-        function stopCountdown() {
-            clearInterval(countdownInterval);
-            document.getElementById('countdown').textContent = '−';
-        }
-
-        function resetCountdown() {
-            countdown = 3;
-            document.getElementById('countdown').textContent = countdown;
-        }
-
+        // ============= FUNÇÕES DE AUTO-REFRESH (SISTEMA ANTIGO - SIMPLIFICADO) =============
+        // Nota: O countdown visual foi removido. Mantido apenas refresh automático.
+        
         function startRefreshInterval() {
             if (refreshInterval) clearInterval(refreshInterval);
             
+            // ⏱️ Aumentado de 10s para 30s para evitar refresh excessivo
             refreshInterval = setInterval(() => {
                 if (autoRefresh) {
                     loadAllData();
                 }
-            }, 10000);
+            }, 30000);
         }
 
         function stopRefreshInterval() {
@@ -2218,63 +3012,881 @@ export const getLogsDashboard = (req, res) => {
                 refreshInterval = null;
             }
         }
-
-        // ============= FUNÇÕES DE SEGURANÇA =============
         
-        // Toggle seção de segurança
-        function toggleSecuritySection() {
-            const content = document.getElementById('security-section-content');
-            const icon = document.getElementById('security-section-icon');
+        // Funções vazias para compatibilidade (elementos não existem mais)
+        function startCountdown() { /* Countdown visual removido */ }
+        function stopCountdown() { /* Countdown visual removido */ }
+        function resetCountdown() { /* Countdown visual removido */ }
+
+        // ============= LISTA UNIFICADA DE SEGURANÇA E IPs =============
+        
+        // Estado global da lista unificada
+        const unifiedListState = {
+            allData: [],
+            filteredData: [],
+            displayData: [],
+            currentPage: 1,
+            itemsPerPage: 20,
+            currentFilter: 'all',
+            currentSort: 'lastSeen',
+            searchTerm: '',
+            autoRefresh: true,
+            autoRefreshInterval: null,
+            autoRefreshSeconds: 30, // ⏱️ Aumentado de 10s para 30s
+            expandedCards: {}, // 💾 Preservar cards expandidos: { 'IP': true/false }
+            scrollPosition: 0, // 💾 Preservar posição do scroll
+            lastInteraction: Date.now(), // ⏸️ Para pausar refresh em interação
+            pauseRefreshTimeout: null // ⏸️ Timeout para retomar refresh
+        };
+        
+        // Toggle seção unificada
+        function toggleUnifiedSection() {
+            const content = document.getElementById('unified-section-content');
+            const icon = document.getElementById('unified-section-icon');
             
             if (content.style.display === 'none') {
                 content.style.display = 'block';
                 icon.textContent = '▼';
-                loadSecurityData();
+                loadUnifiedList();
             } else {
                 content.style.display = 'none';
                 icon.textContent = '▶';
             }
         }
         
-        // Trocar aba de segurança
-        function switchSecurityTab(tab) {
-            console.log('[DEBUG] switchSecurityTab chamada com tab:', tab);
+        // Carregar lista unificada
+        async function loadUnifiedList(preserveState = true) {
+            try {
+                // 💾 SALVAR ESTADO ATUAL (antes de recarregar)
+                if (preserveState) {
+                    // Salvar scroll
+                    const listContainer = document.getElementById('unified-list');
+                    if (listContainer) {
+                        unifiedListState.scrollPosition = listContainer.parentElement?.scrollTop || 0;
+                    }
+                    
+                    // Salvar cards expandidos
+                    document.querySelectorAll('.unified-ip-card.expanded').forEach(card => {
+                        const ip = card.getAttribute('data-ip');
+                        if (ip) unifiedListState.expandedCards[ip] = true;
+                    });
+                }
+                
+                // ⚡ Feedback visual sutil (sem loading destrutivo)
+                const listContainer = document.getElementById('unified-list');
+                const existingContent = listContainer?.innerHTML || '';
+                
+                // Adicionar indicador de atualização sutil
+                const refreshIndicator = document.createElement('div');
+                refreshIndicator.id = 'unified-refresh-indicator';
+                refreshIndicator.style.cssText = 'position: fixed; top: 20px; right: 20px; background: rgba(37, 99, 235, 0.9); color: white; padding: 10px 20px; border-radius: 25px; font-size: 0.85em; z-index: 10000; animation: pulse 1.5s ease-in-out infinite;';
+                refreshIndicator.innerHTML = '🔄 Atualizando...';
+                document.body.appendChild(refreshIndicator);
+                
+                const params = new URLSearchParams({
+                    page: unifiedListState.currentPage,
+                    limit: unifiedListState.itemsPerPage,
+                    filter: unifiedListState.currentFilter,
+                    sort: unifiedListState.currentSort,
+                    search: unifiedListState.searchTerm
+                });
+                
+                const response = await fetch(\`/api/security/unified?\${params}\`);
+                const data = await response.json();
+                
+                // Remover indicador
+                refreshIndicator.remove();
+                
+                if (data.success) {
+                    unifiedListState.allData = data.data || [];
+                    unifiedListState.filteredData = data.data || [];
+                    unifiedListState.displayData = data.data || [];
+                    
+                    // Atualizar estatísticas (com valores padrão)
+                    const summary = data.summary || { total: 0, normal: 0, warning: 0, suspended: 0, blocked: 0 };
+                    updateUnifiedStatistics(summary);
+                    
+                    // Renderizar cards
+                    renderUnifiedCards(data.data || []);
+                    
+                    // ♻️ RESTAURAR ESTADO SALVO
+                    if (preserveState) {
+                        // Restaurar cards expandidos
+                        setTimeout(() => {
+                            Object.keys(unifiedListState.expandedCards).forEach(ip => {
+                                if (unifiedListState.expandedCards[ip]) {
+                                    const card = document.querySelector(\`[data-ip="\${ip}"]\`);
+                                    if (card) {
+                                        card.classList.add('expanded');
+                                    }
+                                }
+                            });
+                            
+                            // Restaurar scroll
+                            if (unifiedListState.scrollPosition > 0 && listContainer.parentElement) {
+                                listContainer.parentElement.scrollTop = unifiedListState.scrollPosition;
+                            }
+                        }, 100);
+                    }
+                    
+                    // Atualizar paginação (apenas se existir)
+                    if (data.pagination) {
+                        updateUnifiedPagination(data.pagination);
+                    } else {
+                        // Se não há paginação, esconder controles
+                        const paginationDiv = document.getElementById('unified-pagination');
+                        if (paginationDiv) paginationDiv.style.display = 'none';
+                    }
+                } else {
+                    showUnifiedError(data.error || 'Erro ao carregar dados');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar lista unificada:', error);
+                
+                // Remover indicador em caso de erro
+                const indicator = document.getElementById('unified-refresh-indicator');
+                if (indicator) indicator.remove();
+                
+                showUnifiedError('Erro de conexão com o servidor');
+            }
+        }
+        
+        // Atualizar estatísticas
+        function updateUnifiedStatistics(summary) {
+            document.getElementById('unified-count-normal').textContent = summary.normal || 0;
+            document.getElementById('unified-count-warning').textContent = summary.warning || 0;
+            document.getElementById('unified-count-suspended').textContent = summary.suspended || 0;
+            document.getElementById('unified-count-blocked').textContent = summary.blocked || 0;
             
-            // Remover active de todos os botões
-            const allButtons = document.querySelectorAll('.tab-btn');
-            console.log('[DEBUG] Botões encontrados:', allButtons.length);
-            allButtons.forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.getElementById('filter-count-all').textContent = summary.total || 0;
+            document.getElementById('filter-count-normal').textContent = summary.normal || 0;
+            document.getElementById('filter-count-warning').textContent = summary.warning || 0;
+            document.getElementById('filter-count-suspended').textContent = summary.suspended || 0;
+            document.getElementById('filter-count-blocked').textContent = summary.blocked || 0;
             
-            // Esconder todos os conteúdos
-            const allContents = document.querySelectorAll('.security-tab-content');
-            console.log('[DEBUG] Conteúdos encontrados:', allContents.length);
-            allContents.forEach(content => {
-                content.style.display = 'none';
-            });
-            
-            // Ativar o botão selecionado usando data-attribute
-            const selector = '.tab-btn[data-tab="' + tab + '"]';
-            console.log('[DEBUG] Seletor do botão:', selector);
-            const activeButton = document.querySelector(selector);
-            if (activeButton) {
-                activeButton.classList.add('active');
-                console.log('[DEBUG] Botão ativado:', tab);
+            const badge = document.getElementById('unified-status-badge');
+            if (summary.blocked > 0 || summary.suspended > 0) {
+                badge.textContent = \`\${summary.blocked + summary.suspended} Ameaças Ativas\`;
+                badge.className = 'badge badge-danger';
+            } else if (summary.warning > 0) {
+                badge.textContent = \`\${summary.warning} IPs em Aviso\`;
+                badge.className = 'badge badge-warning';
             } else {
-                console.error('[ERRO] Botão não encontrado para tab:', tab);
+                badge.textContent = 'Sistema Ativo';
+                badge.className = 'badge badge-success';
+            }
+        }
+        
+        // Renderizar cards
+        function renderUnifiedCards(ips) {
+            const listContainer = document.getElementById('unified-list');
+            
+            if (!ips || ips.length === 0) {
+                listContainer.innerHTML = \`
+                    <div class="unified-empty-state">
+                        <div class="unified-empty-icon">🔍</div>
+                        <div class="unified-empty-message">Nenhum IP encontrado</div>
+                        <div class="unified-empty-hint">
+                            \${unifiedListState.searchTerm 
+                                ? 'Tente ajustar os filtros ou termo de busca' 
+                                : 'Adicione IPs manualmente ou aguarde acessos à API'}
+                        </div>
+                    </div>
+                \`;
+                return;
             }
             
-            // Mostrar o conteúdo selecionado
-            const contentId = 'security-tab-' + tab;
-            console.log('[DEBUG] ID do conteúdo:', contentId);
-            const activeContent = document.getElementById(contentId);
-            if (activeContent) {
-                activeContent.style.display = 'block';
-                console.log('[DEBUG] Conteúdo exibido:', contentId);
-                console.log('[DEBUG] HTML do conteúdo:', activeContent.innerHTML.substring(0, 100));
+            const cardsHTML = ips.map(ipData => createUnifiedCard(ipData)).join('');
+            listContainer.innerHTML = cardsHTML;
+        }
+        
+        // Criar card de IP
+        function createUnifiedCard(ipData) {
+            const { ip, status, stats, security, isSuspicious } = ipData;
+            
+            const statusInfo = {
+                normal: { icon: '✅', label: 'Normal', color: 'success' },
+                warning: { icon: '⚠️', label: 'Aviso', color: 'warning' },
+                suspended: { icon: '⏳', label: 'Suspenso', color: 'info' },
+                blocked: { icon: '🚫', label: 'Bloqueado', color: 'danger' }
+            }[status] || { icon: '❓', label: 'Desconhecido', color: 'secondary' };
+            
+            const actions = getAvailableActions(status, ip); // Passar o IP para verificar se é o próprio
+            
+            return \`
+                <div class="unified-ip-card status-\${status}" data-ip="\${ip}">
+                    <div class="unified-ip-header" onclick="toggleCardDetails('\${ip}')">
+                        <div class="unified-ip-header-left">
+                            <div class="unified-ip-icon">\${statusInfo.icon}</div>
+                            <div>
+                                <div class="unified-ip-address">\${ip}</div>
+                                <span class="unified-ip-status-badge status-\${status}">
+                                    \${statusInfo.label}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="unified-ip-header-right">
+                            <span class="expand-icon">▼</span>
+                        </div>
+                    </div>
+                    
+                    <div class="unified-ip-stats">
+                        <div class="unified-ip-stat">
+                            <span class="unified-ip-stat-icon">📊</span>
+                            <span class="unified-ip-stat-value">\${stats.totalAttempts || 0}</span>
+                            <span>tentativas</span>
+                        </div>
+                        <div class="unified-ip-stat">
+                            <span class="unified-ip-stat-icon">✅</span>
+                            <span class="unified-ip-stat-value">\${stats.authorized || 0}</span>
+                            <span>autorizadas</span>
+                        </div>
+                        <div class="unified-ip-stat">
+                            <span class="unified-ip-stat-icon">❌</span>
+                            <span class="unified-ip-stat-value">\${stats.denied || 0}</span>
+                            <span>negadas</span>
+                        </div>
+                        <div class="unified-ip-stat">
+                            <span class="unified-ip-stat-icon">🕐</span>
+                            <span class="unified-ip-stat-value">\${formatDateTime(stats.lastSeen)}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="unified-ip-actions">
+                        \${actions.map(action => {
+                            const disabledAttr = action.disabled ? 'disabled' : '';
+                            const onclickAttr = action.disabled ? '' : 'onclick="' + action.handler + '(&quot;' + ip + '&quot;)"';
+                            return '<button class="action-btn btn-' + action.type + '" ' + disabledAttr + ' ' + onclickAttr + '>' + action.icon + ' ' + action.label + '</button>';
+                        }).join('')}
+                    </div>
+                    
+                    <div class="unified-ip-details">
+                        <div class="unified-details-grid">
+                            <div class="unified-detail-section">
+                                <div class="unified-detail-title">
+                                    🔒 Informações de Segurança
+                                </div>
+                                <ul class="unified-detail-list">
+                                    <li><strong>Tentativas de acesso:</strong> \${security.attempts || 0}</li>
+                                    <li><strong>Tentativas restantes:</strong> \${security.remainingAttempts || 'N/A'}</li>
+                                    <li><strong>Contagem de suspensões:</strong> \${security.suspensionCount || 0}</li>
+                                    \${security.lastSuspension ? \`<li><strong>Última suspensão:</strong> \${formatDateTime(security.lastSuspension)}</li>\` : ''}
+                                    \${security.blockReason ? \`<li><strong>Motivo do bloqueio:</strong> \${security.blockReason}</li>\` : ''}
+                                </ul>
+                            </div>
+                            
+                            <div class="unified-detail-section">
+                                <div class="unified-detail-title">
+                                    📊 Estatísticas de Acesso
+                                </div>
+                                <ul class="unified-detail-list">
+                                    <li><strong>Total de acessos:</strong> \${stats.totalAttempts || 0}</li>
+                                    <li><strong>Autorizados:</strong> \${stats.authorized || 0}</li>
+                                    <li><strong>Negados:</strong> \${stats.denied || 0}</li>
+                                    <li><strong>Taxa de sucesso:</strong> \${calculateSuccessRate(stats)}%</li>
+                                    <li><strong>Último acesso:</strong> \${formatDateTime(stats.lastSeen)}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \`;
+        }
+        
+        // Determinar ações disponíveis
+        function getAvailableActions(status, ip) {
+            const actions = [
+                { type: 'history', icon: '📜', label: 'Histórico', handler: 'openHistoryModal' }
+            ];
+            
+            // ⚠️ VERIFICAR SE É O PRÓPRIO IP DO CLIENTE
+            const clientIp = '${clientIp}'; // IP do cliente que está acessando o dashboard
+            const isOwnIP = (ip === clientIp) || (ip === '127.0.0.1' && clientIp === '127.0.0.1');
+            
+            // Se for o próprio IP, mostrar alerta em vez de ações perigosas
+            if (isOwnIP) {
+                return [
+                    { 
+                        type: 'warning', 
+                        icon: '🏠', 
+                        label: 'Seu IP (Não pode modificar)', 
+                        handler: 'showOwnIPWarning',
+                        disabled: true
+                    },
+                    { type: 'history', icon: '📜', label: 'Ver Histórico', handler: 'openHistoryModal' }
+                ];
+            }
+            
+            if (status === 'normal') {
+                actions.unshift({ type: 'warn', icon: '⚠️', label: 'Avisar', handler: 'confirmWarnIP' });
+            }
+            
+            if (status === 'normal' || status === 'warning') {
+                actions.unshift({ type: 'suspend', icon: '⏳', label: 'Suspender', handler: 'confirmSuspendIP' });
+                actions.unshift({ type: 'block', icon: '🚫', label: 'Bloquear', handler: 'confirmBlockIP' });
+            }
+            
+            if (status === 'warning' || status === 'suspended' || status === 'blocked') {
+                actions.unshift({ type: 'clear', icon: '✅', label: 'Limpar Status', handler: 'confirmClearIP' });
+            }
+            
+            return actions;
+        }
+        
+        // Mostrar aviso quando tentar modificar próprio IP
+        function showOwnIPWarning() {
+            showToast('🏠 Este é o seu próprio IP! Você não pode modificá-lo para evitar se bloquear acidentalmente.', 'warning');
+        }
+        
+        // Toggle detalhes do card
+        function toggleCardDetails(ip) {
+            const card = document.querySelector(\`[data-ip="\${ip}"]\`);
+            if (card) {
+                const isExpanded = card.classList.toggle('expanded');
+                
+                // 💾 SALVAR ESTADO
+                unifiedListState.expandedCards[ip] = isExpanded;
+                
+                // ⏸️ PAUSAR REFRESH (retomar após 5s de inatividade)
+                pauseAutoRefresh();
+            }
+        }
+        
+        // ⏸️ Pausar auto-refresh durante interação
+        function pauseAutoRefresh() {
+            unifiedListState.lastInteraction = Date.now();
+            
+            // Limpar timeout anterior
+            if (unifiedListState.pauseRefreshTimeout) {
+                clearTimeout(unifiedListState.pauseRefreshTimeout);
+            }
+            
+            // Retomar após 5 segundos de inatividade
+            unifiedListState.pauseRefreshTimeout = setTimeout(() => {
+                unifiedListState.lastInteraction = null;
+            }, 5000);
+        }
+        
+        // Trocar filtro
+        function changeUnifiedFilter(filter) {
+            // ⏸️ PAUSAR REFRESH durante mudança de filtro
+            pauseAutoRefresh();
+            
+            unifiedListState.currentFilter = filter;
+            unifiedListState.currentPage = 1;
+            
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(\`[data-filter="\${filter}"]\`).classList.add('active');
+            
+            // Não preservar estado de expansão ao mudar filtro (resetar)
+            unifiedListState.expandedCards = {};
+            loadUnifiedList(false); // false = não preservar estado (nova visualização)
+        }
+        
+        // Buscar por IP
+        function searchUnifiedList() {
+            const searchInput = document.getElementById('unified-search-input');
+            unifiedListState.searchTerm = searchInput.value.trim();
+            unifiedListState.currentPage = 1;
+            loadUnifiedList();
+        }
+        
+        // Ordenar lista
+        function sortUnifiedList() {
+            const sortSelect = document.getElementById('unified-sort-select');
+            unifiedListState.currentSort = sortSelect.value;
+            loadUnifiedList();
+        }
+        
+        // Navegar páginas
+        function changePage(direction) {
+            if (direction === 'prev' && unifiedListState.currentPage > 1) {
+                unifiedListState.currentPage--;
+            } else if (direction === 'next') {
+                unifiedListState.currentPage++;
+            }
+            loadUnifiedList();
+        }
+        
+        // Atualizar paginação
+        function updateUnifiedPagination(pagination) {
+            const paginationDiv = document.getElementById('unified-pagination');
+            
+            // Verificar se pagination existe e tem dados válidos
+            if (!pagination || !pagination.totalPages || pagination.totalPages <= 1) {
+                if (paginationDiv) paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            
+            document.getElementById('pagination-start').textContent = ((pagination.page - 1) * pagination.limit) + 1;
+            document.getElementById('pagination-end').textContent = Math.min(pagination.page * pagination.limit, pagination.total);
+            document.getElementById('pagination-total').textContent = pagination.total;
+            document.getElementById('pagination-current').textContent = pagination.page;
+            document.getElementById('pagination-pages').textContent = pagination.totalPages;
+            
+            const prevBtn = document.getElementById('pagination-prev');
+            const nextBtn = document.getElementById('pagination-next');
+            
+            prevBtn.disabled = pagination.page === 1;
+            nextBtn.disabled = pagination.page === pagination.totalPages;
+        }
+        
+        // Toggle auto-refresh
+        function toggleUnifiedAutoRefresh() {
+            const toggle = document.getElementById('unified-auto-refresh-toggle');
+            unifiedListState.autoRefresh = !unifiedListState.autoRefresh;
+            
+            if (unifiedListState.autoRefresh) {
+                toggle.classList.add('active');
+                startUnifiedAutoRefresh();
             } else {
-                console.error('[ERRO] Conteúdo não encontrado:', contentId);
+                toggle.classList.remove('active');
+                stopUnifiedAutoRefresh();
+            }
+        }
+        
+        function startUnifiedAutoRefresh() {
+            stopUnifiedAutoRefresh();
+            
+            let seconds = unifiedListState.autoRefreshSeconds;
+            const countdownEl = document.getElementById('unified-countdown');
+            
+            unifiedListState.autoRefreshInterval = setInterval(() => {
+                // ⏸️ NÃO ATUALIZAR se usuário interagiu recentemente
+                const timeSinceInteraction = unifiedListState.lastInteraction 
+                    ? Date.now() - unifiedListState.lastInteraction 
+                    : Infinity;
+                    
+                if (timeSinceInteraction < 5000) {
+                    // Usuário interagiu há menos de 5s, pausar countdown
+                    if (countdownEl) countdownEl.textContent = '⏸️';
+                    return;
+                }
+                
+                seconds--;
+                if (countdownEl) countdownEl.textContent = \`\${seconds}s\`;
+                
+                if (seconds <= 0) {
+                    loadUnifiedList(true); // true = preservar estado
+                    seconds = unifiedListState.autoRefreshSeconds;
+                }
+            }, 1000);
+        }
+        
+        function stopUnifiedAutoRefresh() {
+            if (unifiedListState.autoRefreshInterval) {
+                clearInterval(unifiedListState.autoRefreshInterval);
+                unifiedListState.autoRefreshInterval = null;
+            }
+        }
+        
+        // Mostrar erro
+        function showUnifiedError(message) {
+            const listContainer = document.getElementById('unified-list');
+            listContainer.innerHTML = \`
+                <div class="unified-empty-state">
+                    <div class="unified-empty-icon">⚠️</div>
+                    <div class="unified-empty-message">Erro ao Carregar</div>
+                    <div class="unified-empty-hint">\${message}</div>
+                    <button class="btn success" onclick="loadUnifiedList()" style="margin-top: 20px;">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>
+            \`;
+        }
+        
+        // Calcular taxa de sucesso
+        function calculateSuccessRate(stats) {
+            if (!stats.totalAttempts || stats.totalAttempts === 0) return 0;
+            return Math.round((stats.authorized / stats.totalAttempts) * 100);
+        }
+        
+        // ============= MODAIS E AÇÕES =============
+        
+        // MODAL: ADICIONAR IP
+        function openAddIPModal() {
+            const modal = document.getElementById('addIPModal');
+            modal.style.display = 'flex';
+            document.getElementById('add-ip-address').value = '';
+            document.getElementById('add-ip-status').value = 'warning';
+            document.getElementById('add-ip-reason').value = '';
+            document.getElementById('add-ip-address').focus();
+        }
+        
+        function closeAddIPModal() {
+            const modal = document.getElementById('addIPModal');
+            modal.style.display = 'none';
+        }
+        
+        async function submitAddIP() {
+            const ip = document.getElementById('add-ip-address').value.trim();
+            const status = document.getElementById('add-ip-status').value;
+            const reason = document.getElementById('add-ip-reason').value.trim();
+            
+            if (!ip) {
+                showToast('❌ Digite um endereço IP', 'error');
+                return;
+            }
+            
+            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (!ipPattern.test(ip)) {
+                showToast('❌ Formato de IP inválido', 'error');
+                return;
+            }
+            
+            if (!reason) {
+                showToast('❌ Digite o motivo da ação', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/security/add-ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip, status, reason })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ IP adicionado com sucesso!', 'success');
+                    closeAddIPModal();
+                    loadUnifiedList();
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar IP:', error);
+                showToast('❌ Erro de conexão com o servidor', 'error');
+            }
+        }
+        
+        // MODAL: HISTÓRICO
+        async function openHistoryModal(ip) {
+            const modal = document.getElementById('historyModal');
+            modal.style.display = 'flex';
+            document.getElementById('history-ip-address').textContent = ip;
+            
+            const timeline = document.getElementById('history-timeline');
+            timeline.innerHTML = \`
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: var(--dark-text-muted);">Carregando histórico...</p>
+                </div>
+            \`;
+            
+            await loadIPHistory(ip);
+        }
+        
+        function closeHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            modal.style.display = 'none';
+        }
+        
+        async function loadIPHistory(ip) {
+            try {
+                const response = await fetch(\`/api/security/history/\${ip}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderHistoryTimeline(data.history);
+                } else {
+                    document.getElementById('history-timeline').innerHTML = \`
+                        <div style="text-align: center; padding: 40px; color: var(--danger);">
+                            <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                            <p><strong>Erro ao carregar histórico</strong></p>
+                            <p style="color: var(--dark-text-muted); margin-top: 10px;">\${data.error}</p>
+                        </div>
+                    \`;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar histórico:', error);
+                document.getElementById('history-timeline').innerHTML = \`
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        <div style="font-size: 3em; margin-bottom: 15px;">❌</div>
+                        <p><strong>Erro de conexão</strong></p>
+                    </div>
+                \`;
+            }
+        }
+        
+        function renderHistoryTimeline(history) {
+            const timeline = document.getElementById('history-timeline');
+            
+            if (!history || history.length === 0) {
+                timeline.innerHTML = \`
+                    <div style="text-align: center; padding: 40px; color: var(--dark-text-muted);">
+                        <div style="font-size: 3em; margin-bottom: 15px;">📜</div>
+                        <p><strong>Nenhum histórico encontrado</strong></p>
+                        <p style="margin-top: 10px;">Este IP ainda não possui mudanças de status registradas</p>
+                    </div>
+                \`;
+                return;
+            }
+            
+            const statusColors = {
+                normal: 'var(--success)',
+                warning: 'var(--warning)',
+                suspended: 'var(--info)',
+                blocked: 'var(--danger)'
+            };
+            
+            const statusIcons = {
+                normal: '✅',
+                warning: '⚠️',
+                suspended: '⏳',
+                blocked: '🚫'
+            };
+            
+            const timelineHTML = history.map((entry, index) => {
+                const toColor = statusColors[entry.toStatus] || 'var(--text-muted)';
+                
+                return \`
+                    <div style="
+                        position: relative;
+                        padding: 20px;
+                        padding-left: 50px;
+                        border-left: 3px solid \${toColor};
+                        margin-bottom: \${index === history.length - 1 ? '0' : '20px'};
+                    ">
+                        <div style="
+                            position: absolute;
+                            left: -15px;
+                            top: 20px;
+                            width: 30px;
+                            height: 30px;
+                            background: \${toColor};
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 1.2em;
+                            border: 3px solid var(--bg-primary);
+                        ">
+                            \${statusIcons[entry.toStatus] || '•'}
+                        </div>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <strong style="font-size: 1.1em; color: var(--text-light);">
+                                \${entry.fromStatus} → \${entry.toStatus}
+                            </strong>
+                        </div>
+                        
+                        <div style="color: var(--dark-text-muted); font-size: 0.9em; margin-bottom: 8px;">
+                            🕐 \${formatDateTime(entry.timestamp)}
+                        </div>
+                        
+                        <div style="margin-bottom: 6px;">
+                            <strong>Motivo:</strong> \${entry.reason || 'Não especificado'}
+                        </div>
+                        
+                        <div>
+                            <span style="
+                                display: inline-block;
+                                padding: 4px 10px;
+                                background: rgba(255, 255, 255, 0.1);
+                                border-radius: 8px;
+                                font-size: 0.85em;
+                            ">
+                                \${entry.triggeredBy === 'admin' ? '👤 Manual' : '🤖 Automático'}
+                            </span>
+                            \${entry.metadata && entry.metadata.duration ? \`
+                                <span style="
+                                    display: inline-block;
+                                    padding: 4px 10px;
+                                    background: rgba(255, 255, 255, 0.1);
+                                    border-radius: 8px;
+                                    font-size: 0.85em;
+                                    margin-left: 8px;
+                                ">
+                                    ⏱️ \${entry.metadata.duration / 1000 / 60} min
+                                </span>
+                            \` : ''}
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+            
+            timeline.innerHTML = timelineHTML;
+        }
+        
+        // MODAL: CONFIRMAÇÃO
+        let confirmActionData = {
+            action: null,
+            ip: null,
+            callback: null
+        };
+        
+        function confirmWarnIP(ip) {
+            confirmActionData = { action: 'warn', ip: ip, callback: warnIPManually };
+            document.getElementById('confirm-action-title').textContent = '⚠️ Confirmar Aviso';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja adicionar um aviso a este IP? Esta ação registrará uma tentativa de acesso negada.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn warning';
+            document.getElementById('confirm-action-btn').textContent = '⚠️ Avisar';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function confirmSuspendIP(ip) {
+            confirmActionData = { action: 'suspend', ip: ip, callback: suspendIPManually };
+            document.getElementById('confirm-action-title').textContent = '⏳ Confirmar Suspensão';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja suspender este IP temporariamente? O IP ficará bloqueado por 60 minutos.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn info';
+            document.getElementById('confirm-action-btn').textContent = '⏳ Suspender';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function confirmBlockIP(ip) {
+            confirmActionData = { action: 'block', ip: ip, callback: blockIPManually };
+            document.getElementById('confirm-action-title').textContent = '🚫 Confirmar Bloqueio';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja bloquear este IP permanentemente? Esta ação só pode ser revertida manualmente.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn danger';
+            document.getElementById('confirm-action-btn').textContent = '🚫 Bloquear';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function confirmClearIP(ip) {
+            confirmActionData = { action: 'clear', ip: ip, callback: clearIPStatus };
+            document.getElementById('confirm-action-title').textContent = '✅ Confirmar Limpeza de Status';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja limpar o status deste IP? Todos os avisos, suspensões e bloqueios serão removidos.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn success';
+            document.getElementById('confirm-action-btn').textContent = '✅ Limpar';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirmActionModal').style.display = 'none';
+            confirmActionData = { action: null, ip: null, callback: null };
+        }
+        
+        async function executeConfirmedAction() {
+            if (confirmActionData.callback && confirmActionData.ip) {
+                closeConfirmModal();
+                await confirmActionData.callback(confirmActionData.ip);
+            }
+        }
+        
+        // FUNÇÕES DE API
+        async function warnIPManually(ip) {
+            const reason = prompt(\`Avisar IP \${ip}\n\nDigite o motivo do aviso:\`, 'Aviso manual');
+            if (!reason) return;
+            
+            try {
+                const response = await fetch(\`/api/security/warn-manual/\${ip}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Aviso adicionado com sucesso!', 'success');
+                    loadUnifiedList();
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao avisar IP:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
+        }
+        
+        async function suspendIPManually(ip) {
+            const reason = prompt(\`Suspender IP \${ip}\n\nDigite o motivo da suspensão:\`, 'Suspensão manual');
+            if (!reason) return;
+            
+            try {
+                const response = await fetch(\`/api/security/suspend/\${ip}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ IP suspenso com sucesso!', 'success');
+                    loadUnifiedList();
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao suspender IP:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
+        }
+        
+        async function blockIPManually(ip) {
+            const reason = prompt(\`Bloquear IP \${ip}\n\nDigite o motivo do bloqueio:\`, 'Bloqueio manual');
+            if (!reason) return;
+            
+            try {
+                const response = await fetch(\`/api/security/block/\${ip}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ IP bloqueado com sucesso!', 'success');
+                    loadUnifiedList();
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao bloquear IP:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
+        }
+        
+        async function clearIPStatus(ip) {
+            try {
+                const response = await fetch(\`/api/security/clear-status/\${ip}\`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Status limpo com sucesso!', 'success');
+                    loadUnifiedList();
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao limpar status:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
+        }
+        
+        // ============= FIM LISTA UNIFICADA =============
+
+        // Carregar todos os dados
+        function loadAllData() {
+            loadGeneralStats();
+            loadIPStats();
+            logsPage = 1;
+            loadLogs(false);
+            resetCountdown();
+            
+            // 🔄 Auto-refresh da lista unificada se estiver aberta (com preservação de estado)
+            const unifiedContent = document.getElementById('unified-section-content');
+            if (unifiedContent && unifiedContent.style.display !== 'none') {
+                loadUnifiedList(true); // true = preservar estado
             }
         }
         
@@ -2566,28 +4178,14 @@ export const getLogsDashboard = (req, res) => {
         
         // ============= FIM FUNÇÕES DE SEGURANÇA =============
 
-        // Carregar todos os dados
-        function loadAllData() {
-            loadGeneralStats();
-            loadIPStats();
-            logsPage = 1;
-            loadLogs(false);
-            resetCountdown();
-            
-            // Auto-refresh da seção de segurança se estiver aberta
-            const securityContent = document.getElementById('security-section-content');
-            if (securityContent && securityContent.style.display !== 'none') {
-                loadSecurityData();
-            }
-        }
-
         // Inicializar
         detectMyIP(); // Detectar IP do usuário primeiro
         checkZeroTierStatus(); // Verificar status ZeroTier
         loadAllData();
-        loadSecurityData(); // Carregar dados de segurança no início
+        loadUnifiedList(); // Carregar lista unificada no início
         startCountdown();
         startRefreshInterval();
+        startUnifiedAutoRefresh(); // Iniciar auto-refresh da lista unificada
         
         // Verificar ZeroTier a cada 30 segundos
         setInterval(checkZeroTierStatus, 30000);

@@ -1,8 +1,8 @@
 {
   "name": "api",
-  "version": "2.1.5",
+  "version": "2.2.0",
   "type": "module",
-  "description": "",
+  "description": "API modular com sistema unificado de segurança e logs avançados",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

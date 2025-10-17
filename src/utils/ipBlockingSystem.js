@@ -14,6 +14,9 @@ class IPBlockingSystem {
         // IPs permanentemente bloqueados
         this.blockedIPs = new Set();
         
+        // Histórico de mudanças de status
+        this.statusHistory = new Map();
+        
         // Configurações
         this.config = {
             maxAttempts: 5,              // Tentativas antes da suspensão
@@ -185,6 +188,10 @@ class IPBlockingSystem {
         if (this.blockedIPs.has(ip)) {
             this.blockedIPs.delete(ip);
             this.unauthorizedAttempts.delete(ip);
+            
+            // Registrar no histórico
+            this.recordStatusChange(ip, 'blocked', 'normal', 'Manual unblock by admin', 'admin');
+            
             return true;
         }
         return false;
@@ -198,6 +205,10 @@ class IPBlockingSystem {
     unsuspendIP(ip) {
         if (this.suspendedIPs.has(ip)) {
             this.suspendedIPs.delete(ip);
+            
+            // Registrar no histórico
+            this.recordStatusChange(ip, 'suspended', 'normal', 'Manual unsuspend by admin', 'admin');
+            
             return true;
         }
         return false;
@@ -312,6 +323,8 @@ class IPBlockingSystem {
      * @returns {Object} Resultado da operação
      */
     blockIPManually(ip) {
+        const previousState = this.suspendedIPs.has(ip) ? 'suspended' : (this.unauthorizedAttempts.has(ip) ? 'warning' : 'normal');
+        
         // Remover suspensão se existir
         if (this.suspendedIPs.has(ip)) {
             this.suspendedIPs.delete(ip);
@@ -331,11 +344,14 @@ class IPBlockingSystem {
             const record = this.unauthorizedAttempts.get(ip);
             record.count = 10; // Garantir que está marcado
         }
+
+        // Registrar no histórico
+        this.recordStatusChange(ip, previousState, 'blocked', 'Manual block by admin', 'admin');
         
         return {
             success: true,
             message: `IP ${ip} has been permanently blocked (manual action)`,
-            previousState: this.suspendedIPs.has(ip) ? 'suspended' : 'active'
+            previousState: previousState
         };
     }
     
@@ -380,12 +396,170 @@ class IPBlockingSystem {
             const record = this.unauthorizedAttempts.get(ip);
             record.suspensions = suspensionCount;
         }
+
+        // Registrar no histórico
+        const previousState = this.unauthorizedAttempts.get(ip) && this.unauthorizedAttempts.get(ip).count > 0 ? 'warning' : 'normal';
+        this.recordStatusChange(ip, previousState, 'suspended', 'Manual suspension by admin', 'admin', {
+            duration: `${Math.ceil(suspensionDuration / 1000 / 60)} minutes`,
+            until: new Date(until).toISOString()
+        });
         
         return {
             success: true,
             message: `IP ${ip} has been suspended for ${Math.ceil(suspensionDuration / 1000 / 60)} minutes (manual action)`,
             until: new Date(until).toISOString(),
             suspensionNumber: suspensionCount
+        };
+    }
+
+    /**
+     * Registrar mudança de status no histórico
+     * @param {string} ip - Endereço IP
+     * @param {string} fromStatus - Status anterior
+     * @param {string} toStatus - Novo status
+     * @param {string} reason - Razão da mudança
+     * @param {string} triggeredBy - Quem acionou (system/admin)
+     * @param {Object} metadata - Dados adicionais
+     */
+    recordStatusChange(ip, fromStatus, toStatus, reason, triggeredBy = 'system', metadata = {}) {
+        if (!this.statusHistory.has(ip)) {
+            this.statusHistory.set(ip, []);
+        }
+
+        const history = this.statusHistory.get(ip);
+        history.push({
+            timestamp: new Date().toISOString(),
+            fromStatus: fromStatus,
+            toStatus: toStatus,
+            reason: reason,
+            triggeredBy: triggeredBy,
+            ...metadata
+        });
+
+        // Manter apenas últimos 50 registros por IP
+        if (history.length > 50) {
+            history.shift();
+        }
+    }
+
+    /**
+     * Obter histórico de um IP
+     * @param {string} ip - Endereço IP
+     * @returns {Array} Lista de mudanças
+     */
+    getIPHistory(ip) {
+        return this.statusHistory.get(ip) || [];
+    }
+
+    /**
+     * Obter status atual de um IP
+     * @param {string} ip - Endereço IP
+     * @returns {string} Status: normal | warning | suspended | blocked
+     */
+    getIPStatus(ip) {
+        if (this.blockedIPs.has(ip)) {
+            return 'blocked';
+        }
+
+        if (this.suspendedIPs.has(ip)) {
+            const suspension = this.suspendedIPs.get(ip);
+            if (Date.now() < suspension.until) {
+                return 'suspended';
+            } else {
+                this.suspendedIPs.delete(ip);
+            }
+        }
+
+        if (this.unauthorizedAttempts.has(ip)) {
+            const record = this.unauthorizedAttempts.get(ip);
+            if (record.count > 0 && record.count < this.config.maxAttempts) {
+                return 'warning';
+            }
+        }
+
+        return 'normal';
+    }
+
+    /**
+     * Colocar IP em aviso manualmente
+     * @param {string} ip - Endereço IP
+     * @param {string} reason - Razão do aviso
+     * @returns {Object} Resultado da operação
+     */
+    warnIPManually(ip, reason = 'Manual warning by admin') {
+        const currentStatus = this.getIPStatus(ip);
+
+        if (currentStatus === 'blocked') {
+            return {
+                success: false,
+                message: `IP ${ip} is permanently blocked`
+            };
+        }
+
+        // Criar ou incrementar tentativas
+        if (!this.unauthorizedAttempts.has(ip)) {
+            this.unauthorizedAttempts.set(ip, {
+                count: 1,
+                attempts: [{
+                    timestamp: Date.now(),
+                    reason: reason,
+                    manual: true
+                }],
+                suspensions: 0
+            });
+        } else {
+            const record = this.unauthorizedAttempts.get(ip);
+            record.count++;
+            record.attempts.push({
+                timestamp: Date.now(),
+                reason: reason,
+                manual: true
+            });
+        }
+
+        const record = this.unauthorizedAttempts.get(ip);
+
+        // Registrar mudança no histórico
+        this.recordStatusChange(ip, currentStatus, 'warning', reason, 'admin', {
+            attempts: record.count
+        });
+
+        return {
+            success: true,
+            message: `IP ${ip} placed under warning`,
+            attempts: record.count,
+            remainingAttempts: this.config.maxAttempts - record.count
+        };
+    }
+
+    /**
+     * Limpar status de um IP (voltar ao normal)
+     * @param {string} ip - Endereço IP
+     * @returns {Object} Resultado da operação
+     */
+    clearIPStatus(ip) {
+        const currentStatus = this.getIPStatus(ip);
+
+        if (currentStatus === 'normal') {
+            return {
+                success: true,
+                message: `IP ${ip} already has normal status`,
+                previousStatus: 'normal'
+            };
+        }
+
+        // Remover de todas as listas
+        this.unauthorizedAttempts.delete(ip);
+        this.suspendedIPs.delete(ip);
+        this.blockedIPs.delete(ip);
+
+        // Registrar mudança no histórico
+        this.recordStatusChange(ip, currentStatus, 'normal', 'Status cleared by admin', 'admin');
+
+        return {
+            success: true,
+            message: `IP ${ip} status cleared, back to normal`,
+            previousStatus: currentStatus
         };
     }
 }
