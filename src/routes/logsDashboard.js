@@ -70,48 +70,81 @@ export const getLogsDashboard = (req, res) => {
         .container {
             max-width: 1600px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 25px;
         }
         
         /* Header */
         .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 35px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
             position: relative;
             overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         .header h1 {
             color: white;
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 3em;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            font-weight: 800;
+            letter-spacing: -1px;
         }
         
         .header .subtitle {
-            color: rgba(255,255,255,0.9);
-            font-size: 1.1em;
+            color: rgba(255,255,255,0.95);
+            font-size: 1.15em;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
         }
         
         .live-indicator {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             background: var(--success);
             border-radius: 50%;
             animation: pulse 2s infinite;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
         }
         
         @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            50% { opacity: 0.7; box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            0%, 100% { 
+                opacity: 1; 
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.8; 
+                box-shadow: 0 0 0 12px rgba(16, 185, 129, 0);
+                transform: scale(1.1);
+            }
         }
         
         /* Alert Banner */
@@ -164,35 +197,78 @@ export const getLogsDashboard = (req, res) => {
         /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            margin-bottom: 35px;
         }
         
         .stat-card {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 12px;
-            border-left: 4px solid var(--primary);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            padding: 28px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .stat-card:hover::before {
+            width: 8px;
+        }
+
+        .stat-card:hover::after {
+            opacity: 1;
         }
         
-        .stat-card.success { border-left-color: var(--success); }
-        .stat-card.danger { border-left-color: var(--danger); }
-        .stat-card.warning { border-left-color: var(--warning); }
-        .stat-card.info { border-left-color: var(--info); }
+        .stat-card.success::before { background: var(--success); }
+        .stat-card.danger::before { background: var(--danger); }
+        .stat-card.warning::before { background: var(--warning); }
+        .stat-card.info::before { background: var(--info); }
+
+        .stat-card.success:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15); }
+        .stat-card.danger:hover { box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); }
+        .stat-card.warning:hover { box-shadow: 0 8px 25px rgba(251, 191, 36, 0.15); }
+        .stat-card.info:hover { box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); }
         
         .stat-value {
-            font-size: 2.5em;
-            font-weight: bold;
+            font-size: 2.8em;
+            font-weight: 800;
             color: var(--primary);
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
         .stat-card.success .stat-value { color: var(--success); }
@@ -202,9 +278,12 @@ export const getLogsDashboard = (req, res) => {
         
         .stat-label {
             color: var(--text-muted);
-            font-size: 0.95em;
+            font-size: 0.92em;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
         }
         
         .stat-change {
@@ -251,53 +330,78 @@ export const getLogsDashboard = (req, res) => {
         }
         
         .btn {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
             color: white;
             border: none;
-            padding: 9px 18px;
-            border-radius: 8px;
+            padding: 11px 22px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 0.88em;
-            font-weight: 500;
-            transition: all 0.3s;
+            font-size: 0.92em;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
         }
         
         .btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
         }
         
         .btn.danger {
-            background: var(--danger);
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
         
         .btn.danger:hover {
-            background: #dc2626;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
         }
         
         .btn.success {
-            background: var(--success);
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
         
         .btn.success:hover {
-            background: #059669;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
         }
 
         .btn.secondary {
-            background: rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
             border: 1px solid rgba(255, 255, 255, 0.25);
             color: var(--text-light);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .btn.secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
         
         .auto-refresh-info {
@@ -311,23 +415,152 @@ export const getLogsDashboard = (req, res) => {
         /* Filters */
         .filters {
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 18px;
+            margin-bottom: 25px;
             flex-wrap: wrap;
+            align-items: center;
         }
         
         .filter-input, .filter-select {
-            background: var(--dark-bg);
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: var(--text-light);
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 12px 18px;
+            border-radius: 10px;
             font-size: 0.95em;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
         .filter-input:focus, .filter-select:focus {
             outline: none;
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .filter-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* PAINEL DE FILTROS DE LOGS - REORGANIZADO */
+        .logs-filters-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 51, 234, 0.08) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .filters-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .filter-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-light);
+            font-weight: 600;
+            font-size: 0.9em;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-icon {
+            font-size: 1.1em;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .filter-select.modern,
+        .filter-input.modern {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-light);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+        }
+
+        .filter-select.modern option {
+            background: #1e293b;
+            color: var(--text-light);
+            padding: 10px;
+        }
+
+        .filter-select.modern option:hover,
+        .filter-select.modern option:checked,
+        .filter-select.modern option:focus {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .filter-select.modern:hover,
+        .filter-input.modern:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: linear-gradient(135deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .filter-select.modern:focus,
+        .filter-input.modern:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25), 0 4px 16px rgba(0, 0, 0, 0.25);
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);
+        }
+
+        .filter-input.modern::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 400;
+        }
+
+        .btn-clear-filters {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            color: #f87171;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            letter-spacing: 0.3px;
+        }
+
+        .btn-clear-filters:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%);
+            border-color: rgba(239, 68, 68, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-clear-filters:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
         
         /* Table */
@@ -405,55 +638,102 @@ export const getLogsDashboard = (req, res) => {
         /* IP Cards Grid */
         .ip-stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 5px;
         }
         
         .ip-card {
-            background: var(--dark-bg);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .ip-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--info) 100%);
+            transform: scaleX(0);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .ip-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(59, 130, 246, 0.25);
             border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 51, 234, 0.05) 100%);
+        }
+
+        .ip-card:hover::before {
+            transform: scaleX(1);
         }
         
         .ip-card.suspicious {
+            border-color: rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.05) 100%);
+        }
+
+        .ip-card.suspicious::before {
+            background: linear-gradient(90deg, var(--danger) 0%, #dc2626 100%);
+        }
+
+        .ip-card.suspicious:hover {
+            box-shadow: 0 12px 35px rgba(239, 68, 68, 0.3);
             border-color: var(--danger);
-            background: rgba(239, 68, 68, 0.05);
         }
         
         .ip-address {
             font-family: 'Courier New', monospace;
-            font-size: 1.1em;
+            font-size: 1.15em;
             color: var(--primary);
-            font-weight: bold;
-            margin-bottom: 15px;
+            font-weight: 700;
+            margin-bottom: 18px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.08);
         }
         
         .ip-stat {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9em;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.92em;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .ip-stat:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(4px);
         }
         
         .ip-stat-label {
             color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .ip-stat-value {
             color: var(--text-light);
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 1.05em;
         }
         
         /* Toast Notification */
@@ -1040,32 +1320,46 @@ export const getLogsDashboard = (req, res) => {
         /* Modal de Histórico */
         .modal-history {
             max-width: 1000px;
-            max-height: 90vh;
+            max-height: 90vh !important;
+            height: 90vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden !important;
         }
 
         .modal-history .modal-header {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
             border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+            flex-shrink: 0;
         }
 
         .modal-history .modal-body {
-            flex: 1;
-            overflow: hidden;
+            flex: 1 1 auto;
+            overflow: hidden !important;
             display: flex;
             flex-direction: column;
+            min-height: 0;
+            height: 100%;
+        }
+
+        .modal-history .modal-footer {
+            flex-shrink: 0;
         }
 
         /* Sistema de Abas */
         .tabs-container {
             width: 100%;
-            height: 100%;
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
+            min-height: 0;
+            max-height: 100%;
+            overflow: hidden !important;
+            height: 100%;
         }
 
         .tabs-header {
+            flex: 0 0 auto;
             display: flex;
             gap: 0;
             background: rgba(0, 0, 0, 0.2);
@@ -1129,28 +1423,42 @@ export const getLogsDashboard = (req, res) => {
 
         .tabs-content {
             width: 100%;
-            flex: 1;
-            overflow: hidden;
+            flex: 1 1 auto;
+            overflow: hidden !important;
             background: rgba(0, 0, 0, 0.1);
+            min-height: 0;
+            max-height: 100%;
+            position: relative;
+            height: 100%;
         }
 
         .tab-content {
             display: none;
             height: 100%;
             animation: fadeInSlide 0.4s ease-out;
+            min-height: 0;
+            max-height: 100%;
+            overflow: hidden !important;
         }
 
         .tab-content.active {
             display: flex;
             flex-direction: column;
+            min-height: 0;
+            max-height: 100%;
+            height: 100%;
         }
 
         .history-scroll-area {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
+            flex: 1 1 auto;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
             padding: 20px;
             background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 20px);
+            min-height: 0;
+            max-height: 100%;
+            height: 100%;
+            -webkit-overflow-scrolling: touch;
         }
 
         .history-scroll-area::-webkit-scrollbar {
@@ -2037,37 +2345,6 @@ export const getLogsDashboard = (req, res) => {
             </div>
         </div>
 
-        <!-- Métricas Avançadas -->
-        <div class="section">
-            <div class="section-header">
-                <h2 class="section-title">📊 Métricas Avançadas</h2>
-            </div>
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-title">⏱️ Tempo Médio de Resposta</div>
-                    <div class="metric-value" id="avgResponseTime">...</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">🔥 Endpoints Mais Acessados</div>
-                    <div class="metric-list" id="topEndpoints">
-                        <div class="loading">Carregando...</div>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">🌐 Navegadores Mais Usados</div>
-                    <div class="metric-list" id="topBrowsers">
-                        <div class="loading">Carregando...</div>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">📱 Dispositivos Mais Usados</div>
-                    <div class="metric-list" id="topDevices">
-                        <div class="loading">Carregando...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- IP Stats -->
         <!-- SEÇÃO UNIFICADA: Segurança + Estatísticas de IPs -->
         <div class="section">
@@ -2426,24 +2703,133 @@ export const getLogsDashboard = (req, res) => {
             </div>
         </div>
 
-        <!-- Recent Logs -->
+        <!-- Métricas Avançadas -->
         <div class="section">
             <div class="section-header">
-                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleLogsSection()">
-                    <span id="logs-section-icon">▶</span>
-                    📝 Logs de Acesso Recentes
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleMetricsSection()">
+                    <span id="metrics-section-icon">▶</span>
+                    📊 Métricas Avançadas
                 </h2>
-                <div class="filters" id="logs-controls" style="display: none;">
-                    <input type="number" class="filter-input" id="limitInput" 
-                           placeholder="Limite (padrão: 50)" value="50" onchange="loadLogs()">
-                    <select class="filter-select" id="authorizedFilter" onchange="loadLogs()">
-                        <option value="">Todos os Acessos</option>
-                        <option value="true">✅ Apenas Autorizados</option>
-                        <option value="false">❌ Apenas Negados</option>
-                    </select>
+            </div>
+            <div id="metrics-section-content" style="display: none; padding-top: 20px;">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-title">⏱️ Tempo Médio de Resposta</div>
+                        <div class="metric-value" id="avgResponseTime">...</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">🔥 Endpoints Mais Acessados</div>
+                        <div class="metric-list" id="topEndpoints">
+                            <div class="loading">Carregando...</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">🌐 Navegadores Mais Usados</div>
+                        <div class="metric-list" id="topBrowsers">
+                            <div class="loading">Carregando...</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">📱 Dispositivos Mais Usados</div>
+                        <div class="metric-list" id="topDevices">
+                            <div class="loading">Carregando...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="table-container" id="tableContainer" style="display: none;">
+        </div>
+
+        <!-- Recent Logs -->
+        <div class="section">
+            <div class="section-header" style="flex-direction: column; align-items: stretch; gap: 20px;">
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleLogsSection()">
+                    <span id="logs-section-icon">▼</span>
+                    📝 Logs de Acesso Recentes
+                </h2>
+                
+                <!-- PAINEL DE FILTROS REORGANIZADO -->
+                <div id="logs-controls" class="logs-filters-panel" style="display: flex;">
+                    <!-- Linha 1: Quantidade e Status -->
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <span class="filter-icon">📊</span>
+                                <span>Quantidade</span>
+                            </label>
+                            <select class="filter-select modern" id="limitSelect" onchange="updateLogsLimit()">
+                                <option value="25">25 registros</option>
+                                <option value="50" selected>50 registros</option>
+                                <option value="100">100 registros</option>
+                                <option value="200">200 registros</option>
+                                <option value="500">500 registros</option>
+                                <option value="all">Todos os registros</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <span class="filter-icon">🔐</span>
+                                <span>Status de Acesso</span>
+                            </label>
+                            <select class="filter-select modern" id="authorizedFilter" onchange="loadLogs()">
+                                <option value="">Todos os status</option>
+                                <option value="true">✅ Apenas Autorizados</option>
+                                <option value="false">❌ Apenas Negados</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <span class="filter-icon">🌐</span>
+                                <span>Método HTTP</span>
+                            </label>
+                            <select class="filter-select modern" id="methodFilter" onchange="loadLogs()">
+                                <option value="">Todos os métodos</option>
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="PATCH">PATCH</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Linha 2: Busca e Ações -->
+                    <div class="filters-row">
+                        <div class="filter-group" style="flex: 2;">
+                            <label class="filter-label">
+                                <span class="filter-icon">🔗</span>
+                                <span>Buscar por Endpoint</span>
+                            </label>
+                            <input type="text" 
+                                   class="filter-input modern" 
+                                   id="endpointFilter" 
+                                   placeholder="Digite o endpoint (ex: /api/logs, /docs...)" 
+                                   onkeyup="filterLogsLocally()">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <span class="filter-icon">📍</span>
+                                <span>Buscar por IP</span>
+                            </label>
+                            <input type="text" 
+                                   class="filter-input modern" 
+                                   id="ipFilter" 
+                                   placeholder="Ex: 192.168.1.1" 
+                                   onkeyup="filterLogsLocally()">
+                        </div>
+                        
+                        <div class="filter-group" style="justify-content: flex-end;">
+                            <button class="btn-clear-filters" onclick="clearLogsFilters()">
+                                <span>🗑️</span>
+                                <span>Limpar Filtros</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-container" id="tableContainer" style="display: block;">
                 <table>
                     <thead>
                         <tr>
@@ -2706,16 +3092,23 @@ export const getLogsDashboard = (req, res) => {
                     document.getElementById('scrollLoader').classList.add('show');
                 }
                 
-                const limit = parseInt(document.getElementById('limitInput').value) || 50;
+                // Obter valores dos filtros
+                const limitSelect = document.getElementById('limitSelect').value;
+                const limit = limitSelect === 'all' ? 10000 : parseInt(limitSelect);
                 const authorized = document.getElementById('authorizedFilter').value;
+                const method = document.getElementById('methodFilter').value;
                 
-                let url = \`/api/logs?limit=\${limit * logsPage}\`;
-                if (authorized) url += \`&authorized=\${authorized}\`;
+                let url = '/api/logs?limit=' + (limit * logsPage);
+                if (authorized) url += '&authorized=' + authorized;
+                if (method) url += '&method=' + method;
                 
                 const response = await fetch(url);
                 const data = await response.json();
                 
                 if (data.success && data.logs.length > 0) {
+                    // Armazenar logs originais para filtro local
+                    window.allLogs = data.logs;
+                    
                     const logsHtml = data.logs.map(log => {
                         const isSuspicious = !log.is_authorized;
                         const isNightAccess = isNightTime(log.timestamp);
@@ -2724,13 +3117,13 @@ export const getLogsDashboard = (req, res) => {
                         // Formatar localização com bandeira
                         const countryFlag = log.countryCode ? getFlagEmoji(log.countryCode) : '🌍';
                         const location = log.city && log.country 
-                            ? \`\${countryFlag} \${log.city}, \${log.country}\`
+                            ? countryFlag + ' ' + log.city + ', ' + log.country
                             : log.country 
-                            ? \`\${countryFlag} \${log.country}\`
+                            ? countryFlag + ' ' + log.country
                             : '🌍 Desconhecido';
                         
                         return \`
-                            <tr class="\${rowClass}">
+                            <tr class="\${rowClass}" data-ip="\${log.ip_detected}" data-url="\${log.url || ''}" data-method="\${log.method || 'GET'}">
                                 <td>\${formatDateTime(log.timestamp)}</td>
                                 <td style="font-family: 'Courier New', monospace;">\${log.ip_detected || '−'}</td>
                                 <td>\${location}</td>
@@ -2753,6 +3146,9 @@ export const getLogsDashboard = (req, res) => {
                         document.getElementById('logsTableBody').innerHTML = logsHtml;
                     }
                     
+                    // Aplicar filtros locais se existirem
+                    filterLogsLocally();
+                    
                     hasMoreLogs = data.logs.length === limit * logsPage;
                 } else {
                     if (!append) {
@@ -2767,6 +3163,44 @@ export const getLogsDashboard = (req, res) => {
                 isLoadingMore = false;
                 document.getElementById('scrollLoader').classList.remove('show');
             }
+        }
+
+        // Atualizar limite de logs
+        function updateLogsLimit() {
+            logsPage = 1;
+            loadLogs();
+        }
+
+        // Filtrar logs localmente (sem nova requisição)
+        function filterLogsLocally() {
+            const endpointFilter = document.getElementById('endpointFilter').value.toLowerCase();
+            const ipFilter = document.getElementById('ipFilter').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#logsTableBody tr');
+            
+            rows.forEach(row => {
+                const ip = (row.getAttribute('data-ip') || '').toLowerCase();
+                const url = (row.getAttribute('data-url') || '').toLowerCase();
+                
+                const matchEndpoint = !endpointFilter || url.includes(endpointFilter);
+                const matchIP = !ipFilter || ip.includes(ipFilter);
+                
+                if (matchEndpoint && matchIP) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Limpar todos os filtros
+        function clearLogsFilters() {
+            document.getElementById('limitSelect').value = '50';
+            document.getElementById('authorizedFilter').value = '';
+            document.getElementById('methodFilter').value = '';
+            document.getElementById('endpointFilter').value = '';
+            document.getElementById('ipFilter').value = '';
+            loadLogs();
         }
 
         // Infinite Scroll (somente se o elemento existir)
@@ -3294,6 +3728,20 @@ export const getLogsDashboard = (req, res) => {
             } else {
                 container.style.display = 'none';
                 controls.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // Alternar seção Métricas Avançadas
+        function toggleMetricsSection() {
+            const content = document.getElementById('metrics-section-content');
+            const icon = document.getElementById('metrics-section-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
                 icon.textContent = '▶';
             }
         }
