@@ -196,12 +196,6 @@ export const ipFilter = async (req, res, next) => {
     console.log(`   Referer: ${clientInfo.referer || 'Direct access'}`);
     console.log(`   Language: ${clientInfo.accept_language || 'Not specified'}`);
     console.log(`\n${clientInfo.is_authorized ? '✅' : '❌'} AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
-    if (!clientInfo.is_authorized && origin.type !== 'zerotier') {
-        console.log(`\n💡 TIP: Use ZeroTier para conectar com segurança!`);
-        console.log(`   1. Instalar: https://www.zerotier.com/download/`);
-        console.log(`   2. Executar: zerotier-cli join fada62b01530e6b6`);
-        console.log(`   3. Aguardar autorização do administrador`);
-    }
     console.log('='.repeat(80) + '\n');
     
     // Registrar no sistema de logs APENAS se não for request de API de logs ou assets
@@ -218,23 +212,12 @@ export const ipFilter = async (req, res, next) => {
     if (!clientInfo.is_authorized) {
         return res.status(403).json({ 
             success: false,
-            error: 'Access denied - IP not authorized',
+            error: 'Access Denied',
+            message: 'Unauthorized access attempt detected. Your IP address is not authorized to access this API.',
             yourIP: clientIp,
             origin: origin.network,
-            message: origin.type === 'zerotier' 
-                ? 'Dispositivo ZeroTier não autorizado. Contate o administrador para liberar acesso.'
-                : origin.type === 'localhost'
-                ? 'Localhost deveria estar autorizado. Verifique a configuração.'
-                : 'Este IP não está autorizado. Use ZeroTier para conectar com segurança: https://www.zerotier.com/',
-            zerotier: origin.type !== 'zerotier' ? {
-                howToConnect: [
-                    '1. Instalar ZeroTier: https://www.zerotier.com/download/',
-                    '2. Executar: zerotier-cli join fada62b01530e6b6',
-                    '3. Aguardar autorização do administrador no dashboard ZeroTier',
-                    '4. Acessar API usando IP ZeroTier (10.244.x.x)'
-                ]
-            } : undefined,
-            debug: clientInfo  // Todas as informações do cliente
+            timestamp: new Date().toISOString(),
+            warning: '⚠️ This incident has been logged. Repeated unauthorized access attempts may result in permanent blocking. Please do not attempt to hack or bypass security measures.'
         });
     }
     
