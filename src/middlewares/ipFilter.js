@@ -1,81 +1,10 @@
 import { allowedIPs } from '../config/allowedIPs.js';
 import { accessLogger } from '../utils/accessLogger.js';
+import { getClientIP, isIPInRange, getConnectionOrigin } from '../utils/ipUtils.js';
 
 // Cache de geolocalização (evitar chamadas excessivas à API)
 const geoCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
-
-/**
- * Verifica se um IP está dentro de um range CIDR
- * Exemplo: isIPInRange('10.244.229.5', '10.244.0.0/16') → true
- * @param {string} ip - IP a ser verificado
- * @param {string} cidr - Range CIDR ou IP exato
- * @returns {boolean}
- */
-function isIPInRange(ip, cidr) {
-    // Se não tem '/', é IP exato
-    if (!cidr.includes('/')) {
-        return ip === cidr;
-    }
-    
-    const [range, bits] = cidr.split('/');
-    const bitsNum = parseInt(bits);
-    
-    // Converter IP para número
-    const ipToNumber = (ipStr) => {
-        return ipStr.split('.')
-            .reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
-    };
-    
-    // Criar máscara de rede
-    const mask = ~(2 ** (32 - bitsNum) - 1);
-    
-    const ipNum = ipToNumber(ip);
-    const rangeNum = ipToNumber(range);
-    
-    return (ipNum & mask) === (rangeNum & mask);
-}
-
-/**
- * Identifica a origem da conexão
- * @param {string} ip - IP do cliente
- * @returns {object} - { type, network, icon, color }
- */
-function getConnectionOrigin(ip) {
-    if (ip === '127.0.0.1' || ip === '::1') {
-        return { 
-            type: 'localhost', 
-            network: 'Desenvolvimento Local',
-            icon: '🏠',
-            color: 'blue'
-        };
-    }
-    
-    if (ip.startsWith('10.244.')) {
-        return { 
-            type: 'zerotier', 
-            network: 'ZeroTier VPN',
-            icon: '🔐',
-            color: 'green'
-        };
-    }
-    
-    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
-        return { 
-            type: 'local', 
-            network: 'Rede Local Privada',
-            icon: '🏢',
-            color: 'yellow'
-        };
-    }
-    
-    return { 
-        type: 'public', 
-        network: 'Internet Pública',
-        icon: '🌐',
-        color: 'red'
-    };
-}
 
 // Função para obter geolocalização do IP
 async function getIPGeolocation(ip) {
@@ -155,9 +84,7 @@ async function getIPGeolocation(ip) {
 // Middleware para bloquear requisições de IPs não autorizados
 export const ipFilter = async (req, res, next) => {
     // Pega o IP real considerando proxies/CDN
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                     req.headers['x-real-ip'] || 
-                     req.ip;
+    const clientIp = getClientIP(req);
     
     // Buscar geolocalização do IP
     const geoData = await getIPGeolocation(clientIp);

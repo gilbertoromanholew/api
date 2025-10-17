@@ -620,29 +620,31 @@ api/
 │   │   │   ├── templateUtils.js
 │   │   │   └── README.md
 │   │   │
-│   │   ├── exemplo/         # Exemplo (CPF + Matemática)
+│   │   ├── exemplo/         # Exemplo (CRUD de usuários)
 │   │   │   ├── exemploController.js
 │   │   │   └── exemploRoutes.js
 │   │   │
 │   │   └── pdf/             # Processamento de PDFs
 │   │       ├── pdfController.js
-│   │       ├── pdfParseWrapper.cjs  # Wrapper CommonJS
 │   │       ├── pdfRoutes.js
+│   │       ├── pdfParseWrapper.cjs  # Wrapper CommonJS (modular)
 │   │       └── README.md
 │   │
 │   ├── middlewares/         # Middlewares globais
 │   │   ├── errorHandler.js  # Tratamento de erros
 │   │   ├── ipFilter.js      # Filtro de IP + geolocalização
-│   │   └── validator.js     # Validação com Joi
+│   │   └── validator.js     # Validação de schemas
 │   │
 │   ├── routes/              # Rotas especiais
-│   │   ├── docs.js          # Documentação HTML
+│   │   ├── docs.js          # Documentação HTML interativa
 │   │   ├── index.js         # Rota raiz (JSON)
-│   │   ├── logsDashboard.js # Dashboard de logs
-│   │   └── logsRoutes.js    # API de logs
+│   │   ├── logsDashboard.js # Dashboard de logs em tempo real
+│   │   ├── logsRoutes.js    # API de logs (com cache)
+│   │   └── zerotier.js      # Status ZeroTier VPN
 │   │
 │   └── utils/               # Utilitários genéricos
-│       └── accessLogger.js  # Logger de acessos (global)
+│       ├── accessLogger.js  # Logger de acessos (otimizado O(n))
+│       └── ipUtils.js       # Utilitários de IP (CIDR, detecção)
 │
 ├── server.js                # Entry point
 ├── package.json             # Dependências

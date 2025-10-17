@@ -48,15 +48,16 @@ class AccessLogger {
         return filtered;
     }
 
-    // Estatísticas por IP
+    // Estatísticas por IP (otimizado - O(n) em vez de O(n²))
     getIPStats() {
-        const stats = {};
+        const stats = new Map();
 
-        this.logs.forEach(log => {
+        // Uma única passada pelos logs - O(n)
+        for (const log of this.logs) {
             const ip = log.ip_detected;
             
-            if (!stats[ip]) {
-                stats[ip] = {
+            if (!stats.has(ip)) {
+                stats.set(ip, {
                     ip: ip,
                     total_attempts: 0,
                     authorized: 0,
@@ -67,32 +68,35 @@ class AccessLogger {
                     browsers: new Set(),
                     platforms: new Set(),
                     urls_accessed: []
-                };
+                });
             }
 
-            stats[ip].total_attempts++;
-            stats[ip].last_seen = log.timestamp;
+            const ipStats = stats.get(ip);
+            ipStats.total_attempts++;
+            ipStats.last_seen = log.timestamp;
             
             if (log.is_authorized) {
-                stats[ip].authorized++;
+                ipStats.authorized++;
             } else {
-                stats[ip].denied++;
+                ipStats.denied++;
             }
 
-            if (log.country) stats[ip].countries.add(log.country);
-            if (log.browser) stats[ip].browsers.add(log.browser);
-            if (log.platform) stats[ip].platforms.add(log.platform);
-            if (log.url) stats[ip].urls_accessed.push(log.url);
-        });
+            if (log.country) ipStats.countries.add(log.country);
+            if (log.browser) ipStats.browsers.add(log.browser);
+            if (log.platform) ipStats.platforms.add(log.platform);
+            if (log.url) ipStats.urls_accessed.push(log.url);
+        }
 
-        // Converter Sets para Arrays
-        Object.keys(stats).forEach(ip => {
-            stats[ip].countries = Array.from(stats[ip].countries);
-            stats[ip].browsers = Array.from(stats[ip].browsers);
-            stats[ip].platforms = Array.from(stats[ip].platforms);
-        });
+        // Converter Sets para Arrays e Map para Array
+        const result = Array.from(stats.values()).map(stat => ({
+            ...stat,
+            countries: Array.from(stat.countries),
+            browsers: Array.from(stat.browsers),
+            platforms: Array.from(stat.platforms)
+        }));
 
-        return Object.values(stats).sort((a, b) => b.total_attempts - a.total_attempts);
+        // Ordenar por total de tentativas (decrescente)
+        return result.sort((a, b) => b.total_attempts - a.total_attempts);
     }
 
     // Estatísticas gerais

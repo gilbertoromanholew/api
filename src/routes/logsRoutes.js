@@ -56,9 +56,25 @@ router.post('/api/logs/clear', (req, res) => {
     });
 });
 
-// GET /api/functions - Descoberta automática de funções
+// Cache de rotas descobertas (evitar regex repetido)
+let cachedFunctions = null;
+let cacheTimestamp = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+// GET /api/functions - Descoberta automática de funções (com cache)
 router.get('/api/functions', async (req, res) => {
     try {
+        // Verificar cache
+        const now = Date.now();
+        if (cachedFunctions && cacheTimestamp && (now - cacheTimestamp) < CACHE_TTL) {
+            return res.json({
+                success: true,
+                total: cachedFunctions.length,
+                functions: cachedFunctions,
+                cached: true
+            });
+        }
+
         const functionsPath = join(__dirname, '../functions');
         const folders = await readdir(functionsPath, { withFileTypes: true });
         
@@ -92,7 +108,7 @@ router.get('/api/functions', async (req, res) => {
                     const routesPath = join(functionsPath, folder.name, `${folder.name}Routes.js`);
                     const routesContent = await readFile(routesPath, 'utf-8');
                     
-                    // Extrair rotas usando regex simples
+                    // Extrair rotas usando regex (uma vez e cachear resultado)
                     const routeMatches = routesContent.matchAll(/router\.(get|post|put|delete|patch)\(['"`]([^'"`)]+)['"`]/g);
                     
                     for (const match of routeMatches) {
@@ -109,10 +125,15 @@ router.get('/api/functions', async (req, res) => {
             }
         }
         
+        // Atualizar cache
+        cachedFunctions = functions;
+        cacheTimestamp = now;
+        
         res.json({
             success: true,
             total: functions.length,
-            functions: functions
+            functions: functions,
+            cached: false
         });
     } catch (error) {
         res.status(500).json({

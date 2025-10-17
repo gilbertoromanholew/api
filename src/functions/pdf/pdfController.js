@@ -1,8 +1,13 @@
 import { BaseController } from '../../core/BaseController.js';
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const require = createRequire(import.meta.url);
-const pdfParse = require('./pdfParseWrapper.cjs');
+const pdfParse = require(join(__dirname, 'pdfParseWrapper.cjs'));
 
 class PDFController extends BaseController {
     async readPDF(req, res) {

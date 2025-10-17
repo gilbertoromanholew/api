@@ -1,7 +1,7 @@
+import { getClientIP } from '../utils/ipUtils.js';
+
 export const getLogsDashboard = (req, res) => {
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                     req.headers['x-real-ip'] || 
-                     req.ip;
+    const clientIp = getClientIP(req);
     
     const html = `
 <!DOCTYPE html>

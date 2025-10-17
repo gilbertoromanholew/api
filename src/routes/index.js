@@ -1,8 +1,8 @@
+import { getClientIP } from '../utils/ipUtils.js';
+
 export const getApiInfo = (req, res) => {
-    // Pega o IP real considerando proxies/CDN (mesma lógica do ipFilter)
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                     req.headers['x-real-ip'] || 
-                     req.ip;
+    // Pega o IP real considerando proxies/CDN
+    const clientIp = getClientIP(req);
     
     res.json({
         message: '✅ Access Granted! Welcome to the API',

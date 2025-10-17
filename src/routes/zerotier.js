@@ -1,4 +1,5 @@
 import express from 'express';
+import { getClientIP, cleanIP } from '../utils/ipUtils.js';
 
 const router = express.Router();
 
@@ -8,13 +9,8 @@ const router = express.Router();
  */
 router.get('/status', (req, res) => {
     // Detectar IP do cliente
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-                     req.headers['x-real-ip'] ||
-                     req.connection?.remoteAddress ||
-                     req.socket?.remoteAddress ||
-                     req.ip;
-    
-    const cleanIp = clientIp?.replace(/^::ffff:/, '') || 'unknown';
+    const clientIp = getClientIP(req);
+    const cleanIp = cleanIP(clientIp);
     
     // Verificar se é ZeroTier
     const isZeroTier = cleanIp.startsWith('10.244.');
@@ -131,7 +127,7 @@ router.get('/devices', (req, res) => {
         },
         note: 'Para ver a lista completa de dispositivos, acesse: https://my.zerotier.com/',
         dashboard: 'https://my.zerotier.com/',
-        yourIP: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip
+        yourIP: getClientIP(req)
     });
 });
 
