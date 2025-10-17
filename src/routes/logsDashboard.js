@@ -446,10 +446,11 @@ export const getLogsDashboard = (req, res) => {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: white;
+            background: var(--card-bg);
+            color: var(--text-light);
             padding: 20px 25px;
             border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
             display: flex;
             align-items: center;
             gap: 15px;
@@ -471,22 +472,18 @@ export const getLogsDashboard = (req, res) => {
         
         .toast.success {
             border-left: 5px solid var(--success);
-            color: #333;
         }
         
         .toast.error {
             border-left: 5px solid var(--danger);
-            color: #333;
         }
         
         .toast.warning {
             border-left: 5px solid var(--warning);
-            color: #333;
         }
         
         .toast.info {
             border-left: 5px solid var(--info);
-            color: #333;
         }
         
         .toast-icon {
@@ -500,17 +497,19 @@ export const getLogsDashboard = (req, res) => {
         .toast-title {
             font-weight: bold;
             margin-bottom: 3px;
+            color: var(--text-light);
         }
         
         .toast-message {
             font-size: 0.9em;
-            opacity: 0.8;
+            opacity: 0.9;
+            color: var(--text-light);
         }
         
         .toast-close {
             background: none;
             border: none;
-            color: #333;
+            color: var(--text-light);
             font-size: 1.2em;
             cursor: pointer;
             padding: 5px 10px;
@@ -522,7 +521,6 @@ export const getLogsDashboard = (req, res) => {
         .toast-close:hover {
             opacity: 1;
             transform: scale(1.2);
-            color: #000;
         }
         
         /* Loading */
@@ -934,7 +932,8 @@ export const getLogsDashboard = (req, res) => {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(8px);
             z-index: 10000;
             justify-content: center;
             align-items: center;
@@ -1235,11 +1234,11 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .filter-tab {
-            background: transparent;
-            color: var(--dark-text-muted);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-light);
             padding: 10px 20px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             cursor: pointer;
             font-weight: 500;
             transition: all 0.3s;
@@ -1249,18 +1248,19 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .filter-tab:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
         }
 
         .filter-tab.active {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            border-color: var(--primary);
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
         }
 
         .filter-tab .count {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.25);
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 0.85em;
@@ -1268,7 +1268,8 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .filter-tab.active .count {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.35);
+            font-weight: 800;
         }
 
         .filter-search-row {
@@ -1330,18 +1331,19 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .unified-ip-card {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(15, 23, 42, 0.5);
             border-radius: 12px;
             padding: 20px;
             border-left: 5px solid var(--border);
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             position: relative;
         }
 
         .unified-ip-card:hover {
-            background: rgba(15, 23, 42, 0.8);
-            transform: translateX(5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            background: rgba(30, 41, 59, 0.9);
+            transform: translateX(8px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            border-left-width: 6px;
         }
 
         /* STATUS BORDERS */
@@ -1397,23 +1399,27 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .unified-ip-status-badge.status-normal {
-            background: rgba(5, 150, 105, 0.2);
-            color: var(--success);
+            background: rgba(5, 150, 105, 0.25);
+            color: #10b981;
+            border: 1px solid rgba(5, 150, 105, 0.4);
         }
 
         .unified-ip-status-badge.status-warning {
-            background: rgba(217, 119, 6, 0.2);
-            color: var(--warning);
+            background: rgba(217, 119, 6, 0.25);
+            color: #fb923c;
+            border: 1px solid rgba(217, 119, 6, 0.4);
         }
 
         .unified-ip-status-badge.status-suspended {
-            background: rgba(8, 145, 178, 0.2);
-            color: var(--info);
+            background: rgba(8, 145, 178, 0.25);
+            color: #22d3ee;
+            border: 1px solid rgba(8, 145, 178, 0.4);
         }
 
         .unified-ip-status-badge.status-blocked {
-            background: rgba(220, 38, 38, 0.2);
-            color: var(--danger);
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+            border: 1px solid rgba(220, 38, 38, 0.4);
         }
 
         .unified-ip-header-right {
@@ -1467,30 +1473,38 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .action-btn {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             color: var(--text-light);
             padding: 8px 16px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             cursor: pointer;
             font-size: 0.9em;
             font-weight: 500;
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
         }
 
-        .action-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
+        .action-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .action-btn:active:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
         }
 
         .action-btn[disabled],
         .action-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
             pointer-events: none;
+            filter: grayscale(50%);
         }
 
         .action-btn.btn-warning {
@@ -1575,15 +1589,25 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .unified-detail-section {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 10px;
-            padding: 15px;
+            padding: 18px;
+            transition: all 0.3s;
+        }
+
+        .unified-detail-section:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
         }
 
         .unified-detail-title {
             color: var(--text-light);
             font-weight: 600;
-            margin-bottom: 10px;
+            font-size: 1.05em;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -1643,8 +1667,10 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .pagination-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
+            filter: grayscale(70%);
+            background: rgba(255, 255, 255, 0.03);
         }
 
         .pagination-page {
@@ -3209,7 +3235,7 @@ export const getLogsDashboard = (req, res) => {
         
         // Criar card de IP
         function createUnifiedCard(ipData) {
-            const { ip, status, stats, security, isSuspicious } = ipData;
+            const { ip, status, stats, security, isSuspicious, geo } = ipData;
             
             const statusInfo = {
                 normal: { icon: '✅', label: 'Normal', color: 'success' },
@@ -3220,13 +3246,38 @@ export const getLogsDashboard = (req, res) => {
             
             const actions = getAvailableActions(status, ip); // Passar o IP para verificar se é o próprio
             
+            // Extrair informações de geolocalização
+            const country = geo?.country || 'Desconhecido';
+            const countryCode = geo?.countryCode || 'XX';
+            const city = geo?.city || '';
+            const regionName = geo?.regionName || '';
+            const isp = geo?.isp || 'Desconhecido';
+            const org = geo?.org || '';
+            const as = geo?.as || '';
+            const timezone = geo?.timezone || '';
+            const zip = geo?.zip || '';
+            const lat = geo?.lat || 0;
+            const lon = geo?.lon || 0;
+            const hosting = geo?.hosting || false;
+            const proxy = geo?.proxy || false;
+            const mobile = geo?.mobile || false;
+            
+            const flagEmoji = getFlagEmoji(countryCode);
+            const locationStr = city && regionName ? \`\${city}, \${regionName} - \${country}\` : (city ? \`\${city}, \${country}\` : country);
+            
             return \`
                 <div class="unified-ip-card status-\${status}" data-ip="\${ip}">
                     <div class="unified-ip-header" onclick="toggleCardDetails('\${ip}')">
                         <div class="unified-ip-header-left">
                             <div class="unified-ip-icon">\${statusInfo.icon}</div>
                             <div>
-                                <div class="unified-ip-address">\${ip}</div>
+                                <div class="unified-ip-address">
+                                    \${ip}
+                                    \${flagEmoji ? \`<span style="margin-left: 8px; font-size: 1.2em;">\${flagEmoji}</span>\` : ''}
+                                </div>
+                                <div style="font-size: 0.75em; color: rgba(255,255,255,0.6); margin-top: 2px;">
+                                    📍 \${locationStr}
+                                </div>
                                 <span class="unified-ip-status-badge status-\${status}">
                                     \${statusInfo.label}
                                 </span>
@@ -3292,6 +3343,33 @@ export const getLogsDashboard = (req, res) => {
                                     <li><strong>Negados:</strong> \${stats.denied || 0}</li>
                                     <li><strong>Taxa de sucesso:</strong> \${calculateSuccessRate(stats)}%</li>
                                     <li><strong>Último acesso:</strong> \${formatDateTime(stats.lastSeen)}</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="unified-detail-section">
+                                <div class="unified-detail-title">
+                                    🌍 Geolocalização (ip-api.com)
+                                </div>
+                                <ul class="unified-detail-list">
+                                    <li><strong>País:</strong> \${flagEmoji} \${country} (\${countryCode})</li>
+                                    \${city ? \`<li><strong>Cidade:</strong> \${city}\${regionName ? ', ' + regionName : ''}</li>\` : ''}
+                                    \${zip && zip !== 'N/A' ? \`<li><strong>CEP:</strong> \${zip}</li>\` : ''}
+                                    \${timezone ? \`<li><strong>Timezone:</strong> ⏰ \${timezone}</li>\` : ''}
+                                    \${lat && lon ? \`<li><strong>Coordenadas:</strong> <a href="https://www.google.com/maps?q=\${lat},\${lon}" target="_blank" style="color: var(--primary);">\${lat}, \${lon} 🗺️</a></li>\` : ''}
+                                </ul>
+                            </div>
+                            
+                            <div class="unified-detail-section">
+                                <div class="unified-detail-title">
+                                    🌐 Informações de Rede
+                                </div>
+                                <ul class="unified-detail-list">
+                                    \${isp && isp !== 'Desconhecido' ? \`<li><strong>ISP:</strong> \${isp}</li>\` : ''}
+                                    \${org && org !== 'Desconhecido' ? \`<li><strong>Organização:</strong> \${org}</li>\` : ''}
+                                    \${as && as !== 'N/A' ? \`<li><strong>AS:</strong> <span style="font-family: monospace; font-size: 0.9em;">\${as}</span></li>\` : ''}
+                                    \${hosting ? \`<li><strong>⚠️ Hospedagem:</strong> <span style="color: var(--warning);">Servidor de Hospedagem Detectado</span></li>\` : ''}
+                                    \${proxy ? \`<li><strong>🔒 Proxy/VPN:</strong> <span style="color: var(--danger);">Detectado</span></li>\` : ''}
+                                    \${mobile ? \`<li><strong>📱 Rede Móvel:</strong> <span style="color: var(--info);">Sim</span></li>\` : ''}
                                 </ul>
                             </div>
                         </div>

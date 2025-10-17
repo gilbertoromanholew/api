@@ -377,6 +377,11 @@ router.get('/unified', async (req, res) => {
         // Combinar dados de IPs com status de segurança
         let unifiedIPs = allIPStats.map(ipData => {
             const security = securityMap.get(ipData.ip);
+            
+            // Extrair informações de geolocalização do primeiro log disponível
+            const logs = accessLogger.getAllLogs().filter(log => log.ip_detected === ipData.ip);
+            const firstLog = logs[0] || {};
+            
             return {
                 ip: ipData.ip,
                 status: security ? security.status : 'normal',
@@ -389,6 +394,23 @@ router.get('/unified', async (req, res) => {
                 security: security ? security.securityInfo : {
                     attempts: 0,
                     remainingAttempts: 5
+                },
+                geo: {
+                    country: firstLog.country || 'Desconhecido',
+                    countryCode: firstLog.countryCode || 'XX',
+                    city: firstLog.city || '',
+                    region: firstLog.region || '',
+                    regionName: firstLog.regionName || '',
+                    isp: firstLog.isp || 'Desconhecido',
+                    org: firstLog.org || '',
+                    as: firstLog.as || '',
+                    lat: firstLog.lat || 0,
+                    lon: firstLog.lon || 0,
+                    timezone: firstLog.timezone || '',
+                    zip: firstLog.zip || '',
+                    hosting: firstLog.hosting || false,
+                    proxy: firstLog.proxy || false,
+                    mobile: firstLog.mobile || false
                 },
                 isSuspicious: ipData.denied > 5 || (ipData.denied / ipData.total_attempts) > 0.5
             };

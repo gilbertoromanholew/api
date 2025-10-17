@@ -31,7 +31,6 @@ Thumbs.db
 
 # Git
 .git/
-.gitignore
 
 # ============================================
 # ✅ ARQUIVOS QUE VÃO PARA O GITHUB (PRODUÇÃO)
