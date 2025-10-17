@@ -1066,19 +1066,19 @@ export const getLogsDashboard = (req, res) => {
 
                 <!-- Tabs para diferentes categorias -->
                 <div class="tabs-container" style="margin-bottom: 20px;">
-                    <button class="tab-btn active" onclick="switchSecurityTab('blocked')">
+                    <button class="tab-btn active" data-tab="blocked" onclick="switchSecurityTab('blocked')">
                         🚫 Bloqueados (<span id="tab-blocked-count">0</span>)
                     </button>
-                    <button class="tab-btn" onclick="switchSecurityTab('suspended')">
+                    <button class="tab-btn" data-tab="suspended" onclick="switchSecurityTab('suspended')">
                         ⏳ Suspensos (<span id="tab-suspended-count">0</span>)
                     </button>
-                    <button class="tab-btn" onclick="switchSecurityTab('warnings')">
+                    <button class="tab-btn" data-tab="warnings" onclick="switchSecurityTab('warnings')">
                         ⚠️ Avisos (<span id="tab-warnings-count">0</span>)
                     </button>
                 </div>
 
                 <!-- Conteúdo das tabs -->
-                <div id="security-tab-blocked" class="security-tab-content">
+                <div id="security-tab-blocked" class="security-tab-content" style="display: block;">
                     <div id="blocked-ips-list" class="security-list">
                         <!-- Será preenchido dinamicamente -->
                     </div>
@@ -2207,28 +2207,43 @@ export const getLogsDashboard = (req, res) => {
         
         // Trocar aba de segurança
         function switchSecurityTab(tab) {
+            console.log('[DEBUG] switchSecurityTab chamada com tab:', tab);
+            
             // Remover active de todos os botões
-            document.querySelectorAll('.tab-btn').forEach(btn => {
+            const allButtons = document.querySelectorAll('.tab-btn');
+            console.log('[DEBUG] Botões encontrados:', allButtons.length);
+            allButtons.forEach(btn => {
                 btn.classList.remove('active');
             });
             
             // Esconder todos os conteúdos
-            document.querySelectorAll('.security-tab-content').forEach(content => {
+            const allContents = document.querySelectorAll('.security-tab-content');
+            console.log('[DEBUG] Conteúdos encontrados:', allContents.length);
+            allContents.forEach(content => {
                 content.style.display = 'none';
             });
             
-            // Ativar o botão selecionado
-            const activeButton = document.querySelector('.tab-btn[onclick*="' + "'" + tab + "'" + '"]');
+            // Ativar o botão selecionado usando data-attribute
+            const selector = '.tab-btn[data-tab="' + tab + '"]';
+            console.log('[DEBUG] Seletor do botão:', selector);
+            const activeButton = document.querySelector(selector);
             if (activeButton) {
                 activeButton.classList.add('active');
+                console.log('[DEBUG] Botão ativado:', tab);
+            } else {
+                console.error('[ERRO] Botão não encontrado para tab:', tab);
             }
             
             // Mostrar o conteúdo selecionado
-            const activeContent = document.getElementById('security-tab-' + tab);
+            const contentId = 'security-tab-' + tab;
+            console.log('[DEBUG] ID do conteúdo:', contentId);
+            const activeContent = document.getElementById(contentId);
             if (activeContent) {
                 activeContent.style.display = 'block';
+                console.log('[DEBUG] Conteúdo exibido:', contentId);
+                console.log('[DEBUG] HTML do conteúdo:', activeContent.innerHTML.substring(0, 100));
             } else {
-                console.error('Conteúdo não encontrado: security-tab-' + tab);
+                console.error('[ERRO] Conteúdo não encontrado:', contentId);
             }
         }
         
