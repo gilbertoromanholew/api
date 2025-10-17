@@ -2455,7 +2455,7 @@ export const getLogsDashboard = (req, res) => {
                             \${item.lastAttempt ? \`
                                 <span class="security-item-detail">
                                     <span>🕐</span>
-                                    <span>\${formatTimestamp(item.lastAttempt)}</span>
+                                    <span>\${formatDateTime(item.lastAttempt)}</span>
                                 </span>
                             \` : ''}
                         </div>
