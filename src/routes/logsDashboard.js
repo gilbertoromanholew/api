@@ -1010,12 +1010,12 @@ export const getLogsDashboard = (req, res) => {
         <div class="section">
             <div class="section-header">
                 <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleSecuritySection()">
-                    <span id="security-section-icon">▶</span>
+                    <span id="security-section-icon">▼</span>
                     🛡️ Sistema de Segurança
                     <span class="badge badge-info" id="security-status-badge">Carregando...</span>
                 </h2>
             </div>
-            <div id="security-section-content" style="display: none; padding-top: 20px;">
+            <div id="security-section-content" style="display: block; padding-top: 20px;">
                 
                 <!-- Estatísticas de Segurança -->
                 <div class="stats-grid" style="margin-bottom: 30px;">
@@ -2207,6 +2207,8 @@ export const getLogsDashboard = (req, res) => {
         
         // Trocar aba de segurança
         function switchSecurityTab(tab) {
+            console.log('Switching to tab:', tab); // Debug
+            
             // Remover active de todos os botões
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -2217,9 +2219,19 @@ export const getLogsDashboard = (req, res) => {
                 content.style.display = 'none';
             });
             
-            // Ativar o selecionado
-            document.querySelector(\`.tab-btn[onclick="switchSecurityTab('\${tab}')"]\`).classList.add('active');
-            document.getElementById(\`security-tab-\${tab}\`).style.display = 'block';
+            // Ativar o botão selecionado
+            const activeButton = document.querySelector('.tab-btn[onclick*="' + "'" + tab + "'" + '"]');
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+            
+            // Mostrar o conteúdo selecionado
+            const activeContent = document.getElementById('security-tab-' + tab);
+            if (activeContent) {
+                activeContent.style.display = 'block';
+            } else {
+                console.error('Conteúdo não encontrado: security-tab-' + tab);
+            }
         }
         
         // Carregar dados de segurança
@@ -2519,6 +2531,7 @@ export const getLogsDashboard = (req, res) => {
         detectMyIP(); // Detectar IP do usuário primeiro
         checkZeroTierStatus(); // Verificar status ZeroTier
         loadAllData();
+        loadSecurityData(); // Carregar dados de segurança no início
         startCountdown();
         startRefreshInterval();
         
