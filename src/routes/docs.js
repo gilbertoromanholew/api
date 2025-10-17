@@ -34,14 +34,14 @@ export const getApiDocs = (req, res) => {
             --info-dark: #0e7490;
             
             /* Métodos HTTP - Cores mais escuras e saturadas */
-            --method-get: #0891b2;     /* Ciano escuro */
-            --method-get-bg: #cffafe;
-            --method-post: #059669;    /* Verde escuro */
-            --method-post-bg: #d1fae5;
-            --method-put: #d97706;     /* Laranja escuro */
-            --method-put-bg: #fef3c7;
-            --method-delete: #dc2626;  /* Vermelho escuro */
-            --method-delete-bg: #fee2e2;
+            --method-get: #ffffff;     /* Texto branco */
+            --method-get-bg: #0891b2;  /* Fundo ciano escuro */
+            --method-post: #ffffff;    /* Texto branco */
+            --method-post-bg: #059669; /* Fundo verde escuro */
+            --method-put: #ffffff;     /* Texto branco */
+            --method-put-bg: #d97706;  /* Fundo laranja escuro */
+            --method-delete: #ffffff;  /* Texto branco */
+            --method-delete-bg: #dc2626; /* Fundo vermelho escuro */
             
             /* Textos - Alto contraste */
             --text-primary: #0f172a;   /* Quase preto */

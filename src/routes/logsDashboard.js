@@ -682,7 +682,7 @@ export const getLogsDashboard = (req, res) => {
         }
         
         .security-item-details {
-            color: var(--text-muted);
+            color: var(--dark-text-muted);  /* Usando cor clara para fundo escuro */
             font-size: 0.9em;
             display: flex;
             gap: 15px;
