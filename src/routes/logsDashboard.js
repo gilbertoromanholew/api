@@ -1452,33 +1452,59 @@ export const getLogsDashboard = (req, res) => {
                         const isMyIP = ip.ip === myIP;
                         
                         return \`
-                            <div class="ip-card \${isSuspicious ? 'suspicious' : ''} \${isMyIP ? 'my-ip' : ''}" onclick="showIPDetails('\${ip.ip}')" style="\${isMyIP ? 'border: 2px solid var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);' : ''}">
-                                <div class="ip-address">
-                                    \${isMyIP ? '🏠 ' : ''}\${isSuspicious ? '⚠️ ' : ''}
-                                    \${ip.ip}
-                                    \${isMyIP ? '<span class="badge success" style="margin-left: 8px; font-size: 0.75em;">VOCÊ</span>' : ''}
+                            <div class="ip-card \${isSuspicious ? 'suspicious' : ''} \${isMyIP ? 'my-ip' : ''}" style="\${isMyIP ? 'border: 2px solid var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);' : ''}">
+                                <div style="cursor: pointer;" onclick="showIPDetails('\${ip.ip}')">
+                                    <div class="ip-address">
+                                        \${isMyIP ? '🏠 ' : ''}\${isSuspicious ? '⚠️ ' : ''}
+                                        \${ip.ip}
+                                        \${isMyIP ? '<span class="badge success" style="margin-left: 8px; font-size: 0.75em;">VOCÊ</span>' : ''}
+                                    </div>
+                                    <div class="ip-stat">
+                                        <span class="ip-stat-label">Total:</span>
+                                        <span class="ip-stat-value">\${ip.total_attempts}</span>
+                                    </div>
+                                    <div class="ip-stat">
+                                        <span class="ip-stat-label">✅ Autorizado:</span>
+                                        <span class="ip-stat-value">\${ip.authorized}</span>
+                                    </div>
+                                    <div class="ip-stat">
+                                        <span class="ip-stat-label">❌ Negado:</span>
+                                        <span class="ip-stat-value">\${ip.denied}</span>
+                                    </div>
+                                    <div class="ip-stat">
+                                        <span class="ip-stat-label">🌍 País:</span>
+                                        <span class="ip-stat-value">\${ip.countries && ip.countries.length > 0 ? ip.countries.join(', ') : 'Desconhecido'}</span>
+                                    </div>
+                                    <div class="ip-stat">
+                                        <span class="ip-stat-label">⏰ Último:</span>
+                                        <span class="ip-stat-value">\${formatTime(ip.last_seen)}</span>
+                                    </div>
+                                    \${isSuspicious ? '<span class="badge danger" style="margin-top: 10px;">⚠️ Suspeito</span>' : ''}
                                 </div>
-                                <div class="ip-stat">
-                                    <span class="ip-stat-label">Total:</span>
-                                    <span class="ip-stat-value">\${ip.total_attempts}</span>
-                                </div>
-                                <div class="ip-stat">
-                                    <span class="ip-stat-label">✅ Autorizado:</span>
-                                    <span class="ip-stat-value">\${ip.authorized}</span>
-                                </div>
-                                <div class="ip-stat">
-                                    <span class="ip-stat-label">❌ Negado:</span>
-                                    <span class="ip-stat-value">\${ip.denied}</span>
-                                </div>
-                                <div class="ip-stat">
-                                    <span class="ip-stat-label">🌍 País:</span>
-                                    <span class="ip-stat-value">\${ip.countries && ip.countries.length > 0 ? ip.countries.join(', ') : 'Desconhecido'}</span>
-                                </div>
-                                <div class="ip-stat">
-                                    <span class="ip-stat-label">⏰ Último:</span>
-                                    <span class="ip-stat-value">\${formatTime(ip.last_seen)}</span>
-                                </div>
-                                \${isSuspicious ? '<span class="badge danger" style="margin-top: 10px;">⚠️ Suspeito</span>' : ''}
+                                \${!isMyIP ? \`
+                                    <div class="ip-card-actions" style="display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                                        <button 
+                                            onclick="event.stopPropagation(); suspendIPManual('\${ip.ip}')" 
+                                            class="ip-action-btn suspend"
+                                            style="flex: 1; padding: 8px; background: var(--warning); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: all 0.3s;"
+                                            onmouseover="this.style.background='#d97706'"
+                                            onmouseout="this.style.background='var(--warning)'"
+                                            title="Suspender por 1 hora"
+                                        >
+                                            ⏳ Suspender
+                                        </button>
+                                        <button 
+                                            onclick="event.stopPropagation(); blockIPManual('\${ip.ip}')" 
+                                            class="ip-action-btn block"
+                                            style="flex: 1; padding: 8px; background: var(--danger); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: all 0.3s;"
+                                            onmouseover="this.style.background='#dc2626'"
+                                            onmouseout="this.style.background='var(--danger)'"
+                                            title="Bloquear permanentemente"
+                                        >
+                                            🚫 Bloquear
+                                        </button>
+                                    </div>
+                                \` : ''}
                             </div>
                         \`;
                     }).join('') + (hasMoreIPs && !showAllIPs ? \`
@@ -2421,6 +2447,57 @@ export const getLogsDashboard = (req, res) => {
             }
         }
         
+        // Suspender IP manualmente (do card de IP)
+        async function suspendIPManual(ip) {
+            if (!confirm(\`⏳ Suspender o IP \${ip}?\n\nEste IP será suspenso por 1 hora e não poderá acessar a API durante este período.\`)) {
+                return;
+            }
+            
+            try {
+                // Simula 5 tentativas não autorizadas para acionar a suspensão
+                const response = await fetch(\`/api/security/suspend-manual/\${ip}\`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast(\`✅ IP \${ip} suspenso por 1 hora!\`, 'success');
+                    loadSecurityData();
+                    loadIPStats();
+                } else {
+                    showToast(\`❌ Erro ao suspender IP\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao suspender IP:', error);
+                showToast('❌ Erro ao suspender IP', 'error');
+            }
+        }
+        
+        // Bloquear IP manualmente (do card de IP)
+        async function blockIPManual(ip) {
+            if (!confirm(\`🚫 Bloquear PERMANENTEMENTE o IP \${ip}?\n\n⚠️ ATENÇÃO: Esta ação bloqueará o IP definitivamente!\nO IP não poderá mais acessar a API.\n\nDeseja continuar?\`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(\`/api/security/block-manual/\${ip}\`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast(\`✅ IP \${ip} bloqueado permanentemente!\`, 'success');
+                    loadSecurityData();
+                    loadIPStats();
+                } else {
+                    showToast(\`❌ Erro ao bloquear IP\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao bloquear IP:', error);
+                showToast('❌ Erro ao bloquear IP', 'error');
+            }
+        }
+        
         // ============= FIM FUNÇÕES DE SEGURANÇA =============
 
         // Carregar todos os dados
@@ -2430,6 +2507,12 @@ export const getLogsDashboard = (req, res) => {
             logsPage = 1;
             loadLogs(false);
             resetCountdown();
+            
+            // Auto-refresh da seção de segurança se estiver aberta
+            const securityContent = document.getElementById('security-section-content');
+            if (securityContent && securityContent.style.display !== 'none') {
+                loadSecurityData();
+            }
         }
 
         // Inicializar

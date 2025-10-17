@@ -237,4 +237,70 @@ router.get('/all', (req, res) => {
     }
 });
 
+/**
+ * POST /api/security/suspend-manual/:ip
+ * Suspender IP manualmente por 1 hora (admin)
+ */
+router.post('/suspend-manual/:ip', (req, res) => {
+    try {
+        const { ip } = req.params;
+        
+        // Forçar suspensão criando tentativas artificiais
+        for (let i = 0; i < 5; i++) {
+            ipBlockingSystem.recordUnauthorizedAttempt(ip, {
+                url: '/admin-suspend',
+                method: 'MANUAL',
+                userAgent: 'Admin Dashboard',
+                country: 'Admin Action',
+                origin: 'Manual Suspension'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `IP ${ip} has been suspended for 1 hour`,
+            ip: ip,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/security/block-manual/:ip
+ * Bloquear IP manualmente de forma permanente (admin)
+ */
+router.post('/block-manual/:ip', (req, res) => {
+    try {
+        const { ip } = req.params;
+        
+        // Forçar bloqueio criando tentativas artificiais até atingir o limite
+        for (let i = 0; i < 10; i++) {
+            ipBlockingSystem.recordUnauthorizedAttempt(ip, {
+                url: '/admin-block',
+                method: 'MANUAL',
+                userAgent: 'Admin Dashboard',
+                country: 'Admin Action',
+                origin: 'Manual Block'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `IP ${ip} has been permanently blocked`,
+            ip: ip,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 export default router;
