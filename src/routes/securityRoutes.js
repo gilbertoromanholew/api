@@ -379,22 +379,28 @@ router.get('/unified', async (req, res) => {
             });
         });
         
-        // Adicionar autorizados (apenas os que já apareceram nos logs)
-        // IPs autorizados que nunca fizeram requisições não aparecem aqui
+        // Adicionar autorizados
+        // ✅ INCLUIR TODOS OS IPs AUTORIZADOS, mesmo sem histórico
         authorizedIPs.forEach(ip => {
-            // Só adicionar se o IP já existe no allIPStats (já fez alguma requisição)
-            const ipExists = allIPStats.some(stat => stat.ip === ip);
-            if (ipExists) {
-                // Se não tiver um status de segurança pior, marcar como autorizado
-                if (!securityMap.has(ip)) {
-                    securityMap.set(ip, {
-                        status: 'authorized',
-                        securityInfo: {
-                            authorizedAt: new Date().toISOString(),
-                            source: 'dynamic'
-                        }
-                    });
+            // ✅ AUTORIZAÇÃO SOBRESCREVE QUALQUER STATUS
+            securityMap.set(ip, {
+                status: 'authorized',
+                securityInfo: {
+                    authorizedAt: new Date().toISOString(),
+                    source: 'dynamic'
                 }
+            });
+            
+            // Se o IP não existe nos stats, adicionar
+            const ipExists = allIPStats.some(stat => stat.ip === ip);
+            if (!ipExists) {
+                allIPStats.push({
+                    ip: ip,
+                    total_attempts: 0,
+                    authorized: 0,
+                    denied: 0,
+                    last_seen: new Date().toISOString()
+                });
             }
         });
 
