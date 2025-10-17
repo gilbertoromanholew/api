@@ -2413,9 +2413,17 @@ export const getLogsDashboard = (req, res) => {
         
         // Renderizar IPs com avisos
         function renderWarningIPs(ips) {
+            console.log('[DEBUG] renderWarningIPs chamada com:', ips);
             const container = document.getElementById('warnings-ips-list');
+            console.log('[DEBUG] Container warnings-ips-list encontrado:', container ? 'SIM' : 'NÃO');
+            
+            if (!container) {
+                console.error('[ERRO] Container warnings-ips-list não encontrado!');
+                return;
+            }
             
             if (ips.length === 0) {
+                console.log('[DEBUG] Nenhum IP com avisos, mostrando mensagem vazia');
                 container.innerHTML = \`
                     <div class="security-empty">
                         <div class="security-empty-icon">✅</div>
@@ -2425,6 +2433,7 @@ export const getLogsDashboard = (req, res) => {
                 return;
             }
             
+            console.log('[DEBUG] Renderizando', ips.length, 'IPs com avisos');
             container.innerHTML = ips.map(item => \`
                 <div class="security-item warning">
                     <div class="security-item-icon">⚠️</div>
@@ -2453,6 +2462,7 @@ export const getLogsDashboard = (req, res) => {
                     </div>
                 </div>
             \`).join('');
+            console.log('[DEBUG] HTML renderizado, tamanho:', container.innerHTML.length, 'caracteres');
         }
         
         // Desbloquear IP
