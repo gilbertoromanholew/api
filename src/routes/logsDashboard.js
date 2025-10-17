@@ -1943,6 +1943,9 @@ export const getLogsDashboard = (req, res) => {
                         <button class="btn-add-ip" onclick="openAuthorizeIPModal()" style="background: linear-gradient(135deg, #10b981, #059669);">
                             🔓 Autorizar Acesso
                         </button>
+                        <button class="btn-add-ip" onclick="openAccessLevelsModal()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
+                            🔑 Níveis de Acesso
+                        </button>
                         <button class="btn-refresh" onclick="loadUnifiedList()">
                             🔄 Atualizar
                         </button>
@@ -2142,6 +2145,180 @@ export const getLogsDashboard = (req, res) => {
                     </button>
                     <button class="btn success" onclick="submitAuthorizeIP()">
                         🔓 Autorizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Níveis de Acesso -->
+        <div id="accessLevelsModal" class="modal">
+            <div class="modal-content" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h2>🔑 Níveis de Acesso e Permissões</h2>
+                    <button class="modal-close" onclick="closeAccessLevelsModal()">✖</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Explicação -->
+                    <div style="background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="font-size: 1.3em;">🛡️</span>
+                            <strong style="color: #a78bfa;">Sistema de Segurança em 3 Níveis</strong>
+                        </div>
+                        <small style="color: rgba(255, 255, 255, 0.7); line-height: 1.5;">
+                            A API possui 3 níveis hierárquicos de permissão. Cada IP autorizado recebe um nível específico que determina o que pode acessar.
+                        </small>
+                    </div>
+
+                    <!-- NÍVEL 1: ADMIN -->
+                    <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1)); border: 2px solid #ef4444; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                            <span style="font-size: 2em;">🔑</span>
+                            <div>
+                                <h3 style="color: #ef4444; margin: 0; font-size: 1.3em;">NÍVEL 1: ADMIN</h3>
+                                <small style="color: rgba(255, 255, 255, 0.6);">IPs Permanentes (Localhost + ZeroTier)</small>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <strong style="color: #ef4444;">📍 IPs Neste Nível:</strong>
+                            <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
+                                <li><code>127.0.0.1</code> - Localhost IPv4</li>
+                                <li><code>::1</code> - Localhost IPv6</li>
+                                <li><code>10.244.0.0/16</code> - ZeroTier VPN</li>
+                            </ul>
+                        </div>
+
+                        <strong style="color: #10b981;">✅ Permissões Completas:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
+                            <li>✅ Ver dashboard <code>/logs</code></li>
+                            <li>✅ Gerenciar segurança <code>/api/security/*</code></li>
+                            <li>✅ Bloquear/desbloquear IPs</li>
+                            <li>✅ Autorizar/desautorizar IPs</li>
+                            <li>✅ Acessar todos os endpoints da API</li>
+                            <li>✅ Sem rate limiting</li>
+                            <li>✅ Não pode ser bloqueado</li>
+                        </ul>
+                    </div>
+
+                    <!-- NÍVEL 2: TRUSTED -->
+                    <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1)); border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                            <span style="font-size: 2em;">🤝</span>
+                            <div>
+                                <h3 style="color: #3b82f6; margin: 0; font-size: 1.3em;">NÍVEL 2: TRUSTED</h3>
+                                <small style="color: rgba(255, 255, 255, 0.6);">IPs do arquivo .env (ALLOWED_IPS)</small>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <strong style="color: #3b82f6;">📝 Como Adicionar:</strong>
+                            <p style="margin-top: 10px; color: rgba(255, 255, 255, 0.8);">
+                                Edite o arquivo <code>.env</code> na raiz do projeto:
+                            </p>
+                            <code style="display: block; background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 4px; margin-top: 8px; color: #10b981;">
+                                ALLOWED_IPS=203.0.113.50,198.51.100.25
+                            </code>
+                        </div>
+
+                        <strong style="color: #10b981;">✅ Permissões:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
+                            <li>✅ Acessar documentação <code>/docs</code></li>
+                            <li>✅ Usar endpoints da API normalmente</li>
+                            <li>✅ Fazer requisições de negócio</li>
+                        </ul>
+
+                        <strong style="color: #ef4444; margin-top: 15px; display: block;">❌ Bloqueado:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
+                            <li>❌ Dashboard <code>/logs</code></li>
+                            <li>❌ Gerenciar segurança <code>/api/security/*</code></li>
+                            <li>❌ Bloquear/desbloquear IPs</li>
+                        </ul>
+                    </div>
+
+                    <!-- NÍVEL 3: GUEST -->
+                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1)); border: 2px solid #fbbf24; border-radius: 12px; padding: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                            <span style="font-size: 2em;">👤</span>
+                            <div>
+                                <h3 style="color: #fbbf24; margin: 0; font-size: 1.3em;">NÍVEL 3: GUEST</h3>
+                                <small style="color: rgba(255, 255, 255, 0.6);">IPs Autorizados Temporariamente (via /logs)</small>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <strong style="color: #fbbf24;">⚡ Como Funciona:</strong>
+                            <p style="margin-top: 10px; color: rgba(255, 255, 255, 0.8);">
+                                Quando você autoriza um IP pelo botão <strong>"🔓 Autorizar Acesso"</strong>, ele recebe este nível. 
+                                São autorizações <strong>temporárias em memória</strong> que resetam ao reiniciar o servidor.
+                            </p>
+                        </div>
+
+                        <strong style="color: #10b981;">✅ Permissões Mínimas:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
+                            <li>✅ Acessar documentação <code>/docs</code></li>
+                            <li>✅ Ver página inicial <code>/</code></li>
+                        </ul>
+
+                        <strong style="color: #ef4444; margin-top: 15px; display: block;">❌ Tudo Mais Bloqueado:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px; color: rgba(255, 255, 255, 0.8);">
+                            <li>❌ Dashboard <code>/logs</code> → 403 Forbidden</li>
+                            <li>❌ Gerenciar segurança <code>/api/security/*</code> → 403 Forbidden</li>
+                            <li>❌ Endpoints da API <code>/api/*</code> → 403 Forbidden</li>
+                            <li>❌ Qualquer outra rota → 403 Forbidden</li>
+                        </ul>
+
+                        <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                            <strong style="color: #ef4444;">🚨 Sistema de 3 Strikes:</strong>
+                            <p style="margin-top: 8px; color: rgba(255, 255, 255, 0.8);">
+                                Se um IP guest tentar acessar rotas bloqueadas <strong>3 vezes</strong>, ele será <strong>desautorizado automaticamente</strong>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Comparação Rápida -->
+                    <div style="margin-top: 25px; overflow-x: auto;">
+                        <strong style="color: #a78bfa; display: block; margin-bottom: 15px; font-size: 1.1em;">📊 Comparação Rápida:</strong>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                            <thead>
+                                <tr style="background: rgba(124, 58, 237, 0.2);">
+                                    <th style="padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.1);">Recurso</th>
+                                    <th style="padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1); color: #ef4444;">🔑 Admin</th>
+                                    <th style="padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1); color: #3b82f6;">🤝 Trusted</th>
+                                    <th style="padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1); color: #fbbf24;">👤 Guest</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/docs</code></td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                </tr>
+                                <tr style="background: rgba(255,255,255,0.02);">
+                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/logs</code></td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/api/security/*</code></td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
+                                </tr>
+                                <tr style="background: rgba(255,255,255,0.02);">
+                                    <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><code>/api/*</code> (outros)</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">✅</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">❌</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn primary" onclick="closeAccessLevelsModal()">
+                        ✅ Entendi
                     </button>
                 </div>
             </div>
@@ -3775,6 +3952,17 @@ export const getLogsDashboard = (req, res) => {
                 console.error('Erro ao adicionar IP:', error);
                 showToast('❌ Erro de conexão com o servidor', 'error');
             }
+        }
+        
+        // MODAL: NÍVEIS DE ACESSO
+        function openAccessLevelsModal() {
+            const modal = document.getElementById('accessLevelsModal');
+            modal.style.display = 'flex';
+        }
+        
+        function closeAccessLevelsModal() {
+            const modal = document.getElementById('accessLevelsModal');
+            modal.style.display = 'none';
         }
         
         // MODAL: AUTORIZAR IP

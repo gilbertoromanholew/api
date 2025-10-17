@@ -110,3 +110,41 @@ export function listFuncionalidades() {
         return [];
     }
 }
+
+/**
+ * Obter lista de rotas descobertas para API
+ * @returns {Promise<Array>} Lista de rotas
+ */
+export async function getDiscoveredRoutes() {
+    const funcionalidadesDir = path.join(__dirname, '../functions');
+    const routes = [];
+    
+    try {
+        const categories = fs.readdirSync(funcionalidadesDir);
+        
+        for (const category of categories) {
+            const categoryPath = path.join(funcionalidadesDir, category);
+            
+            if (!fs.statSync(categoryPath).isDirectory() || category === '_TEMPLATE') {
+                continue;
+            }
+            
+            const files = fs.readdirSync(categoryPath);
+            const routeFile = files.find(file => file.endsWith('Routes.js'));
+            
+            if (routeFile) {
+                routes.push({
+                    name: category,
+                    path: `/${category}`,
+                    method: 'GET/POST',
+                    description: `Funcionalidade de ${category}`
+                });
+            }
+        }
+        
+        return routes;
+    } catch (error) {
+        console.error('Erro ao obter rotas descobertas:', error);
+        return [];
+    }
+}

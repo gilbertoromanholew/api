@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { errorHandler, notFoundHandler } from './src/middlewares/errorHandler.js';
+import { requireAdmin, trackViolations } from './src/middlewares/accessLevel.js';
 import { getApiInfo } from './src/routes/index.js';
 import { getApiDocs } from './src/routes/docs.js';
 import { getLogsDashboard } from './src/routes/logsDashboard.js';
@@ -20,13 +21,89 @@ app.use(express.json());
 // Middleware de segurança - filtro de IP
 app.use(ipFilter);
 
+// Middleware de rastreamento de violações
+app.use(trackViolations);
+
 // Rotas de sistema (documentação e logs)
-app.get('/', getApiInfo);           // JSON com toda documentação
-app.get('/docs', getApiDocs);       // Página HTML bonita
-app.get('/logs', getLogsDashboard); // Dashboard de logs em tempo real
-app.use(logsRoutes);                // API de logs
+app.get('/', getApiInfo);           // JSON com toda documentação (público)
+app.get('/docs', getApiDocs);       // Página HTML bonita (público)
+// Rotas de sistema (documentação e logs)
+app.get('/', getApiInfo);           // JSON com toda documentação (público)
+app.get('/docs', getApiDocs);       // Página HTML bonita (público)
+app.get('/logs', requireAdmin, getLogsDashboard); // 🔒 Dashboard APENAS para admin
+
+// Rota para listar funções disponíveis (para o /docs)
+app.get('/api/functions', async (req, res) => {
+    try {
+        const { readdir, readFile } = await import('fs/promises');
+        const { join, dirname } = await import('path');
+        const { fileURLToPath } = await import('url');
+        
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
+        const functionsPath = join(__dirname, 'src/functions');
+        
+        const folders = await readdir(functionsPath, { withFileTypes: true });
+        const functions = [];
+        
+        for (const folder of folders) {
+            if (folder.isDirectory() && !folder.name.startsWith('_')) {
+                const functionInfo = {
+                    name: folder.name,
+                    path: `/${folder.name}`,
+                    description: 'Sem descrição disponível',
+                    endpoints: []
+                };
+                
+                // Tentar ler README.md
+                try {
+                    const readmePath = join(functionsPath, folder.name, 'README.md');
+                    const readmeContent = await readFile(readmePath, 'utf-8');
+                    const firstLine = readmeContent.split('\n').find(line => line.trim() && !line.startsWith('#'));
+                    if (firstLine) {
+                        functionInfo.description = firstLine.trim();
+                    }
+                } catch (err) {
+                    // README não existe
+                }
+                
+                // Tentar descobrir rotas
+                try {
+                    const routesPath = join(functionsPath, folder.name, `${folder.name}Routes.js`);
+                    const routesContent = await readFile(routesPath, 'utf-8');
+                    const routeMatches = routesContent.matchAll(/router\.(get|post|put|delete|patch)\(['"`]([^'"`)]+)['"`]/g);
+                    
+                    for (const match of routeMatches) {
+                        functionInfo.endpoints.push({
+                            method: match[1].toUpperCase(),
+                            path: match[2]
+                        });
+                    }
+                } catch (err) {
+                    // Arquivo de rotas não existe
+                }
+                
+                functions.push(functionInfo);
+            }
+        }
+        
+        res.json({
+            success: true,
+            total: functions.length,
+            functions: functions
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            functions: [],
+            error: error.message
+        });
+    }
+});
+
+app.use('/api/logs', logsRoutes);   // API de logs
 app.use('/zerotier', zerotierRoutes); // API ZeroTier (status e info)
-app.use('/api/security', securityRoutes); // API de segurança (bloqueios e suspensões)
+app.use('/api/security', requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
 
 // Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
