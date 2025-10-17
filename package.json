@@ -2,7 +2,7 @@
   "name": "api",
   "version": "2.2.4",
   "type": "module",
-  "description": "API modular com sistema unificado de segurança, logs avançados e gerenciamento dinâmico de IPs autorizados",
+  "description": "API REST modular com auto-descoberta de rotas, sistema de segurança inteligente e dashboard de monitoramento em tempo real",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

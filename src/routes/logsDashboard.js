@@ -1154,6 +1154,10 @@ export const getLogsDashboard = (req, res) => {
             color: var(--danger);
         }
 
+        .unified-stat-card.status-authorized .unified-stat-value {
+            color: #10b981;
+        }
+
         /* CONTROLS - Botões de Ação */
         .unified-controls {
             display: flex;
@@ -1395,6 +1399,10 @@ export const getLogsDashboard = (req, res) => {
             border-left-color: var(--danger);
         }
 
+        .unified-ip-card.status-authorized {
+            border-left-color: #10b981;
+        }
+
         /* CARD HEADER */
         .unified-ip-header {
             display: flex;
@@ -1452,6 +1460,12 @@ export const getLogsDashboard = (req, res) => {
             background: rgba(220, 38, 38, 0.25);
             color: #f87171;
             border: 1px solid rgba(220, 38, 38, 0.4);
+        }
+
+        .unified-ip-status-badge.status-authorized {
+            background: rgba(16, 185, 129, 0.25);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.4);
         }
 
         .unified-ip-header-right {
@@ -1912,6 +1926,11 @@ export const getLogsDashboard = (req, res) => {
                             <div class="unified-stat-value" id="unified-count-blocked">0</div>
                             <div class="unified-stat-label">Bloqueados</div>
                         </div>
+                        <div class="unified-stat-card status-authorized">
+                            <div class="unified-stat-icon">🔓</div>
+                            <div class="unified-stat-value" id="unified-count-authorized">0</div>
+                            <div class="unified-stat-label">Autorizados</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1959,6 +1978,10 @@ export const getLogsDashboard = (req, res) => {
                         <button class="filter-tab" data-filter="blocked" onclick="changeUnifiedFilter('blocked')">
                             🚫 Bloqueados
                             <span class="count" id="filter-count-blocked">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="authorized" onclick="changeUnifiedFilter('authorized')">
+                            🔓 Autorizados
+                            <span class="count" id="filter-count-authorized">0</span>
                         </button>
                     </div>
                     
@@ -2105,11 +2128,11 @@ export const getLogsDashboard = (req, res) => {
 
                     <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 15px; margin-top: 15px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="font-size: 1.3em;">✅</span>
-                            <strong style="color: #10b981;">O que isso faz?</strong>
+                            <span style="font-size: 1.3em;">⚡</span>
+                            <strong style="color: #10b981;">Autorização Temporária</strong>
                         </div>
                         <small style="color: rgba(255, 255, 255, 0.7); line-height: 1.5;">
-                            Este IP será <strong>adicionado à lista de IPs autorizados</strong> e poderá fazer requisições normalmente à API, sem ser bloqueado pelo sistema de segurança.
+                            Este IP será <strong>autorizado apenas em memória</strong> e poderá fazer requisições à API normalmente. <strong style="color: #fbbf24;">Ao reiniciar o servidor, esta autorização será perdida.</strong>
                         </small>
                     </div>
                 </div>
@@ -3287,6 +3310,7 @@ export const getLogsDashboard = (req, res) => {
             document.getElementById('filter-count-warning').textContent = summary.warning || 0;
             document.getElementById('filter-count-suspended').textContent = summary.suspended || 0;
             document.getElementById('filter-count-blocked').textContent = summary.blocked || 0;
+            document.getElementById('filter-count-authorized').textContent = summary.authorized || 0;
             
             const badge = document.getElementById('unified-status-badge');
             if (summary.blocked > 0 || summary.suspended > 0) {
@@ -3332,7 +3356,8 @@ export const getLogsDashboard = (req, res) => {
                 normal: { icon: '✅', label: 'Normal', color: 'success' },
                 warning: { icon: '⚠️', label: 'Aviso', color: 'warning' },
                 suspended: { icon: '⏳', label: 'Suspenso', color: 'info' },
-                blocked: { icon: '🚫', label: 'Bloqueado', color: 'danger' }
+                blocked: { icon: '🚫', label: 'Bloqueado', color: 'danger' },
+                authorized: { icon: '🔓', label: 'Autorizado', color: 'success' }
             }[status] || { icon: '❓', label: 'Desconhecido', color: 'secondary' };
             
             const actions = getAvailableActions(status, ip); // Passar o IP para verificar se é o próprio
@@ -3506,9 +3531,15 @@ export const getLogsDashboard = (req, res) => {
                 actions.unshift({ type: 'clear', icon: '✅', label: 'Limpar Status', handler: 'confirmClearIP' });
             }
             
-            // Adicionar opção de autorizar para todos os IPs (exceto próprio IP)
+            // Adicionar opção de autorizar/desautorizar para todos os IPs (exceto próprio IP)
             if (!isOwnIP) {
-                actions.push({ type: 'authorize', icon: '🔓', label: 'Autorizar API', handler: 'confirmAuthorizeIPFromCard' });
+                if (status === 'authorized') {
+                    // Se já está autorizado, mostrar botão de desautorizar
+                    actions.push({ type: 'unauthorize', icon: '🔒', label: 'Desautorizar API', handler: 'confirmUnauthorizeIPFromCard' });
+                } else {
+                    // Se não está autorizado, mostrar botão de autorizar
+                    actions.push({ type: 'authorize', icon: '🔓', label: 'Autorizar API', handler: 'confirmAuthorizeIPFromCard' });
+                }
             }
             
             return actions;
@@ -4113,11 +4144,43 @@ export const getLogsDashboard = (req, res) => {
                 
                 if (data.success) {
                     showToast(\`🔓 IP \${ip} autorizado com sucesso!\`, 'success');
+                    loadUnifiedList(); // Recarregar lista para mostrar status atualizado
                 } else {
                     showToast(\`❌ Erro: \${data.error}\`, 'error');
                 }
             } catch (error) {
                 console.error('Erro ao autorizar IP:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
+        }
+
+        function confirmUnauthorizeIPFromCard(ip) {
+            confirmActionData = { action: 'unauthorize', ip: ip, callback: unauthorizeIPFromCard };
+            document.getElementById('confirm-action-title').textContent = '🔒 Desautorizar Acesso à API';
+            document.getElementById('confirm-action-message').textContent = 
+                'Você tem certeza que deseja remover a autorização deste IP? O IP não poderá mais fazer requisições à API.';
+            document.getElementById('confirm-action-ip').textContent = ip;
+            document.getElementById('confirm-action-btn').className = 'btn danger';
+            document.getElementById('confirm-action-btn').textContent = '🔒 Desautorizar';
+            document.getElementById('confirmActionModal').style.display = 'flex';
+        }
+
+        async function unauthorizeIPFromCard(ip) {
+            try {
+                const response = await fetch(\`/api/security/unauthorize-ip/\${ip}\`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(\`🔒 IP \${ip} desautorizado com sucesso!\`, 'success');
+                    loadUnifiedList(); // Recarregar lista para mostrar status atualizado
+                } else {
+                    showToast(\`❌ Erro: \${data.error}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao desautorizar IP:', error);
                 showToast('❌ Erro de conexão', 'error');
             }
         }

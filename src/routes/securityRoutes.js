@@ -332,6 +332,11 @@ router.get('/unified', async (req, res) => {
         const blocked = ipBlockingSystem.getBlockedIPs();
         const suspended = ipBlockingSystem.getSuspendedIPs();
         const warnings = ipBlockingSystem.getWarningIPs();
+        
+        // Obter IPs autorizados
+        const { getAllowedIPsList } = await import('../config/allowedIPs.js');
+        const allowedIPsData = getAllowedIPsList();
+        const authorizedIPs = allowedIPsData.dynamic || []; // Apenas IPs dinâmicos
 
         // Criar mapa de status de segurança por IP
         const securityMap = new Map();
@@ -372,6 +377,25 @@ router.get('/unified', async (req, res) => {
                     lastAttempt: item.lastAttempt
                 }
             });
+        });
+        
+        // Adicionar autorizados (apenas os que já apareceram nos logs)
+        // IPs autorizados que nunca fizeram requisições não aparecem aqui
+        authorizedIPs.forEach(ip => {
+            // Só adicionar se o IP já existe no allIPStats (já fez alguma requisição)
+            const ipExists = allIPStats.some(stat => stat.ip === ip);
+            if (ipExists) {
+                // Se não tiver um status de segurança pior, marcar como autorizado
+                if (!securityMap.has(ip)) {
+                    securityMap.set(ip, {
+                        status: 'authorized',
+                        securityInfo: {
+                            authorizedAt: new Date().toISOString(),
+                            source: 'dynamic'
+                        }
+                    });
+                }
+            }
         });
 
         // Combinar dados de IPs com status de segurança
@@ -425,7 +449,8 @@ router.get('/unified', async (req, res) => {
             normal: unifiedIPs.filter(ip => ip.status === 'normal').length,
             warning: unifiedIPs.filter(ip => ip.status === 'warning').length,
             suspended: unifiedIPs.filter(ip => ip.status === 'suspended').length,
-            blocked: unifiedIPs.filter(ip => ip.status === 'blocked').length
+            blocked: unifiedIPs.filter(ip => ip.status === 'blocked').length,
+            authorized: unifiedIPs.filter(ip => ip.status === 'authorized').length
         };
 
         // Aplicar busca (não afeta summary)

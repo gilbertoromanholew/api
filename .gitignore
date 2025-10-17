@@ -8,9 +8,6 @@
 /logs
 *.log
 
-# Data (configurações dinâmicas)
-/data
-
 # Sistema operacional
 .DS_Store
 Thumbs.db
