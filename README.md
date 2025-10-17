@@ -2,12 +2,18 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![Version](https://img.shields.io/badge/Version-2.1.0-blue.svg)](https://github.com/gilbertoromanholew/api)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-success.svg)](https://api.samm.host)
 
-> **API REST modular com auto-descoberta de rotas, validação centralizada, dashboard de monitoramento em tempo real e sistema de templates para desenvolvimento rápido.**
+> **API REST modular com auto-descoberta de rotas, validação centralizada, dashboard de monitoramento em tempo real, sistema de bloqueio automático de IPs e templates para desenvolvimento rápido.**
 
 **🌐 URL de Produção:** https://api.samm.host
+
+**📚 Documentação Adicional:**
+- 🛡️ [Sistema de Bloqueio de IPs](./SISTEMA_BLOQUEIO.md) - Documentação técnica completa
+- 📊 [Implementação do Sistema](./IMPLEMENTACAO_BLOQUEIO.md) - Resumo executivo
+- 🔍 [Auditoria Completa](./AUDITORIA_COMPLETA.md) - Relatório de auditoria do código
 
 ---
 
@@ -22,6 +28,7 @@
 - [Como Criar Nova Funcionalidade](#-como-criar-nova-funcionalidade)
 - [Configuração](#-configuração)
 - [Segurança](#-segurança)
+  - [Sistema de Bloqueio Automático](#️-sistema-de-bloqueio-automático-de-ips)
 - [Performance & Otimizações](#-performance--otimizações)
 - [ZeroTier VPN - Acesso Seguro](#-zerotier-vpn---acesso-seguro)
 - [Novas Implementações](#-novas-implementações-v210)
@@ -37,12 +44,12 @@
 - ⚡ **Auto-carregamento de Rotas** - Descobre e registra rotas automaticamente
 - 🛡️ **Validação Centralizada** - Sistema de schemas reutilizáveis
 - 🎨 **Respostas Padronizadas** - BaseController para consistência
-- � **Sistema de Templates** - Crie novas funcionalidades em 5 minutos
+- 📦 **Sistema de Templates** - Crie novas funcionalidades em 5 minutos
 - 🌐 **CORS Habilitado** - Pronto para APIs públicas
 - 🚦 **Tratamento Global de Erros** - Error handler centralizado
 
 ### 📊 Monitoramento & Documentação
-- �📝 **Documentação Automática Interativa** (`/docs`)
+- 📝 **Documentação Automática Interativa** (`/docs`)
   - Interface limpa com seções colapsáveis
   - Detecção automática de IP público
   - Cards de funções clicáveis com exemplos integrados
@@ -62,6 +69,11 @@
 
 ### 🔒 Segurança & Performance
 - 🔐 **Controle de Acesso por IP com CIDR** - Whitelist inteligente com suporte a ranges
+- 🛡️ **Sistema de Bloqueio Automático** - Suspensões temporárias e bloqueios permanentes
+  - Suspensão de 1 hora após 5 tentativas não autorizadas
+  - Bloqueio permanente após 10 tentativas ou 3 suspensões
+  - Dashboard visual para gerenciamento em tempo real
+  - API REST para consulta e administração de bloqueios
 - 🌍 **Geolocalização Completa** (ip-api.com - 24+ campos):
   - País, cidade, região, CEP, timezone, coordenadas
   - ISP, organização, AS (Sistema Autônomo)
@@ -69,7 +81,6 @@
   - Cache de 24h para performance
 - ⚡ **Cache Inteligente** - Rotas descobertas (5min), geolocalização (24h)
 - 📊 **Logs Otimizados** - Estatísticas O(n) em vez de O(n²)
-- 🛡️ **Proteção Anti-Hacking** - Mensagens de aviso para IPs não autorizados
 - 🔐 **Suporte a ZeroTier VPN** - Acesso seguro via rede virtual criptografada
 - 🏠 **Detecção de Origem** - Identifica localhost, ZeroTier, LAN e WAN
 
@@ -591,27 +602,80 @@ export const allowedIPs = [
 - ✅ IPs individuais (ex: `192.168.1.100`)
 - ✅ IPs do arquivo `.env` (variável `ALLOWED_IPS`)
 
-### Proteção Anti-Hacking
+### 🛡️ Sistema de Bloqueio Automático de IPs
 
-Acesso não autorizado retorna mensagem de aviso sem revelar informações sensíveis:
+Sistema completo de proteção contra tentativas de acesso não autorizadas com **suspensões temporárias** e **bloqueios permanentes**:
 
-```json
-{
-  "success": false,
-  "error": "Access Denied",
-  "message": "Unauthorized access attempt detected. Your IP address is not authorized to access this API.",
-  "yourIP": "203.0.113.42",
-  "origin": "Internet Pública",
-  "timestamp": "2025-10-17T12:00:00.000Z",
-  "warning": "⚠️ This incident has been logged. Repeated unauthorized access attempts may result in permanent blocking. Please do not attempt to hack or bypass security measures."
-}
+#### Regras de Bloqueio
+
 ```
+Tentativa 1-4:  ⚠️  AVISO
+                "X tentativas restantes antes da suspensão"
+
+Tentativa 5:    ⏳  SUSPENSÃO TEMPORÁRIA (1 hora)
+                HTTP 429 - "IP suspenso por 60 minutos"
+
+Tentativa 10:   🚫  BLOQUEIO PERMANENTE
+                HTTP 403 - "IP permanentemente bloqueado"
+                
+OU
+
+3 Suspensões:   🚫  BLOQUEIO PERMANENTE
+                HTTP 403 - "IP bloqueado após 3 suspensões"
+```
+
+#### Configuração Padrão
+
+- **5 tentativas** → Suspensão temporária (1 hora)
+- **10 tentativas** → Bloqueio permanente direto
+- **3 suspensões** → Bloqueio permanente
+- **Cache em memória** (Map/Set para performance)
+
+#### Endpoints de Gerenciamento
+
+```bash
+# Estatísticas gerais
+GET /api/security/stats
+
+# Listar IPs bloqueados/suspensos/avisos
+GET /api/security/blocked
+GET /api/security/suspended
+GET /api/security/warnings
+
+# Verificar IP específico
+GET /api/security/check/:ip
+
+# Desbloquear IP (admin)
+POST /api/security/unblock/:ip
+
+# Remover suspensão (admin)
+POST /api/security/unsuspend/:ip
+
+# Obter todos os dados
+GET /api/security/all
+```
+
+#### Dashboard Visual
+
+Acesse **http://localhost:3000/logs** e expanda a seção **"🛡️ Sistema de Segurança"**:
+
+- 📊 Estatísticas em tempo real (bloqueados/suspensos/avisos)
+- 🎯 Sistema de tabs moderno (Bloqueados/Suspensos/Avisos)
+- 🎨 Cards visuais com ícones e detalhes completos
+- ⚡ Auto-refresh a cada 10 segundos
+- 🔧 Botões de gerenciamento (desbloquear/remover suspensão)
+- ⚙️ Visualização das regras configuradas
 
 **Recursos de Segurança:**
 - 🚫 Não revela como se conectar à API
 - 📝 Todos os acessos negados são logados
-- ⚠️ Mensagens de advertência claras
+- ⚠️ Mensagens progressivas (aviso → suspensão → bloqueio)
 - 🔐 Sem exposição de informações da rede interna
+- ⏰ Suspensões temporárias expiram automaticamente
+- 🛠️ Gerenciamento completo via dashboard ou API
+- 🎯 Bloqueio inteligente baseado em padrões de comportamento
+
+**Documentação Completa:** Ver [SISTEMA_BLOQUEIO.md](./SISTEMA_BLOQUEIO.md)
 
 ### Geolocalização de IPs (24+ campos)
 
@@ -988,15 +1052,20 @@ api/
 │   │   ├── index.js         # Rota raiz (JSON)
 │   │   ├── logsDashboard.js # Dashboard de logs em tempo real
 │   │   ├── logsRoutes.js    # API de logs (com cache)
+│   │   ├── securityRoutes.js # API de segurança (bloqueios)
 │   │   └── zerotier.js      # Status ZeroTier VPN
 │   │
 │   └── utils/               # Utilitários genéricos
 │       ├── accessLogger.js  # Logger de acessos (otimizado O(n))
-│       └── ipUtils.js       # Utilitários de IP (CIDR, detecção)
+│       ├── ipUtils.js       # Utilitários de IP (CIDR, detecção)
+│       └── ipBlockingSystem.js  # Sistema de bloqueio automático
 │
 ├── server.js                # Entry point
-├── package.json             # Dependências
-└── README.md                # Documentação
+├── package.json             # Dependências (v2.1.0)
+├── README.md                # Documentação principal
+├── SISTEMA_BLOQUEIO.md      # Documentação do sistema de bloqueio
+├── IMPLEMENTACAO_BLOQUEIO.md # Resumo executivo da implementação
+└── AUDITORIA_COMPLETA.md    # Relatório de auditoria
 ```
 
 ---

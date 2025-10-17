@@ -1,6 +1,7 @@
 import { allowedIPs } from '../config/allowedIPs.js';
 import { accessLogger } from '../utils/accessLogger.js';
 import { getClientIP, isIPInRange, getConnectionOrigin } from '../utils/ipUtils.js';
+import { ipBlockingSystem } from '../utils/ipBlockingSystem.js';
 
 // Cache de geolocalização (evitar chamadas excessivas à API)
 const geoCache = new Map();
@@ -210,6 +211,73 @@ export const ipFilter = async (req, res, next) => {
     
     // Verificar autorização (agora suporta CIDR)
     if (!clientInfo.is_authorized) {
+        // Verificar se IP está bloqueado ou suspenso
+        const blockStatus = ipBlockingSystem.checkIP(clientIp);
+        
+        if (blockStatus.blocked) {
+            // IP bloqueado ou suspenso
+            const statusCode = blockStatus.type === 'permanent' ? 403 : 429;
+            const emoji = blockStatus.type === 'permanent' ? '🚫' : '⏳';
+            
+            return res.status(statusCode).json({
+                success: false,
+                error: blockStatus.type === 'permanent' ? 'Access Permanently Blocked' : 'Access Temporarily Suspended',
+                message: blockStatus.message,
+                type: blockStatus.type,
+                yourIP: clientIp,
+                origin: origin.network,
+                timestamp: new Date().toISOString(),
+                ...(blockStatus.type === 'temporary' && {
+                    suspendedUntil: blockStatus.until,
+                    remainingMinutes: blockStatus.remainingMinutes
+                }),
+                notice: `${emoji} Your IP has been ${blockStatus.type === 'permanent' ? 'permanently blocked' : 'temporarily suspended'} due to repeated unauthorized access attempts.`
+            });
+        }
+        
+        // Registrar tentativa não autorizada no sistema de bloqueio
+        const attemptResult = ipBlockingSystem.recordUnauthorizedAttempt(clientIp, {
+            url: req.url,
+            method: req.method,
+            userAgent: req.headers['user-agent'],
+            country: clientInfo.country,
+            origin: origin.network
+        });
+        
+        // Resposta baseada no status
+        let warningMessage = '';
+        let statusDetails = {};
+        
+        if (attemptResult.status === 'blocked') {
+            // Acabou de ser bloqueado permanentemente
+            warningMessage = `🚫 Your IP has been permanently blocked after ${attemptResult.attempts || attemptResult.suspensions} violations.`;
+            statusDetails = {
+                type: 'permanent_block',
+                reason: attemptResult.reason,
+                totalAttempts: attemptResult.attempts,
+                totalSuspensions: attemptResult.suspensions
+            };
+        } else if (attemptResult.status === 'suspended') {
+            // Acabou de ser suspenso
+            warningMessage = `⏳ Your IP has been temporarily suspended for ${attemptResult.remainingMinutes} minutes. This is suspension #${attemptResult.suspensionNumber} of ${ipBlockingSystem.config.maxSuspensions} allowed.`;
+            statusDetails = {
+                type: 'temporary_suspension',
+                suspendedUntil: attemptResult.until,
+                remainingMinutes: attemptResult.remainingMinutes,
+                suspensionNumber: attemptResult.suspensionNumber,
+                maxSuspensions: ipBlockingSystem.config.maxSuspensions
+            };
+        } else if (attemptResult.status === 'warning') {
+            // Ainda permitido, mas com aviso
+            warningMessage = `⚠️ Warning: ${attemptResult.remainingAttempts} unauthorized attempts remaining before temporary suspension.`;
+            statusDetails = {
+                type: 'warning',
+                attempts: attemptResult.attempts,
+                remainingAttempts: attemptResult.remainingAttempts,
+                maxAttempts: ipBlockingSystem.config.maxAttempts
+            };
+        }
+        
         return res.status(403).json({ 
             success: false,
             error: 'Access Denied',
@@ -217,7 +285,8 @@ export const ipFilter = async (req, res, next) => {
             yourIP: clientIp,
             origin: origin.network,
             timestamp: new Date().toISOString(),
-            warning: '⚠️ This incident has been logged. Repeated unauthorized access attempts may result in permanent blocking. Please do not attempt to hack or bypass security measures.'
+            security: statusDetails,
+            warning: warningMessage
         });
     }
     

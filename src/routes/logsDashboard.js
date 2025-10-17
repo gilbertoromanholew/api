@@ -565,6 +565,160 @@ export const getLogsDashboard = (req, res) => {
             border-bottom: none;
         }
         
+        /* Security Tabs */
+        .tabs-container {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0;
+            margin-bottom: 25px;
+        }
+        
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            position: relative;
+            bottom: -2px;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-light);
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        /* Security List */
+        .security-list {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .security-item {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid var(--danger);
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .security-item:hover {
+            transform: translateX(5px);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        .security-item.blocked {
+            border-left-color: var(--danger);
+        }
+        
+        .security-item.suspended {
+            border-left-color: var(--warning);
+        }
+        
+        .security-item.warning {
+            border-left-color: var(--info);
+        }
+        
+        .security-item-icon {
+            font-size: 2.5em;
+        }
+        
+        .security-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .security-item-ip {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--text-light);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .security-item-details {
+            color: var(--text-muted);
+            font-size: 0.9em;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .security-item-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .security-item-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .security-action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .security-action-btn.unblock {
+            background: var(--success);
+            color: white;
+        }
+        
+        .security-action-btn.unblock:hover {
+            background: #059669;
+            transform: scale(1.05);
+        }
+        
+        .security-action-btn.unsuspend {
+            background: var(--info);
+            color: white;
+        }
+        
+        .security-action-btn.unsuspend:hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+        
+        .security-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 1.1em;
+        }
+        
+        .security-empty-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .stat-description {
+            color: var(--text-muted);
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        
         /* IP Details Panel */
         .ip-details-panel {
             display: none;
@@ -849,6 +1003,99 @@ export const getLogsDashboard = (req, res) => {
                 <div class="details-body" id="detailsBody">
                     <!-- Conteúdo será preenchido dinamicamente -->
                 </div>
+            </div>
+        </div>
+
+        <!-- Security & Blocking System -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleSecuritySection()">
+                    <span id="security-section-icon">▶</span>
+                    🛡️ Sistema de Segurança
+                    <span class="badge badge-info" id="security-status-badge">Carregando...</span>
+                </h2>
+            </div>
+            <div id="security-section-content" style="display: none; padding-top: 20px;">
+                
+                <!-- Estatísticas de Segurança -->
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card danger">
+                        <div class="stat-label">🚫 IPs Bloqueados</div>
+                        <div class="stat-value" id="security-blocked-count">0</div>
+                        <div class="stat-description">Bloqueio permanente</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">⏳ IPs Suspensos</div>
+                        <div class="stat-value" id="security-suspended-count">0</div>
+                        <div class="stat-description">Suspensão temporária</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-label">⚠️ IPs com Avisos</div>
+                        <div class="stat-value" id="security-warnings-count">0</div>
+                        <div class="stat-description">Tentativas registradas</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">✅ Status do Sistema</div>
+                        <div class="stat-value" style="font-size: 1.5em;">ATIVO</div>
+                        <div class="stat-description">Proteção automática</div>
+                    </div>
+                </div>
+
+                <!-- Configurações do Sistema -->
+                <div class="info-box" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1)); border-left: 4px solid var(--info);">
+                    <h3 style="margin-bottom: 15px; font-size: 1.2em;">⚙️ Configurações de Proteção</h3>
+                    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 0.9em;">Tentativas antes de suspensão</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: var(--warning);" id="security-config-max-attempts">5</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 0.9em;">Duração da suspensão</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: var(--warning);" id="security-config-suspension">60 min</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 0.9em;">Suspensões antes de bloqueio</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: var(--danger);" id="security-config-max-suspensions">3</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 0.9em;">Tentativas para bloqueio direto</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: var(--danger);" id="security-config-block-attempts">10</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs para diferentes categorias -->
+                <div class="tabs-container" style="margin-bottom: 20px;">
+                    <button class="tab-btn active" onclick="switchSecurityTab('blocked')">
+                        🚫 Bloqueados (<span id="tab-blocked-count">0</span>)
+                    </button>
+                    <button class="tab-btn" onclick="switchSecurityTab('suspended')">
+                        ⏳ Suspensos (<span id="tab-suspended-count">0</span>)
+                    </button>
+                    <button class="tab-btn" onclick="switchSecurityTab('warnings')">
+                        ⚠️ Avisos (<span id="tab-warnings-count">0</span>)
+                    </button>
+                </div>
+
+                <!-- Conteúdo das tabs -->
+                <div id="security-tab-blocked" class="security-tab-content">
+                    <div id="blocked-ips-list" class="security-list">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+                </div>
+
+                <div id="security-tab-suspended" class="security-tab-content" style="display: none;">
+                    <div id="suspended-ips-list" class="security-list">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+                </div>
+
+                <div id="security-tab-warnings" class="security-tab-content" style="display: none;">
+                    <div id="warnings-ips-list" class="security-list">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1914,6 +2161,267 @@ export const getLogsDashboard = (req, res) => {
                 refreshInterval = null;
             }
         }
+
+        // ============= FUNÇÕES DE SEGURANÇA =============
+        
+        // Toggle seção de segurança
+        function toggleSecuritySection() {
+            const content = document.getElementById('security-section-content');
+            const icon = document.getElementById('security-section-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+                loadSecurityData();
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
+        // Trocar aba de segurança
+        function switchSecurityTab(tab) {
+            // Remover active de todos os botões
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Esconder todos os conteúdos
+            document.querySelectorAll('.security-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Ativar o selecionado
+            document.querySelector(\`.tab-btn[onclick="switchSecurityTab('\${tab}')"]\`).classList.add('active');
+            document.getElementById(\`security-tab-\${tab}\`).style.display = 'block';
+        }
+        
+        // Carregar dados de segurança
+        async function loadSecurityData() {
+            try {
+                const response = await fetch('/api/security/all');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Atualizar estatísticas
+                    document.getElementById('security-blocked-count').textContent = data.blocked.total;
+                    document.getElementById('security-suspended-count').textContent = data.suspended.total;
+                    document.getElementById('security-warnings-count').textContent = data.warnings.total;
+                    
+                    // Atualizar contadores nas tabs
+                    document.getElementById('tab-blocked-count').textContent = data.blocked.total;
+                    document.getElementById('tab-suspended-count').textContent = data.suspended.total;
+                    document.getElementById('tab-warnings-count').textContent = data.warnings.total;
+                    
+                    // Atualizar configurações
+                    document.getElementById('security-config-max-attempts').textContent = data.stats.config.maxAttempts;
+                    document.getElementById('security-config-suspension').textContent = \`\${data.stats.config.suspensionDuration / 1000 / 60} min\`;
+                    document.getElementById('security-config-max-suspensions').textContent = data.stats.config.maxSuspensions;
+                    document.getElementById('security-config-block-attempts').textContent = data.stats.config.permanentBlockAttempts;
+                    
+                    // Atualizar badge
+                    const badge = document.getElementById('security-status-badge');
+                    if (data.blocked.total > 0 || data.suspended.total > 0) {
+                        badge.textContent = \`\${data.blocked.total + data.suspended.total} Ameaças Bloqueadas\`;
+                        badge.className = 'badge badge-danger';
+                    } else {
+                        badge.textContent = 'Sistema Seguro';
+                        badge.className = 'badge badge-success';
+                    }
+                    
+                    // Renderizar listas
+                    renderBlockedIPs(data.blocked.list);
+                    renderSuspendedIPs(data.suspended.list);
+                    renderWarningIPs(data.warnings.list);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados de segurança:', error);
+                document.getElementById('security-status-badge').textContent = 'Erro ao Carregar';
+                document.getElementById('security-status-badge').className = 'badge badge-danger';
+            }
+        }
+        
+        // Renderizar IPs bloqueados
+        function renderBlockedIPs(ips) {
+            const container = document.getElementById('blocked-ips-list');
+            
+            if (ips.length === 0) {
+                container.innerHTML = \`
+                    <div class="security-empty">
+                        <div class="security-empty-icon">✅</div>
+                        <div>Nenhum IP permanentemente bloqueado</div>
+                    </div>
+                \`;
+                return;
+            }
+            
+            container.innerHTML = ips.map(item => \`
+                <div class="security-item blocked">
+                    <div class="security-item-icon">🚫</div>
+                    <div class="security-item-info">
+                        <div class="security-item-ip">\${item.ip}</div>
+                        <div class="security-item-details">
+                            <span class="security-item-detail">
+                                <span>📊</span>
+                                <span>\${item.attempts} tentativa(s)</span>
+                            </span>
+                            <span class="security-item-detail">
+                                <span>⏳</span>
+                                <span>\${item.suspensions} suspensão(ões)</span>
+                            </span>
+                            \${item.lastAttempt ? \`
+                                <span class="security-item-detail">
+                                    <span>🕐</span>
+                                    <span>\${formatTimestamp(item.lastAttempt)}</span>
+                                </span>
+                            \` : ''}
+                        </div>
+                    </div>
+                    <div class="security-item-actions">
+                        <button class="security-action-btn unblock" onclick="unblockIP('\${item.ip}')">
+                            ✅ Desbloquear
+                        </button>
+                    </div>
+                </div>
+            \`).join('');
+        }
+        
+        // Renderizar IPs suspensos
+        function renderSuspendedIPs(ips) {
+            const container = document.getElementById('suspended-ips-list');
+            
+            if (ips.length === 0) {
+                container.innerHTML = \`
+                    <div class="security-empty">
+                        <div class="security-empty-icon">✅</div>
+                        <div>Nenhum IP temporariamente suspenso</div>
+                    </div>
+                \`;
+                return;
+            }
+            
+            container.innerHTML = ips.map(item => \`
+                <div class="security-item suspended">
+                    <div class="security-item-icon">⏳</div>
+                    <div class="security-item-info">
+                        <div class="security-item-ip">\${item.ip}</div>
+                        <div class="security-item-details">
+                            <span class="security-item-detail">
+                                <span>⏰</span>
+                                <span>Resta(m) \${item.remainingMinutes} minuto(s)</span>
+                            </span>
+                            <span class="security-item-detail">
+                                <span>📊</span>
+                                <span>\${item.attempts} tentativa(s)</span>
+                            </span>
+                            <span class="security-item-detail">
+                                <span>🔢</span>
+                                <span>Suspensão #\${item.suspensionCount}</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="security-item-actions">
+                        <button class="security-action-btn unsuspend" onclick="unsuspendIP('\${item.ip}')">
+                            ✅ Remover Suspensão
+                        </button>
+                    </div>
+                </div>
+            \`).join('');
+        }
+        
+        // Renderizar IPs com avisos
+        function renderWarningIPs(ips) {
+            const container = document.getElementById('warnings-ips-list');
+            
+            if (ips.length === 0) {
+                container.innerHTML = \`
+                    <div class="security-empty">
+                        <div class="security-empty-icon">✅</div>
+                        <div>Nenhum IP com avisos</div>
+                    </div>
+                \`;
+                return;
+            }
+            
+            container.innerHTML = ips.map(item => \`
+                <div class="security-item warning">
+                    <div class="security-item-icon">⚠️</div>
+                    <div class="security-item-info">
+                        <div class="security-item-ip">\${item.ip}</div>
+                        <div class="security-item-details">
+                            <span class="security-item-detail">
+                                <span>📊</span>
+                                <span>\${item.attempts} tentativa(s)</span>
+                            </span>
+                            <span class="security-item-detail">
+                                <span>⚠️</span>
+                                <span>\${item.remainingAttempts} restante(s) antes da suspensão</span>
+                            </span>
+                            <span class="security-item-detail">
+                                <span>🔢</span>
+                                <span>\${item.suspensions} suspensão(ões) anterior(es)</span>
+                            </span>
+                            \${item.lastAttempt ? \`
+                                <span class="security-item-detail">
+                                    <span>🕐</span>
+                                    <span>\${formatTimestamp(item.lastAttempt)}</span>
+                                </span>
+                            \` : ''}
+                        </div>
+                    </div>
+                </div>
+            \`).join('');
+        }
+        
+        // Desbloquear IP
+        async function unblockIP(ip) {
+            if (!confirm(\`Tem certeza que deseja desbloquear o IP \${ip}?\`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(\`/api/security/unblock/\${ip}\`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(\`IP \${ip} desbloqueado com sucesso!\`, 'success');
+                    loadSecurityData();
+                } else {
+                    showToast(\`Erro ao desbloquear IP: \${data.message}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao desbloquear IP:', error);
+                showToast('Erro ao desbloquear IP', 'error');
+            }
+        }
+        
+        // Remover suspensão de IP
+        async function unsuspendIP(ip) {
+            if (!confirm(\`Tem certeza que deseja remover a suspensão do IP \${ip}?\`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(\`/api/security/unsuspend/\${ip}\`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(\`Suspensão do IP \${ip} removida com sucesso!\`, 'success');
+                    loadSecurityData();
+                } else {
+                    showToast(\`Erro ao remover suspensão: \${data.message}\`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao remover suspensão:', error);
+                showToast('Erro ao remover suspensão', 'error');
+            }
+        }
+        
+        // ============= FIM FUNÇÕES DE SEGURANÇA =============
 
         // Carregar todos os dados
         function loadAllData() {

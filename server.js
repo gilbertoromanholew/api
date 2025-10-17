@@ -8,6 +8,7 @@ import { getLogsDashboard } from './src/routes/logsDashboard.js';
 import { autoLoadRoutes } from './src/core/routeLoader.js';
 import logsRoutes from './src/routes/logsRoutes.js';
 import zerotierRoutes from './src/routes/zerotier.js';
+import securityRoutes from './src/routes/securityRoutes.js';
 import config from './src/config/index.js';
 
 const app = express();
@@ -25,6 +26,7 @@ app.get('/docs', getApiDocs);       // Página HTML bonita
 app.get('/logs', getLogsDashboard); // Dashboard de logs em tempo real
 app.use(logsRoutes);                // API de logs
 app.use('/zerotier', zerotierRoutes); // API ZeroTier (status e info)
+app.use('/api/security', securityRoutes); // API de segurança (bloqueios e suspensões)
 
 // Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
