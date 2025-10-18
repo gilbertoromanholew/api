@@ -9,6 +9,7 @@
  */
 
 import { allowedIPs } from '../config/allowedIPs.js';
+import { isIPInRange } from '../utils/ipUtils.js';
 
 // IPs permanentes (Admin)
 const permanentIPs = [
@@ -25,13 +26,13 @@ export async function getIPAccessLevel(ip) {
     const { getAllowedIPsList, getDynamicIPLevel } = await import('../config/allowedIPs.js');
     const ipList = getAllowedIPsList();
     
-    // Admin: IPs permanentes
-    if (ipList.permanent.includes(ip)) {
+    // Admin: IPs permanentes (suporte a CIDR)
+    if (ipList.permanent.some(allowedIP => isIPInRange(ip, allowedIP))) {
         return 'admin';
     }
     
-    // Trusted: IPs do .env OU IPs dinâmicos com nível 'trusted'
-    if (ipList.fromEnv.includes(ip)) {
+    // Trusted: IPs do .env (suporte a CIDR) OU IPs dinâmicos com nível 'trusted'
+    if (ipList.fromEnv.some(allowedIP => isIPInRange(ip, allowedIP))) {
         return 'trusted';
     }
     

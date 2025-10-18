@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "2.10.2",
+  "version": "2.10.3",
   "type": "module",
   "description": "API REST modular com auto-descoberta de rotas, sistema de segurança inteligente e dashboard de monitoramento em tempo real",
   "main": "server.js",
