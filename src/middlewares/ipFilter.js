@@ -199,15 +199,8 @@ export const ipFilter = async (req, res, next) => {
     console.log(`\n${clientInfo.is_authorized ? '✅' : '❌'} AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
     console.log('='.repeat(80) + '\n');
     
-    // Registrar no sistema de logs APENAS se não for request de API de logs ou assets
-    const shouldLog = !req.url.startsWith('/api/logs') && 
-                      !req.url.includes('.js') && 
-                      !req.url.includes('.css') &&
-                      !req.url.includes('.ico');
-    
-    if (shouldLog) {
-        accessLogger.addLog(clientInfo);
-    }
+    // Registrar TODOS os acessos no sistema de logs (sem filtros)
+    accessLogger.addLog(clientInfo);
     
     // Verificar autorização (agora suporta CIDR)
     if (!clientInfo.is_authorized) {

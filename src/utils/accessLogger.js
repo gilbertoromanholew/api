@@ -2,7 +2,7 @@
 class AccessLogger {
     constructor() {
         this.logs = [];
-        this.maxLogs = 1000; // Manter últimos 1000 logs
+        this.maxLogs = 5000; // Manter últimos 5000 logs (aumentado para comportar todos os acessos)
     }
 
     // Adicionar novo log

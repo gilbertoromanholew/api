@@ -3902,12 +3902,12 @@ export const getLogsDashboard = (req, res) => {
         function startRefreshInterval() {
             if (refreshInterval) clearInterval(refreshInterval);
             
-            // ⏱️ Aumentado de 10s para 30s para evitar refresh excessivo
+            // ⏱️ Padronizado em 15s para todo o dashboard
             refreshInterval = setInterval(() => {
                 if (autoRefresh) {
                     loadAllData();
                 }
-            }, 30000);
+            }, 15000);
         }
 
         function stopRefreshInterval() {
@@ -3943,7 +3943,7 @@ export const getLogsDashboard = (req, res) => {
             searchTerm: '',
             autoRefresh: true, // ✅ Ligado por padrão
             autoRefreshInterval: null,
-            autoRefreshSeconds: 10, // ✅ Reduzido para 10s
+            autoRefreshSeconds: 15, // ⏱️ Padronizado em 15s (todo o dashboard sincronizado)
             expandedCards: {}, // 💾 Preservar cards expandidos: { 'IP': true/false }
             scrollPosition: 0, // 💾 Preservar posição do scroll
             lastInteraction: Date.now(), // ⏸️ Para pausar refresh em interação
@@ -5546,8 +5546,8 @@ export const getLogsDashboard = (req, res) => {
         startRefreshInterval();
         startUnifiedAutoRefresh(); // Iniciar auto-refresh da lista unificada
         
-        // Verificar ZeroTier a cada 30 segundos
-        setInterval(checkZeroTierStatus, 30000);
+        // Verificar ZeroTier a cada 15 segundos (padronizado)
+        setInterval(checkZeroTierStatus, 15000);
         
         // Toast de boas-vindas
         setTimeout(() => {
