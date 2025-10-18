@@ -2,7 +2,7 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![Version](https://img.shields.io/badge/Version-2.2.4-blue.svg)](https://github.com/gilbertoromanholew/api)
+[![Version](https://img.shields.io/badge/Version-2.10.2-blue.svg)](https://github.com/gilbertoromanholew/api)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **API REST modular com auto-descoberta de rotas, sistema de segurança inteligente e dashboard de monitoramento em tempo real.**
@@ -47,9 +47,12 @@ npm start
 - **Autorização Temporária** - IPs dinâmicos em memória
 
 ### 📊 Monitoramento
-- **Dashboard em Tempo Real** - Métricas, IPs, logs
+- **Dashboard em Tempo Real** - Métricas, IPs, logs (auto-refresh 15s)
+- **Sistema de Filtros Avançado** - Quantidade, Status, Método HTTP, Endpoint, IP
+- **Logging Completo** - Registra TODOS os acessos sem filtros (5000 logs em memória)
 - **Documentação Interativa** - Teste endpoints direto no navegador
 - **Cache Inteligente** - Rotas (5min) + geo (24h)
+- **Tema Escuro Premium** - Design moderno com gradientes e animações suaves
 
 ---
 
@@ -148,9 +151,10 @@ curl -X POST http://localhost:3000/api/security/unblock/192.168.1.100
 - `POST /read-pdf` - Extrair texto de PDF
 
 ### Monitoramento
-- `GET /logs` - Dashboard visual
+- `GET /logs` - Dashboard visual completo
 - `GET /api/logs/list` - Logs em JSON
-- `GET /api/logs/summary` - Estatísticas
+- `GET /api/logs/stats` - Estatísticas em tempo real
+- `GET /api/logs/summary` - Resumo de acessos
 
 ### Segurança
 - `GET /api/security/unified` - Lista unificada de IPs
@@ -167,8 +171,9 @@ curl -X POST http://localhost:3000/api/security/unblock/192.168.1.100
 - 📖 [Arquitetura Detalhada](./docs/ARQUITETURA.md)
 - 🔒 [Guia de Segurança](./docs/SEGURANCA.md)
 - 📡 [Referência da API](./docs/API_REFERENCE.md)
-- 🔍 [Auditoria Completa](./AUDITORIA_COMPLETA_v2.2.4.md)
+- 🔍 [Auditoria Final](./AUDITORIA_FINAL.md)
 - 📝 [Changelog](./CHANGELOG.md)
+- 🎨 [Design System](./docs/DESIGN.md) *(em breve)*
 
 ---
 
@@ -241,12 +246,40 @@ Contribuições são bem-vindas! Siga os passos:
 
 ## 📊 Status do Projeto
 
-- ✅ v2.2.4 - Sistema de autorização temporária
-- ✅ v2.2.3 - Correção de paleta de modais
-- ✅ v2.2.2 - Melhorias de layout e contraste
-- ✅ v2.2.0 - Lista unificada de IPs + Dashboard
+- ✅ **v2.10.2** - Refresh sincronizado em 15s para todas as seções
+- ✅ **v2.10.1** - Padronização inicial de refresh em 30s
+- ✅ **v2.10.0** - Remoção de filtros de logging + limite aumentado para 5000
+- ✅ **v2.9.3** - Animações suavizadas nos cards de estatísticas
+- ✅ **v2.9.2** - Correção de hover nos dropdowns (tema escuro)
+- ✅ **v2.9.1** - Correção de cores de fundo dos filtros
+- ✅ **v2.9.0** - Redesign completo do painel de filtros (2 linhas organizadas)
+- ✅ **v2.8.0** - Sistema de filtros avançado (Quantidade, Status, Método, Endpoint, IP)
+- ✅ **v2.7.2** - Correção definitiva do scroll do modal de histórico
+- ✅ **v2.7.0** - Reorganização de seções do dashboard
+- ✅ **v2.2.4** - Sistema de autorização temporária
+- ✅ **v2.2.3** - Correção de paleta de modais
+- ✅ **v2.2.0** - Lista unificada de IPs + Dashboard
 
-**Score de Qualidade:** 9.2/10 🌟
+**Score de Qualidade:** 9.7/10 🌟
+
+---
+
+## 🎨 Destaques da Interface
+
+### Dashboard Premium (v2.9.0+)
+- **Painel de Filtros Organizado** - 2 linhas com labels descritivos e ícones
+- **Tema Escuro Consistente** - Gradientes azul/roxo em toda a interface
+- **Animações Suaves** - Hover elegante nos cards (-4px, sombras sutis)
+- **Responsivo** - Design adaptável para desktop e mobile
+- **Auto-refresh Inteligente** - Pausa ao interagir, retoma automaticamente
+
+### Sistema de Filtros (v2.8.0+)
+- 📊 **Quantidade**: 25, 50, 100, 200, 500, Todos
+- ✅ **Status**: Todos, Autorizados, Negados
+- 🔧 **Método HTTP**: Todos, GET, POST, PUT, DELETE, PATCH
+- 🔍 **Busca por Endpoint**: Filtro de URL em tempo real
+- � **Busca por IP**: Localização rápida de IPs específicos
+- 🧹 **Limpar Filtros**: Reset completo com um clique
 
 ---
 
