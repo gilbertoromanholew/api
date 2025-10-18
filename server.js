@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { errorHandler, notFoundHandler } from './src/middlewares/errorHandler.js';
-import { requireAdmin, trackViolations } from './src/middlewares/accessLevel.js';
+import { requireAdmin, trackViolations, validateRouteAccess } from './src/middlewares/accessLevel.js';
 import { getApiInfo } from './src/routes/index.js';
 import { getApiDocs } from './src/routes/docs.js';
 import { getLogsDashboard } from './src/routes/logsDashboard.js';
@@ -33,6 +33,9 @@ app.use(express.json());
 // Middleware de segurança - filtro de IP
 app.use(ipFilter);
 
+// Middleware de validação de acesso por rota
+app.use(validateRouteAccess);
+
 // Middleware de rastreamento de violações
 app.use(trackViolations);
 
@@ -44,8 +47,8 @@ app.get('/', getApiInfo);           // JSON com toda documentação (público)
 app.get('/docs', getApiDocs);       // Página HTML bonita (público)
 app.get('/logs', requireAdmin, getLogsDashboard); // 🔒 Dashboard APENAS para admin
 
-// Rota para listar funções disponíveis (ADMIN ONLY - expõe estrutura interna)
-app.get('/api/functions', requireAdmin, async (req, res) => {
+// Rota para listar funções disponíveis (público, mas filtrado por nível de acesso)
+app.get('/api/functions', async (req, res) => {
     try {
         const { readdir, readFile } = await import('fs/promises');
         const { join, dirname } = await import('path');
@@ -99,10 +102,36 @@ app.get('/api/functions', requireAdmin, async (req, res) => {
             }
         }
         
+        // Detectar nível de acesso do usuário
+        const { getIPAccessLevel } = await import('./src/middlewares/accessLevel.js');
+        const clientIp = req.ip_detected || req.ip;
+        const accessLevel = await getIPAccessLevel(clientIp);
+        
+        // Filtrar baseado no nível de acesso
+        let filteredFunctions = functions;
+        let note = '';
+        
+        if (accessLevel === 'guest') {
+            // GUEST: não vê endpoints (apenas visualiza que funções existem)
+            filteredFunctions = functions.map(func => ({
+                ...func,
+                endpoints: []  // Oculta todos os endpoints
+            }));
+            note = '👁️ Acesso de visualização: você pode ver que funções existem, mas não pode usá-las. Entre em contato com o administrador para obter acesso.';
+        } else if (accessLevel === 'trusted') {
+            // TRUSTED: vê TUDO (tem acesso total às functions)
+            note = '✅ Acesso completo às funções: você pode usar todos os endpoints das funções carregadas dinamicamente.';
+        } else if (accessLevel === 'admin') {
+            // ADMIN: vê TUDO
+            note = '🔓 Acesso administrativo: você tem acesso total a todas as rotas, incluindo gerenciamento da API.';
+        }
+        
         res.json({
             success: true,
-            total: functions.length,
-            functions: functions
+            total: filteredFunctions.length,
+            functions: filteredFunctions,
+            accessLevel: accessLevel,
+            note: note
         });
     } catch (error) {
         res.status(500).json({

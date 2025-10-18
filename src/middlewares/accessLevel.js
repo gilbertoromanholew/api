@@ -56,46 +56,38 @@ export async function canAccessRoute(ip, method, path) {
         return { allowed: true, level: 'admin' };
     }
     
-    // Trusted: não pode acessar /logs e /api/security
+    // Trusted: acesso a /docs + TODAS as rotas de functions (qualquer método)
     if (level === 'trusted') {
-        if (path.startsWith('/logs')) {
+        // Bloquear rotas administrativas
+        if (path.startsWith('/logs') || 
+            path.startsWith('/api/logs') || 
+            path.startsWith('/api/security') || 
+            path.startsWith('/zerotier')) {
             return { 
                 allowed: false, 
                 level: 'trusted', 
-                reason: 'Route restricted to admin only' 
+                reason: 'Administrative routes restricted to admin only' 
             };
         }
-        if (path.startsWith('/api/security')) {
-            return { 
-                allowed: false, 
-                level: 'trusted', 
-                reason: 'Security management restricted to admin only' 
-            };
-        }
+        
+        // Permitir tudo do resto (/, /docs, /api/functions, e TODAS as functions)
         return { allowed: true, level: 'trusted' };
     }
     
-    // Guest: /docs + endpoints das funções disponíveis (exceto _TEMPLATE)
+    // Guest: APENAS /docs (visualização)
     if (level === 'guest') {
-        const allowedPaths = ['/', '/docs', '/health', '/api/functions'];
+        const allowedPaths = ['/', '/docs', '/api/functions'];
         
-        // Permitir caminhos básicos
+        // Permitir apenas documentação
         if (allowedPaths.includes(path) || path === '/') {
             return { allowed: true, level: 'guest' };
         }
         
-        // Permitir endpoints de funções (exceto _TEMPLATE)
-        if (path.startsWith('/api/') && !path.startsWith('/api/security') && !path.startsWith('/api/logs')) {
-            // Verificar se não é _TEMPLATE
-            if (!path.includes('/_TEMPLATE/') && !path.includes('/template')) {
-                return { allowed: true, level: 'guest' };
-            }
-        }
-        
+        // Bloquear tudo do resto
         return { 
             allowed: false, 
             level: 'guest', 
-            reason: 'Guest access limited to documentation and function endpoints' 
+            reason: 'Guest access limited to documentation only (/docs)' 
         };
     }
     
