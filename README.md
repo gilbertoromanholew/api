@@ -2,7 +2,7 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![Version](https://img.shields.io/badge/Version-2.10.2-blue.svg)](https://github.com/gilbertoromanholew/api)
+[![Version](https://img.shields.io/badge/Version-2.13.0-blue.svg)](https://github.com/gilbertoromanholew/api)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **API REST modular com auto-descoberta de rotas, sistema de segurança inteligente e dashboard de monitoramento em tempo real.**
@@ -30,6 +30,11 @@ npm start
 - 📖 API: http://localhost:3000
 - 📚 Docs: http://localhost:3000/docs
 - 📊 Dashboard: http://localhost:3000/logs
+
+**📖 Documentação para Desenvolvedores/IAs:**
+- 🤖 **[Instruções para IA](AI_INSTRUCTIONS.md)** - Guia completo de arquitetura e regras
+- ⚡ **[Quick Reference](QUICK_REFERENCE.md)** - Referência rápida (cheat sheet)
+- 📋 **[CHANGELOG](CHANGELOG.md)** - Histórico de versões
 
 ---
 
@@ -78,26 +83,72 @@ api/
 
 ## 🛠️ Como Criar Nova Funcionalidade
 
+### 🔒 Sistema de Permissões (v2.12.0)
+
+Antes de criar, entenda os níveis de acesso:
+
+| Nível | Acesso | Functions |
+|-------|--------|-----------|
+| **GUEST** 👁️ | Apenas `/docs` | ❌ Não pode usar |
+| **TRUSTED** 📝 | `/docs` + Functions | ✅ Acesso total |
+| **ADMIN** 🔓 | Tudo | ✅ Acesso total |
+
+**Por padrão:** TRUSTED e ADMIN podem usar TODAS as functions.  
+**Para restringir:** Adicione `requireAdmin` nas rotas específicas.
+
+---
+
 ### Método 1: Copiar Template (5 minutos)
 
-```bash
+```powershell
 # 1. Copie o template
-cp -r src/functions/_TEMPLATE src/functions/minhaFeature
+Copy-Item -Path "src/functions/_TEMPLATE" -Destination "src/functions/minhaFeature" -Recurse
 
 # 2. Renomeie os arquivos
 cd src/functions/minhaFeature
-mv templateController.js minhaFeatureController.js
-mv templateRoutes.js minhaFeatureRoutes.js
-mv templateUtils.js minhaFeatureUtils.js
+Rename-Item "templateController.js" "minhaFeatureController.js"
+Rename-Item "templateRoutes.js" "minhaFeatureRoutes.js"
+Rename-Item "templateUtils.js" "minhaFeatureUtils.js"  # Opcional
+Remove-Item "README.md"  # Delete o README do template
 
-# 3. Implemente sua lógica
-# Edite os arquivos e substitua "template" por "minhaFeature"
+# 3. Edite os arquivos e implemente sua lógica
+# - minhaFeatureController.js: Lógica de negócio
+# - minhaFeatureRoutes.js: Definição de rotas
 
 # 4. Reinicie o servidor
 npm start
 ```
 
-**Pronto!** A rota foi descoberta automaticamente.
+**Pronto!** A rota foi descoberta automaticamente e está acessível para **TRUSTED** e **ADMIN**.
+
+---
+
+### 📝 Exemplos de Permissões
+
+#### ✅ Function padrão (TRUSTED + ADMIN)
+```javascript
+// minhaFeatureRoutes.js
+router.get('/usuarios', controller.listar);  // TRUSTED pode acessar
+router.post('/usuarios', controller.criar);   // TRUSTED pode acessar
+```
+
+#### 🔒 Proteger rota específica (só ADMIN)
+```javascript
+import { requireAdmin } from '../../middlewares/accessLevel.js';
+
+router.get('/usuarios', controller.listar);           // TRUSTED pode acessar
+router.delete('/usuarios/:id', requireAdmin, controller.deletar);  // Só ADMIN
+```
+
+#### 🔐 Function inteira só para ADMIN
+```javascript
+import { requireAdmin } from '../../middlewares/accessLevel.js';
+
+router.get('/secrets', requireAdmin, controller.listar);  // Só ADMIN
+router.post('/secrets', requireAdmin, controller.criar);  // Só ADMIN
+```
+
+📖 **Documentação completa:** `src/functions/_TEMPLATE/README.md`
 
 ### Método 2: Estrutura Manual
 

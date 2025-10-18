@@ -1937,9 +1937,17 @@ export const getLogsDashboard = (req, res) => {
         }
 
         .access-level-badge.level-admin {
-            background: rgba(239, 68, 68, 0.25);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3));
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.6);
+            font-weight: 700;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+            animation: glow-admin 2s ease-in-out infinite;
+        }
+
+        @keyframes glow-admin {
+            0%, 100% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
         }
 
         .access-level-badge.level-trusted {
