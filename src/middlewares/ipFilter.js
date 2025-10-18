@@ -283,6 +283,10 @@ export const ipFilter = async (req, res, next) => {
         });
     }
     
+    // Definir variáveis no req para outros middlewares
+    req.ip_detected = clientIp;
+    req.clientInfo = clientInfo;
+    
     next();
 };
 

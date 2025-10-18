@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import exemploController from './exemploController.js';
 import { validate } from '../../middlewares/validator.js';
+import { requireTrusted, requireAdmin } from '../../middlewares/accessLevel.js';
 
 const router = Router();
 
@@ -48,13 +49,13 @@ router.get('/usuarios/estatisticas', (req, res) => exemploController.estatistica
 // GET /usuarios/:id - Busca um usuário específico
 router.get('/usuarios/:id', (req, res) => exemploController.buscarUsuario(req, res));
 
-// POST /usuarios - Cria um novo usuário
-router.post('/usuarios', validate(criarUsuarioSchema), (req, res) => exemploController.criarUsuario(req, res));
+// POST /usuarios - Cria um novo usuário (TRUSTED+)
+router.post('/usuarios', requireTrusted, validate(criarUsuarioSchema), (req, res) => exemploController.criarUsuario(req, res));
 
-// PUT /usuarios/:id - Atualiza um usuário existente
-router.put('/usuarios/:id', validate(atualizarUsuarioSchema), (req, res) => exemploController.atualizarUsuario(req, res));
+// PUT /usuarios/:id - Atualiza um usuário existente (TRUSTED+)
+router.put('/usuarios/:id', requireTrusted, validate(atualizarUsuarioSchema), (req, res) => exemploController.atualizarUsuario(req, res));
 
-// DELETE /usuarios/:id - Remove um usuário
-router.delete('/usuarios/:id', (req, res) => exemploController.deletarUsuario(req, res));
+// DELETE /usuarios/:id - Remove um usuário (ADMIN ONLY)
+router.delete('/usuarios/:id', requireAdmin, (req, res) => exemploController.deletarUsuario(req, res));
 
 export default router;

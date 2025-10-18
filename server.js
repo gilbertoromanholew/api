@@ -15,7 +15,19 @@ import config from './src/config/index.js';
 const app = express();
 
 // Middlewares globais
-app.use(cors());
+app.use(cors({
+    origin: [
+        'https://api.samm.host',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        /^http:\/\/10\.244\.\d+\.\d+:\d+$/,  // ZeroTier range (10.244.0.0/16)
+        /^http:\/\/localhost:\d+$/,          // Localhost com qualquer porta
+        /^http:\/\/127\.0\.0\.1:\d+$/        // 127.0.0.1 com qualquer porta
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json());
 
 // Middleware de segurança - filtro de IP
@@ -32,8 +44,8 @@ app.get('/', getApiInfo);           // JSON com toda documentação (público)
 app.get('/docs', getApiDocs);       // Página HTML bonita (público)
 app.get('/logs', requireAdmin, getLogsDashboard); // 🔒 Dashboard APENAS para admin
 
-// Rota para listar funções disponíveis (para o /docs)
-app.get('/api/functions', async (req, res) => {
+// Rota para listar funções disponíveis (ADMIN ONLY - expõe estrutura interna)
+app.get('/api/functions', requireAdmin, async (req, res) => {
     try {
         const { readdir, readFile } = await import('fs/promises');
         const { join, dirname } = await import('path');
@@ -101,8 +113,8 @@ app.get('/api/functions', async (req, res) => {
     }
 });
 
-app.use('/api/logs', logsRoutes);   // API de logs
-app.use('/zerotier', zerotierRoutes); // API ZeroTier (status e info)
+app.use('/api/logs', requireAdmin, logsRoutes);   // 🔒 API de logs APENAS para admin
+app.use('/zerotier', requireAdmin, zerotierRoutes); // 🔒 ZeroTier APENAS para admin
 app.use('/api/security', requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
 
 // Auto-carregar funcionalidades do diretório src/functions/
