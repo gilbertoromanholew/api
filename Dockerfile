@@ -1,28 +1,49 @@
-# Etapa 1: Utilizar a imagem oficial do Nginx como base
-FROM nginx:1.25-alpine
+# Build stage
+FROM node:22-alpine AS builder
 
-# Instalar 'wget' para ser usado no Healthcheck
-# A imagem 'nginx:alpine' padrão não vem com 'wget' ou 'curl'
-RUN apk add --no-cache wget
+# Diretório de trabalho
+WORKDIR /app
 
-# Remover a página de boas-vindas padrão do Nginx para garantir um ambiente limpo
-RUN rm -rf /usr/share/nginx/html/*
+# Copiar arquivos de dependências da pasta dist-api
+COPY ./dist-api/package*.json ./
 
-# Copiar os arquivos estáticos da sua pasta 'dist' (que está no GitHub)
-# para o diretório público do Nginx
-# IMPORTANTE: Se a pasta 'dist' não estiver na raiz, ajuste o caminho.
-COPY ./dist-api/ /usr/share/nginx/html/
+# Instalar TODAS as dependências
+RUN npm ci
 
-# Copiar configuração customizada do Nginx (com proxy reverso para API)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copiar código fonte da pasta dist-api
+COPY ./dist-api/ .
 
-# Expor a porta 80
-EXPOSE 80
+# Production stage
+FROM node:22-alpine
 
-# Verificação de saúde (Healthcheck)
-# Isto corrige o erro que você viu no log do Coolify
+# Instalar dependências do sistema
+RUN apk add --no-cache curl wget
+
+# Criar usuário não-root para segurança
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+# Diretório de trabalho
+WORKDIR /app
+
+# Copiar package files
+COPY ./dist-api/package*.json ./
+
+# Instalar apenas dependências de produção
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar código do builder
+COPY --from=builder --chown=nodejs:nodejs /app/src ./src
+COPY --from=builder --chown=nodejs:nodejs /app/server.js ./server.js
+
+# Mudar para usuário não-root
+USER nodejs
+
+# Expor porta 3000 (porta da API Node.js)
+EXPOSE 3000
+
+# Health check na porta 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# O comando para iniciar o Nginx (CMD ["nginx", "-g", "daemon off;"])
-# já está definido na imagem base, então não é necessário especificá-lo novamente.
+# Comando de inicialização (Node.js, não Nginx!)
+CMD ["node", "server.js"]
