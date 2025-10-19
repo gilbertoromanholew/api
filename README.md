@@ -1,13 +1,25 @@
-# 🚀 API Modular - Node.js & Express
+# 🚀 API Modular - Sistema Jurídico com Pontos
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.18.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1.0-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![Version](https://img.shields.io/badge/Version-2.13.0-blue.svg)](https://github.com/gilbertoromanholew/api)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Version](https://img.shields.io/badge/Version-2.0-blue.svg)](https://github.com/gilbertoromanholew/api)
 
-> **API REST modular com auto-descoberta de rotas, sistema de segurança inteligente e dashboard de monitoramento em tempo real.**
+> **API REST modular para ferramentas jurídicas com sistema de pontos, autenticação completa e arquitetura escalável.**
 
-🌐 **Produção:** https://api.samm.host
+🌐 **Produção:** https://api.samm.host  
+📱 **Frontend:** https://ferramentas.samm.host
+
+---
+
+## 🎯 O que é este sistema?
+
+API backend para plataforma de **ferramentas jurídicas** (calculadoras trabalhistas, planejamento previdenciário, validadores) com:
+- 🔐 **Autenticação completa** (CPF brasileiro + Supabase)
+- 💰 **Sistema de pontos** (gratuitos + pagos, com limite)
+- 🎯 **15 ferramentas jurídicas** reais (3 pts planejamento, 1 pt simples)
+- 🔗 **Sistema de referência** (indique e ganhe pontos)
+- 📊 **Dashboard completo** (perfil, estatísticas, histórico)
 
 ---
 
@@ -19,275 +31,407 @@ git clone https://github.com/gilbertoromanholew/api.git
 cd api
 npm install
 
-# Configure (opcional)
+# Configure ambiente
 cp .env.example .env
+# Edite .env com suas credenciais Supabase
+
+# Crie o banco de dados
+# Execute database/schema.sql no Supabase SQL Editor
+# Execute database/seed_tools.sql para popular ferramentas
 
 # Inicie
 npm start
 ```
 
 **Acesse:**
-- 📖 API: http://localhost:3000
+- � API: http://localhost:3000
 - 📚 Docs: http://localhost:3000/docs
-- 📊 Dashboard: http://localhost:3000/logs
-
-**📖 Documentação para Desenvolvedores/IAs:**
-- 🤖 **[Instruções para IA](AI_INSTRUCTIONS.md)** - Guia completo de arquitetura e regras
-- ⚡ **[Quick Reference](QUICK_REFERENCE.md)** - Referência rápida (cheat sheet)
-- 📋 **[CHANGELOG](CHANGELOG.md)** - Histórico de versões
+- � Functions: http://localhost:3000/api/functions
 
 ---
 
-## ✨ Características Principais
+## � Documentação Completa
 
-### 🏗️ Arquitetura
-- **Modular** - Funcionalidades independentes com auto-descoberta
-- **Escalável** - Pronto para crescer horizontal e verticalmente
-- **Limpo** - BaseController + validação centralizada
+### 🏠 **[DOCUMENTACAO_COMPLETA.md](./DOCUMENTACAO_COMPLETA.md)** - Índice Geral
+Navegue por toda a documentação do sistema.
 
-### 🔒 Segurança
-- **Whitelist de IPs** - Controle de acesso com CIDR
-- **Bloqueio Automático** - Suspensões e bloqueios progressivos
-- **Geolocalização** - 24+ campos (país, cidade, ISP, proxy/VPN)
-- **Autorização Temporária** - IPs dinâmicos em memória
+### ⭐ Guias Essenciais:
 
-### 📊 Monitoramento
-- **Dashboard em Tempo Real** - Métricas, IPs, logs (auto-refresh 15s)
-- **Sistema de Filtros Avançado** - Quantidade, Status, Método HTTP, Endpoint, IP
-- **Logging Completo** - Registra TODOS os acessos sem filtros (5000 logs em memória)
-- **Documentação Interativa** - Teste endpoints direto no navegador
-- **Cache Inteligente** - Rotas (5min) + geo (24h)
-- **Tema Escuro Premium** - Design moderno com gradientes e animações suaves
+1. **[SISTEMA_BEM_AMARRADO.md](./SISTEMA_BEM_AMARRADO.md)** - Visão geral completa
+2. **[GUIA_IMPLEMENTACAO_FERRAMENTAS.md](./GUIA_IMPLEMENTACAO_FERRAMENTAS.md)** - Como criar ferramentas
+3. **[GUIA_MUDANCA_CATEGORIAS.md](./GUIA_MUDANCA_CATEGORIAS.md)** - Gerenciar categorias
+
+### 📦 Módulos da API:
+
+- **[Auth Module](./src/functions/auth/README.md)** - Autenticação e registro
+- **[Points Module](./src/functions/points/README.md)** - Sistema de pontos
+- **[User Module](./src/functions/user/README.md)** - Perfil e estatísticas
+- **[Tools Module](./src/functions/tools/README.md)** - Gerenciador de ferramentas
+
+### 🏗️ Arquitetura:
+
+- **[src/functions/README.md](./src/functions/README.md)** - Estrutura modular
 
 ---
 
-## 📦 Estrutura do Projeto
+## ✨ Características
+
+### 🏗️ Arquitetura Modular
+- **Auto-descoberta** - Adicione módulos sem editar server.js
+- **Separação clara** - Service (lógica) + Controller (orquestração)
+- **Testável** - Lógica pura isolada
+- **Escalável** - Adicione ferramentas facilmente
+
+### 🔐 Autenticação e Segurança
+- **CPF brasileiro** - Validação completa do algoritmo
+- **Supabase Auth** - JWT + Sessions httpOnly
+- **Sistema de referência** - Códigos únicos de indicação
+- **RLS** - Row Level Security no banco
+
+### 💰 Sistema de Pontos
+- **Gratuitos + Pagos** - Dois tipos de pontos
+- **Prioridade** - Consome gratuitos primeiro
+- **Limite** - 100 pontos gratuitos máximo
+- **Histórico completo** - Todas as transações registradas
+
+### �️ Ferramentas Jurídicas
+- **15 ferramentas** reais cadastradas
+- **5 categorias** organizadas
+- **Custos:** 3 pts (planejamento) ou 1 pt (simples)
+- **Consumo automático** - Pontos consumidos ao usar
+
+### 🎁 Sistema de Indicação
+- **10 pontos** de bônus no cadastro
+- **5 pontos** por pessoa indicada
+- **Códigos únicos** de 8 caracteres
+- **Rastreamento completo** de indicações
+
+---
+
+## 📊 Módulos e Endpoints
+
+### 🔐 Auth (5 endpoints)
+```
+POST   /api/auth/check-cpf      - Verificar se CPF existe
+POST   /api/auth/register       - Cadastrar novo usuário
+POST   /api/auth/login          - Fazer login
+POST   /api/auth/logout         - Sair
+GET    /api/auth/session        - Dados da sessão atual
+```
+
+### 💰 Points (5 endpoints)
+```
+GET    /api/points/balance         - Saldo atual
+GET    /api/points/history         - Histórico (paginado)
+POST   /api/points/consume         - Consumir pontos
+GET    /api/points/can-use/:tool   - Verificar se pode usar
+POST   /api/points/add-free        - Adicionar grátis (admin)
+```
+
+### 👤 User (4 endpoints)
+```
+GET    /api/user/profile      - Perfil completo + pontos
+PUT    /api/user/profile      - Atualizar nome
+GET    /api/user/stats        - Estatísticas de uso
+GET    /api/user/referrals    - Lista de indicações
+```
+
+### 🛠️ Tools (4 endpoints)
+```
+GET    /api/tools/list              - Listar todas (público)
+GET    /api/tools/:tool_name        - Detalhes da ferramenta
+POST   /api/tools/execute/:tool     - Executar ferramenta
+GET    /api/tools/history           - Histórico de uso
+```
+
+**Total:** 18 endpoints funcionais
+
+---
+
+---
+
+## �️ Banco de Dados
+
+### Schema (7 tabelas):
+- `profiles` - Dados dos usuários (CPF, nome, código)
+- `user_points` - Saldo de pontos (grátis + pagos)
+- `point_transactions` - Histórico completo
+- `tool_costs` - Ferramentas e custos
+- `point_packages` - Pacotes para venda (Stripe)
+- `purchases` - Compras realizadas
+
+### Scripts SQL:
+- `database/schema.sql` - Estrutura completa
+- `database/seed_tools.sql` - 15 ferramentas iniciais
+
+---
+
+## � Como Usar
+
+### 1. Cadastrar Usuário
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cpf": "123.456.789-09",
+    "email": "usuario@email.com",
+    "password": "Senha@123",
+    "full_name": "João Silva"
+  }'
+```
+
+### 2. Fazer Login
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "cpf": "123.456.789-09",
+    "password": "Senha@123"
+  }'
+```
+
+### 3. Ver Saldo de Pontos
+```bash
+curl http://localhost:3000/api/points/balance \
+  -b cookies.txt
+```
+
+### 4. Listar Ferramentas
+```bash
+curl http://localhost:3000/api/tools/list
+```
+
+### 5. Executar Ferramenta
+```bash
+curl -X POST http://localhost:3000/api/tools/execute/calc_rescisao \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "params": {
+      "salario": 3000,
+      "dataAdmissao": "2020-01-15",
+      "dataDemissao": "2025-10-18"
+    }
+  }'
+```
+
+---
+
+## 🛠️ Implementar Nova Ferramenta
+
+Siga o **[GUIA_IMPLEMENTACAO_FERRAMENTAS.md](./GUIA_IMPLEMENTACAO_FERRAMENTAS.md)** completo.
+
+### Resumo rápido:
+
+1. **Cadastrar no banco:**
+```sql
+INSERT INTO tool_costs (tool_name, display_name, description, points_cost, category, icon)
+VALUES ('nova_ferramenta', 'Nova Ferramenta', 'Descrição', 1, 'Categoria', '🛠️');
+```
+
+2. **Criar service:**
+```javascript
+// src/functions/calculators/services/novaService.js
+export function calcular(dados) {
+  // Lógica pura aqui
+  return { resultado }
+}
+```
+
+3. **Adicionar no controller:**
+```javascript
+// src/functions/calculators/calculatorsController.js
+export async function novaFerramenta(req, res) {
+  // 1. Verificar pontos
+  // 2. Calcular
+  // 3. Consumir pontos
+  // 4. Retornar
+}
+```
+
+4. **Definir rota:**
+```javascript
+// src/functions/calculators/calculatorsRoutes.js
+router.post('/nova', requireAuth, novaFerramenta)
+```
+
+**✅ Pronto! API registra automaticamente em `/api/calculators/nova`**
+
+---
+
+## � Mudar Categorias
+
+Siga o **[GUIA_MUDANCA_CATEGORIAS.md](./GUIA_MUDANCA_CATEGORIAS.md)** completo.
+
+### Resumo rápido:
+
+```sql
+-- Renomear categoria
+UPDATE tool_costs SET category = 'Novo Nome' WHERE category = 'Antigo';
+
+-- Mover ferramenta
+UPDATE tool_costs SET category = 'Outra' WHERE tool_name = 'calc_rescisao';
+
+-- Mudar custo
+UPDATE tool_costs SET points_cost = 5 WHERE tool_name = 'calc_rescisao';
+```
+
+**✅ API atualiza automaticamente!**
+
+---
+
+## 📁 Estrutura do Projeto
 
 ```
 api/
 ├── src/
-│   ├── config/           # Configurações (IPs, env)
-│   ├── core/             # BaseController + routeLoader
-│   ├── functions/        # Módulos independentes ⭐
-│   │   ├── exemplo/      # CRUD de usuários
-│   │   ├── pdf/          # Leitura de PDFs
-│   │   └── _TEMPLATE/    # Template para novas funções
-│   ├── middlewares/      # Segurança + validação
-│   ├── routes/           # Rotas especiais (docs, logs)
-│   └── utils/            # Utilitários
-├── server.js             # Entry point
-└── package.json
+│   ├── functions/              ← Módulos (auto-descoberta)
+│   │   ├── auth/              ← Autenticação
+│   │   ├── points/            ← Sistema de pontos
+│   │   ├── user/              ← Perfil e stats
+│   │   ├── tools/             ← Gerenciador
+│   │   └── calculators/       ← SUAS FERRAMENTAS AQUI
+│   │
+│   ├── config/                ← Supabase, etc
+│   ├── core/                  ← routeLoader
+│   ├── middlewares/           ← Validação, etc
+│   └── routes/                ← Rotas especiais
+│
+├── database/                  ← SQL scripts
+│   ├── schema.sql            ← Estrutura do banco
+│   └── seed_tools.sql        ← Ferramentas iniciais
+│
+├── *.md                       ← DOCUMENTAÇÃO
+└── server.js                  ← Entry point
 ```
 
 ---
 
-## 🛠️ Como Criar Nova Funcionalidade
+## 🎯 Tecnologias
 
-### 🔒 Sistema de Permissões (v2.12.0)
-
-Antes de criar, entenda os níveis de acesso:
-
-| Nível | Acesso | Functions |
-|-------|--------|-----------|
-| **GUEST** 👁️ | Apenas `/docs` | ❌ Não pode usar |
-| **TRUSTED** 📝 | `/docs` + Functions | ✅ Acesso total |
-| **ADMIN** 🔓 | Tudo | ✅ Acesso total |
-
-**Por padrão:** TRUSTED e ADMIN podem usar TODAS as functions.  
-**Para restringir:** Adicione `requireAdmin` nas rotas específicas.
+- **Runtime:** Node.js 22.18.0+
+- **Framework:** Express 5.1.0
+- **Database:** PostgreSQL (Supabase)
+- **Auth:** Supabase Auth + JWT
+- **Validação:** JSON Schema
+- **Cookies:** cookie-parser
 
 ---
 
-### Método 1: Copiar Template (5 minutos)
+## 🔧 Variáveis de Ambiente
 
-```powershell
-# 1. Copie o template
-Copy-Item -Path "src/functions/_TEMPLATE" -Destination "src/functions/minhaFeature" -Recurse
+```env
+# Supabase
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 
-# 2. Renomeie os arquivos
-cd src/functions/minhaFeature
-Rename-Item "templateController.js" "minhaFeatureController.js"
-Rename-Item "templateRoutes.js" "minhaFeatureRoutes.js"
-Rename-Item "templateUtils.js" "minhaFeatureUtils.js"  # Opcional
-Remove-Item "README.md"  # Delete o README do template
+# Segredos
+JWT_SECRET=seu_jwt_secret_aqui
+SESSION_SECRET=seu_session_secret_aqui
 
-# 3. Edite os arquivos e implemente sua lógica
-# - minhaFeatureController.js: Lógica de negócio
-# - minhaFeatureRoutes.js: Definição de rotas
+# Sistema de Pontos
+SIGNUP_BONUS_POINTS=10
+REFERRAL_BONUS_POINTS=5
+FREE_POINTS_LIMIT=100
 
-# 4. Reinicie o servidor
-npm start
-```
-
-**Pronto!** A rota foi descoberta automaticamente e está acessível para **TRUSTED** e **ADMIN**.
-
----
-
-### 📝 Exemplos de Permissões
-
-#### ✅ Function padrão (TRUSTED + ADMIN)
-```javascript
-// minhaFeatureRoutes.js
-router.get('/usuarios', controller.listar);  // TRUSTED pode acessar
-router.post('/usuarios', controller.criar);   // TRUSTED pode acessar
-```
-
-#### 🔒 Proteger rota específica (só ADMIN)
-```javascript
-import { requireAdmin } from '../../middlewares/accessLevel.js';
-
-router.get('/usuarios', controller.listar);           // TRUSTED pode acessar
-router.delete('/usuarios/:id', requireAdmin, controller.deletar);  // Só ADMIN
-```
-
-#### 🔐 Function inteira só para ADMIN
-```javascript
-import { requireAdmin } from '../../middlewares/accessLevel.js';
-
-router.get('/secrets', requireAdmin, controller.listar);  // Só ADMIN
-router.post('/secrets', requireAdmin, controller.criar);  // Só ADMIN
-```
-
-📖 **Documentação completa:** `src/functions/_TEMPLATE/README.md`
-
-### Método 2: Estrutura Manual
-
-```javascript
-// src/functions/usuarios/usuariosRoutes.js
-import { Router } from 'express';
-const router = Router();
-
-router.get('/usuarios', (req, res) => {
-    res.json({ success: true, data: [] });
-});
-
-export default router;
-```
-
----
-
-## 🔒 Configuração de Segurança
-
-### Autorizar IPs
-
-```bash
-# Via .env (permanente)
-ALLOWED_IPS=192.168.1.100,10.0.0.0/8
-
-# Via Dashboard (temporário - memória)
-# Acesse /logs → 🔓 Autorizar Acesso
-```
-
-### Desbloquear IP
-
-```bash
-# Via API
-curl -X POST http://localhost:3000/api/security/unblock/192.168.1.100
-
-# Via Dashboard
-# Acesse /logs → Card do IP → 🔓 Desbloquear
-```
-
----
-
-## 🌍 Endpoints Disponíveis
-
-### Documentação
-- `GET /` - Documentação JSON
-- `GET /docs` - Interface interativa
-
-### Exemplos
-- `GET /usuarios` - Listar usuários
-- `POST /usuarios` - Criar usuário
-- `POST /read-pdf` - Extrair texto de PDF
-
-### Monitoramento
-- `GET /logs` - Dashboard visual completo
-- `GET /api/logs/list` - Logs em JSON
-- `GET /api/logs/stats` - Estatísticas em tempo real
-- `GET /api/logs/summary` - Resumo de acessos
-
-### Segurança
-- `GET /api/security/unified` - Lista unificada de IPs
-- `POST /api/security/authorize-ip` - Autorizar IP
-- `POST /api/security/unauthorize-ip/:ip` - Remover autorização
-- `POST /api/security/block/:ip` - Bloquear IP
-- `POST /api/security/unblock/:ip` - Desbloquear IP
-- `POST /api/security/suspend/:ip` - Suspender IP
-
----
-
-## 📚 Documentação Completa
-
-- 📖 [Arquitetura Detalhada](./docs/ARQUITETURA.md)
-- 🔒 [Guia de Segurança](./docs/SEGURANCA.md)
-- 📡 [Referência da API](./docs/API_REFERENCE.md)
-- 🔍 [Auditoria Final](./AUDITORIA_FINAL.md)
-- 📝 [Changelog](./CHANGELOG.md)
-- 🎨 [Design System](./docs/DESIGN.md) *(em breve)*
-
----
-
-## 🚀 Deployment
-
-### Docker (Recomendado)
-
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
-```bash
-docker build -t api-modular .
-docker run -p 3000:3000 --env-file .env api-modular
-```
-
-### PM2 (Process Manager)
-
-```bash
-npm install -g pm2
-pm2 start server.js --name api-modular
-pm2 save
-pm2 startup
-```
-
----
-
-## ⚙️ Variáveis de Ambiente
-
-```bash
-# .env
+# Servidor
 PORT=3000
-ALLOWED_IPS=127.0.0.1,::1,192.168.1.0/24
-NODE_ENV=production
+NODE_ENV=development
 ```
+
+---
+
+## � Documentação
+
+### Para Desenvolvedores:
+1. [DOCUMENTACAO_COMPLETA.md](./DOCUMENTACAO_COMPLETA.md) - Índice geral
+2. [SISTEMA_BEM_AMARRADO.md](./SISTEMA_BEM_AMARRADO.md) - Visão geral
+3. [GUIA_IMPLEMENTACAO_FERRAMENTAS.md](./GUIA_IMPLEMENTACAO_FERRAMENTAS.md) - Como criar
+4. [GUIA_MUDANCA_CATEGORIAS.md](./GUIA_MUDANCA_CATEGORIAS.md) - Gerenciar categorias
+5. [src/functions/README.md](./src/functions/README.md) - Arquitetura modular
+
+### Para Product Owners:
+1. [ESTRUTURA_FERRAMENTAS.md](./ESTRUTURA_FERRAMENTAS.md) - Lista de ferramentas
+2. [GUIA_MUDANCA_CATEGORIAS.md](./GUIA_MUDANCA_CATEGORIAS.md) - Como reorganizar
+
+---
+
+## � Scripts
+
+```bash
+npm start          # Iniciar servidor
+npm run dev        # Desenvolvimento com nodemon
+npm test           # Executar testes (TODO)
+npm run lint       # Verificar código (TODO)
+```
+
+---
+
+## 🚧 Roadmap
+
+### Fase 1: ✅ Autenticação + Pontos (Completa)
+- [x] Sistema de autenticação com CPF
+- [x] Sistema de pontos (gratuitos + pagos)
+- [x] Sistema de referência
+- [x] 15 ferramentas cadastradas
+
+### Fase 2: ✅ Módulos Principais (Completa)
+- [x] Módulo Points completo
+- [x] Módulo User completo
+- [x] Módulo Tools completo
+- [x] Documentação completa
+
+### Fase 3: 🔄 Integração Frontend (Próximo)
+- [ ] Remover Supabase direto do Vue
+- [ ] Criar API service centralizado
+- [ ] Migrar composables para API
+- [ ] Testar fluxo completo
+
+### Fase 4: 📅 Stripe + Pagamentos
+- [ ] Endpoint de checkout
+- [ ] Webhooks de pagamento
+- [ ] Compra de pacotes de pontos
+- [ ] Histórico de compras
+
+### Fase 5: 📅 Implementação das Ferramentas
+- [ ] Calculadora de Rescisão
+- [ ] Calculadora de Férias
+- [ ] Planejamento Previdenciário
+- [ ] Extrator de CNIS
+- [ ] Validadores (CPF, CNPJ, CEP)
 
 ---
 
 ## 🤝 Contribuindo
 
-Contribuições são bem-vindas! Siga os passos:
-
-1. Fork o projeto
-2. Crie uma branch: `git checkout -b feature/MinhaFeature`
-3. Commit: `git commit -m 'Adiciona MinhaFeature'`
-4. Push: `git push origin feature/MinhaFeature`
+1. Fork o repositório
+2. Crie uma branch (`git checkout -b feature/nova-ferramenta`)
+3. Commit suas mudanças (`git commit -m 'Add: nova ferramenta'`)
+4. Push para a branch (`git push origin feature/nova-ferramenta`)
 5. Abra um Pull Request
 
 ---
 
 ## 📄 Licença
 
-[MIT License](LICENSE) - Você é livre para usar, modificar e distribuir.
+MIT License - Veja [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
-## 👨‍💻 Autor
+## 📞 Suporte
+
+- 📖 **Documentação:** Leia [DOCUMENTACAO_COMPLETA.md](./DOCUMENTACAO_COMPLETA.md)
+- 🐛 **Bugs:** Abra uma issue no GitHub
+- 💡 **Sugestões:** Pull requests são bem-vindos!
+
+---
+
+**🎉 Sistema 100% documentado e pronto para crescer!**
+
+**Versão:** 2.0 - Sistema Modular Completo  
+**Última atualização:** 18/10/2025
 
 **Gilberto Roman Holew**
 - GitHub: [@gilbertoromanholew](https://github.com/gilbertoromanholew)
