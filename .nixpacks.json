@@ -1,0 +1,13 @@
+{
+  "phases": {
+    "setup": {
+      "aptPkgs": ["curl", "wget"]
+    },
+    "install": {
+      "cmds": ["npm ci"]
+    }
+  },
+  "start": {
+    "cmd": "npm run start"
+  }
+}

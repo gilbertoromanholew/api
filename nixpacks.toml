@@ -1,0 +1,8 @@
+[phases.setup]
+aptPkgs = ["curl", "wget"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[start]
+cmd = "npm run start"
