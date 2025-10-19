@@ -1,0 +1,56 @@
+# Dependências (serão instaladas no container)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Git
+.git/
+.github/
+.gitignore
+README.md
+CHANGELOG.md
+AI_INSTRUCTIONS.md
+QUICK_REFERENCE.md
+
+# Ambiente local (não enviar para produção)
+.env.local
+.env.development
+.env.test
+
+# Arquivos temporários
+*.log
+*.tmp
+*.temp
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Database local
+database/
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Cache
+.npm/
+.cache/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Testes
+*.test.js
+*.spec.js
+__tests__/
