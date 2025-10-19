@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { checkCPF, register, login, logout, getSession } from './authController.js';
+import { checkCPF, checkEmail, register, login, logout, resendConfirmation, getSession } from './authController.js';
 import { requireAuth, optionalAuth } from './authMiddleware.js';
 import { validate } from '../../middlewares/validator.js';
 
@@ -12,6 +12,16 @@ const checkCPFSchema = {
     required: ['cpf'],
     types: {
         cpf: 'string'
+    }
+};
+
+/**
+ * Schema de validação para check-email
+ */
+const checkEmailSchema = {
+    required: ['email'],
+    types: {
+        email: 'string'
     }
 };
 
@@ -45,17 +55,33 @@ const loginSchema = {
 };
 
 /**
+ * Schema de validação para resend-confirmation
+ */
+const resendConfirmationSchema = {
+    required: ['email'],
+    types: {
+        email: 'string'
+    }
+};
+
+/**
  * ROTAS PÚBLICAS
  */
 
 // POST /auth/check-cpf - Verificar se CPF existe
 router.post('/check-cpf', validate(checkCPFSchema), checkCPF);
 
+// POST /auth/check-email - Verificar disponibilidade de email
+router.post('/check-email', validate(checkEmailSchema), checkEmail);
+
 // POST /auth/register - Cadastrar novo usuário
 router.post('/register', validate(registerSchema), register);
 
 // POST /auth/login - Fazer login
 router.post('/login', validate(loginSchema), login);
+
+// POST /auth/resend-confirmation - Reenviar email de confirmação
+router.post('/resend-confirmation', validate(resendConfirmationSchema), resendConfirmation);
 
 /**
  * ROTAS AUTENTICADAS

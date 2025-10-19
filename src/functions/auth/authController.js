@@ -1,5 +1,5 @@
 import { BaseController } from '../../core/BaseController.js';
-import { supabase, supabaseAdmin, createUser, createUserSession, signOut } from '../../config/supabase.js';
+import { supabase, supabaseAdmin, createUser, createUserSession, signOut, resendConfirmationEmail } from '../../config/supabase.js';
 import { 
     isValidCPF, 
     isValidEmail, 
@@ -43,6 +43,39 @@ class AuthController extends BaseController {
             return this.success(res, {
                 exists: !!data,
                 cpf: cleanedCPF
+            });
+        });
+    }
+
+    /**
+     * POST /auth/check-email
+     * Verifica se email já está cadastrado
+     */
+    async checkEmail(req, res) {
+        return this.execute(req, res, async (req, res) => {
+            const { email } = req.body;
+            
+            // Validar email
+            if (!isValidEmail(email)) {
+                return this.error(res, 'Email inválido', 400);
+            }
+            
+            const normalizedEmail = email.toLowerCase().trim();
+            
+            // Buscar email no banco (supabase auth)
+            const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+            
+            if (error) {
+                throw error;
+            }
+            
+            const emailExists = users.users.some(user => 
+                user.email?.toLowerCase() === normalizedEmail
+            );
+            
+            return this.success(res, {
+                available: !emailExists,
+                email: normalizedEmail
             });
         });
     }
@@ -227,8 +260,9 @@ class AuthController extends BaseController {
                     referral_code: userReferralCode
                 },
                 points_earned: signupBonus,
-                referral_bonus_given: referralBonusGiven
-            }, 'Usuário criado com sucesso! Bem-vindo à AJI.', 201);
+                referral_bonus_given: referralBonusGiven,
+                requires_verification: true // Flag para frontend saber que precisa verificar email
+            }, 'Cadastro realizado com sucesso! Enviamos um email de confirmação para você. Por favor, verifique sua caixa de entrada.', 201);
         });
     }
     
@@ -308,6 +342,45 @@ class AuthController extends BaseController {
     }
     
     /**
+     * POST /auth/resend-confirmation
+     * Reenvia email de confirmação
+     */
+    async resendConfirmation(req, res) {
+        return this.execute(req, res, async (req, res) => {
+            const { email } = req.body;
+            
+            if (!email || !isValidEmail(email)) {
+                return this.error(res, 'Email inválido', 400);
+            }
+            
+            const normalizedEmail = email.toLowerCase().trim();
+            
+            // Verificar se usuário existe
+            const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+            
+            if (listError) {
+                throw listError;
+            }
+            
+            const user = users.users.find(u => u.email?.toLowerCase() === normalizedEmail);
+            
+            if (!user) {
+                return this.error(res, 'Email não encontrado', 404);
+            }
+            
+            // Verificar se já está confirmado
+            if (user.email_confirmed_at) {
+                return this.error(res, 'Email já foi confirmado. Você pode fazer login.', 400);
+            }
+            
+            // Reenviar email de confirmação
+            await resendConfirmationEmail(normalizedEmail);
+            
+            return this.success(res, null, 'Email de confirmação reenviado com sucesso! Verifique sua caixa de entrada.');
+        });
+    }
+    
+    /**
      * GET /auth/session
      * Verifica sessão atual
      */
@@ -350,7 +423,9 @@ const authController = new AuthController();
 
 export default authController;
 export const checkCPF = (req, res) => authController.checkCPF(req, res);
+export const checkEmail = (req, res) => authController.checkEmail(req, res);
 export const register = (req, res) => authController.register(req, res);
 export const login = (req, res) => authController.login(req, res);
 export const logout = (req, res) => authController.logout(req, res);
+export const resendConfirmation = (req, res) => authController.resendConfirmation(req, res);
 export const getSession = (req, res) => authController.getSession(req, res);

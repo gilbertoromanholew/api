@@ -102,7 +102,8 @@ export async function createUser(email, password, metadata = {}) {
             password,
             options: {
                 data: metadata,
-                emailRedirectTo: undefined // Desabilitar email de confirmação por enquanto
+                // URL para onde o usuário será redirecionado após clicar no link do email
+                emailRedirectTo: process.env.FRONTEND_URL || 'http://localhost:5173/auth?confirmed=true'
             }
         });
         
@@ -141,6 +142,34 @@ export async function signOut(token) {
         }
         
         return true;
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Helper: Reenviar email de confirmação
+ */
+export async function resendConfirmationEmail(email) {
+    try {
+        if (!supabaseAdmin) {
+            throw new Error('Admin client não configurado');
+        }
+
+        // Gerar novo link de confirmação
+        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'signup',
+            email: email,
+            options: {
+                redirectTo: process.env.FRONTEND_URL || 'http://localhost:5173/auth?confirmed=true'
+            }
+        });
+        
+        if (error) {
+            throw error;
+        }
+        
+        return data;
     } catch (error) {
         throw error;
     }
