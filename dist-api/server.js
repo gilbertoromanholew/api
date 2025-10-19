@@ -11,6 +11,7 @@ import { autoLoadRoutes } from './src/core/routeLoader.js';
 import logsRoutes from './src/routes/logsRoutes.js';
 import zerotierRoutes from './src/routes/zerotier.js';
 import securityRoutes from './src/routes/securityRoutes.js';
+import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import config from './src/config/index.js';
 
 const app = express();
@@ -48,9 +49,10 @@ app.use(validateRouteAccess);
 // Middleware de rastreamento de violações
 app.use(trackViolations);
 
-// Rotas de sistema (documentação e logs)
-app.get('/', getApiInfo);           // JSON com toda documentação (público)
-app.get('/docs', getApiDocs);       // Página HTML bonita (público)
+// 🔄 PROXY REVERSO SUPABASE
+// Redireciona /supabase/* para o Supabase interno (sem domínio público)
+app.use('/supabase', supabaseProxyCors, supabaseProxy);
+
 // Rotas de sistema (documentação e logs)
 app.get('/', getApiInfo);           // JSON com toda documentação (público)
 app.get('/docs', getApiDocs);       // Página HTML bonita (público)

@@ -379,6 +379,67 @@ class AuthController extends BaseController {
             return this.success(res, null, 'Email de confirmação reenviado com sucesso! Verifique sua caixa de entrada.');
         });
     }
+
+    /**
+     * POST /auth/verify-email-token
+     * Verifica token de confirmação de email do Supabase
+     */
+    async verifyEmailToken(req, res) {
+        return this.execute(req, res, async (req, res) => {
+            const { access_token, refresh_token, type } = req.body;
+
+            if (!access_token) {
+                return this.error(res, 'Token de acesso não fornecido', 400);
+            }
+
+            // Verificar token com Supabase
+            const { data: { user }, error } = await supabase.auth.getUser(access_token);
+
+            if (error) {
+                console.error('Erro ao verificar token:', error);
+                return this.error(res, 'Token inválido ou expirado', 401);
+            }
+
+            if (!user) {
+                return this.error(res, 'Usuário não encontrado', 404);
+            }
+
+            // Verificar se email já foi confirmado
+            if (!user.email_confirmed_at) {
+                return this.error(res, 'Email ainda não foi confirmado', 400);
+            }
+
+            // Verificar se já foi confirmado anteriormente (evitar duplicar bônus)
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (!profile) {
+                return this.error(res, 'Perfil não encontrado', 404);
+            }
+
+            // Buscar pontos atuais
+            const { data: points } = await supabase
+                .from('user_points')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            // Retornar sucesso com dados do usuário
+            return this.success(res, {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    full_name: profile.full_name
+                },
+                profile,
+                points_earned: points?.free_points || 50,
+                already_confirmed: true
+            }, 'Email confirmado com sucesso!');
+        });
+    }
     
     /**
      * GET /auth/session
@@ -428,4 +489,5 @@ export const register = (req, res) => authController.register(req, res);
 export const login = (req, res) => authController.login(req, res);
 export const logout = (req, res) => authController.logout(req, res);
 export const resendConfirmation = (req, res) => authController.resendConfirmation(req, res);
+export const verifyEmailToken = (req, res) => authController.verifyEmailToken(req, res);
 export const getSession = (req, res) => authController.getSession(req, res);

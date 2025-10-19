@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { checkCPF, checkEmail, register, login, logout, resendConfirmation, getSession } from './authController.js';
+import { checkCPF, checkEmail, register, login, logout, resendConfirmation, verifyEmailToken, getSession } from './authController.js';
 import { requireAuth, optionalAuth } from './authMiddleware.js';
 import { validate } from '../../middlewares/validator.js';
 
@@ -65,6 +65,18 @@ const resendConfirmationSchema = {
 };
 
 /**
+ * Schema de validação para verify-email-token
+ */
+const verifyEmailTokenSchema = {
+    required: ['access_token'],
+    types: {
+        access_token: 'string',
+        refresh_token: 'string',
+        type: 'string'
+    }
+};
+
+/**
  * ROTAS PÚBLICAS
  */
 
@@ -82,6 +94,9 @@ router.post('/login', validate(loginSchema), login);
 
 // POST /auth/resend-confirmation - Reenviar email de confirmação
 router.post('/resend-confirmation', validate(resendConfirmationSchema), resendConfirmation);
+
+// POST /auth/verify-email-token - Verificar token de confirmação de email
+router.post('/verify-email-token', validate(verifyEmailTokenSchema), verifyEmailToken);
 
 /**
  * ROTAS AUTENTICADAS
