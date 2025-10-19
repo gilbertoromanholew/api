@@ -163,10 +163,7 @@ app.use(notFoundHandler);  // 404 - Rota não encontrada
 app.use(errorHandler);     // Erro genérico
 
 // Iniciar servidor
-app.listen(config.server.port, config.server.host, () => {
-    console.log(`🚀 Servidor rodando na porta ${config.server.port}`);
-    console.log(`📍 Acesse: http://localhost:${config.server.port}`);
-    console.log(`📖 Documentação: http://localhost:${config.server.port}/docs`);
-    console.log(`📊 Dashboard: http://localhost:${config.server.port}/logs`);
-    console.log(`🔐 ZeroTier Status: http://localhost:${config.server.port}/zerotier/status\n`);
+app.listen(config.server.port, config.server.host, async () => {
+    const { logStartup } = await import('./src/utils/startupLogger.js');
+    await logStartup();
 });
