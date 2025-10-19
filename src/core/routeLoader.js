@@ -45,13 +45,15 @@ export async function autoLoadRoutes(app) {
                     const routeModule = await import(`file://${routePath}`);
                     
                     if (routeModule.default) {
-                        app.use(routeModule.default);
+                        // Registrar rotas com prefixo /api/{category}
+                        app.use(`/api/${category}`, routeModule.default);
                         loadedRoutes.push({
                             category,
                             file: routeFile,
-                            path: categoryPath
+                            path: categoryPath,
+                            prefix: `/api/${category}`
                         });
-                        console.log(`   ✅ ${category}/${routeFile}`);
+                        console.log(`   ✅ ${category}/${routeFile} -> /api/${category}`);
                     } else {
                         console.log(`   ⚠️  ${category}/${routeFile} - sem export default`);
                     }
