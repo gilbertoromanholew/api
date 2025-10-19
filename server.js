@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { errorHandler, notFoundHandler } from './src/middlewares/errorHandler.js';
 import { requireAdmin, trackViolations, validateRouteAccess } from './src/middlewares/accessLevel.js';
@@ -19,7 +20,9 @@ app.use(cors({
     origin: [
         'https://api.samm.host',
         'http://localhost:3000',
+        'http://localhost:5173',
         'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173',
         /^http:\/\/10\.244\.\d+\.\d+:\d+$/,  // ZeroTier range (10.244.0.0/16)
         /^http:\/\/localhost:\d+$/,          // Localhost com qualquer porta
         /^http:\/\/127\.0\.0\.1:\d+$/        // 127.0.0.1 com qualquer porta
@@ -29,6 +32,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Middleware de segurança - filtro de IP
 app.use(ipFilter);
