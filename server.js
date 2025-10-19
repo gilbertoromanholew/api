@@ -163,7 +163,12 @@ app.use(notFoundHandler);  // 404 - Rota não encontrada
 app.use(errorHandler);     // Erro genérico
 
 // Iniciar servidor
-app.listen(config.server.port, config.server.host, async () => {
-    const { logStartup } = await import('./src/utils/startupLogger.js');
-    await logStartup();
+app.listen(config.server.port, config.server.host, () => {
+    // Importar e executar logs de inicialização
+    import('./src/utils/startupLogger.js')
+        .then(({ logStartup }) => logStartup())
+        .catch(() => {
+            // Fallback caso o logger falhe
+            console.log(`\n� Servidor rodando em ${config.server.host}:${config.server.port}\n`);
+        });
 });
