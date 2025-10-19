@@ -3,6 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Debug: Mostrar configuração do Supabase
+console.log('\n🔧 Configuração Supabase:');
+console.log(`   URL: ${process.env.SUPABASE_URL || '❌ NÃO CONFIGURADA'}`);
+console.log(`   ANON_KEY: ${process.env.SUPABASE_ANON_KEY ? '✅ Configurada' : '❌ NÃO CONFIGURADA'}`);
+console.log(`   SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurada' : '❌ NÃO CONFIGURADA'}\n`);
+
 // Validar variáveis de ambiente
 if (!process.env.SUPABASE_URL) {
     throw new Error('❌ SUPABASE_URL não configurada no .env');
