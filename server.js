@@ -18,10 +18,14 @@ const app = express();
 // Middlewares globais
 app.use(cors({
     origin: [
-        'https://samm.host',                 // Frontend PRODUÇÃO
-        'https://api.samm.host',             // API PRODUÇÃO
-        'http://localhost:3000',
-        'http://localhost:5173',
+        'http://localhost',                  // Frontend na porta 80 (rede local VPS)
+        'http://localhost:80',
+        'http://127.0.0.1',
+        'http://127.0.0.1:80',
+        'https://samm.host',                 // Frontend público (se usar Nginx/Caddy)
+        'https://api.samm.host',             // API pública (se usar Nginx/Caddy)
+        'http://localhost:3000',             // API local
+        'http://localhost:5173',             // Dev local
         'http://127.0.0.1:3000',
         'http://127.0.0.1:5173',
         /^http:\/\/10\.244\.\d+\.\d+:\d+$/,  // ZeroTier range (10.244.0.0/16)

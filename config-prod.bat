@@ -3,13 +3,13 @@ chcp 65001 >nul
 cls
 echo.
 echo ================================================
-echo   🚀 CONFIGURAÇÃO PARA PRODUÇÃO
+echo   🚀 API - CONFIGURAÇÃO PARA PRODUÇÃO
 echo ================================================
 echo.
 echo ⚠️  ATENÇÃO: Isso vai configurar para PRODUÇÃO!
 echo.
-echo    Frontend: https://samm.host
-echo    API:      https://api.samm.host
+echo    API:      localhost:3000 (rede local VPS)
+echo    Frontend: localhost:80 (rede local VPS)
 echo.
 set /p confirm="Tem certeza? (S/N): "
 if /i not "%confirm%"=="S" (
@@ -20,99 +20,69 @@ if /i not "%confirm%"=="S" (
 )
 
 echo.
-echo Configurando ambiente para PRODUÇÃO...
+echo Configurando API para PRODUÇÃO (rede local VPS)...
 echo.
-
-REM ===================================
-REM Frontend - tools-website-builder
-REM ===================================
-echo [1/2] Configurando Frontend (.env)...
-cd /d "%~dp0..\tools-website-builder"
-
-(
-echo # Frontend - Vue App
-echo VITE_APP_NAME="AJI - Assessora Jurídica Inteligente"
-echo VITE_APP_VERSION=2.0.0
-echo.
-echo # API Backend ^(Express^) - PRODUÇÃO
-echo VITE_API_URL=https://api.samm.host
-echo.
-echo # ⚠️ SUPABASE REMOVIDO DO FRONTEND
-echo # Todas as operações agora passam pela API backend
-) > .env
-
-if %errorlevel% equ 0 (
-    echo    ✅ Frontend configurado para https://api.samm.host
-) else (
-    echo    ❌ Erro ao configurar frontend
-    pause
-    exit /b 1
-)
 
 REM ===================================
 REM Backend - api
 REM ===================================
-echo.
-echo [2/2] Configurando Backend (.env)...
+echo [1/1] Configurando Backend (.env)...
 cd /d "%~dp0"
 
-REM Ler o arquivo .env atual e modificar apenas FRONTEND_URL
-powershell -Command "(Get-Content .env) -replace 'FRONTEND_URL=.*', 'FRONTEND_URL=https://samm.host' | Set-Content .env"
+REM Atualizar variáveis no .env
+powershell -Command "(Get-Content .env) -replace 'HOST=.*', 'HOST=127.0.0.1' | Set-Content .env.tmp; Move-Item -Force .env.tmp .env"
+powershell -Command "(Get-Content .env) -replace 'ALLOWED_IPS=.*', 'ALLOWED_IPS=127.0.0.1,localhost,::1' | Set-Content .env.tmp; Move-Item -Force .env.tmp .env"
+powershell -Command "(Get-Content .env) -replace 'FRONTEND_URL=.*', 'FRONTEND_URL=http://localhost' | Set-Content .env.tmp; Move-Item -Force .env.tmp .env"
 
 if %errorlevel% equ 0 (
-    echo    ✅ Backend configurado para https://samm.host
+    echo    ✅ Backend configurado para rede local
 ) else (
     echo    ❌ Erro ao configurar backend
     pause
     exit /b 1
 )
 
-REM ===================================
-REM Atualizar CORS no server.js
-REM ===================================
-echo.
-echo [IMPORTANTE] Atualizando CORS no server.js...
-echo.
-echo ⚠️  ATENÇÃO: Você precisa adicionar manualmente no server.js:
-echo.
-echo    origin: [
-echo        'https://samm.host',           // ^<-- ADICIONAR
-echo        'https://api.samm.host',
-echo        // ... resto
-echo    ]
-echo.
+if %errorlevel% equ 0 (
+    echo    ✅ Backend configurado para rede local
+) else (
+    echo    ❌ Erro ao configurar backend
+    pause
+    exit /b 1
+)
 
 echo.
 echo ================================================
-echo   ✅ CONFIGURAÇÃO PARA PRODUÇÃO COMPLETA!
+echo   ✅ API CONFIGURADA PARA PRODUÇÃO!
 echo ================================================
 echo.
-echo   Frontend: https://samm.host
-echo   API:      https://api.samm.host
+echo   API:      localhost:3000 (rede local)
+echo   Frontend: localhost:80 (rede local)
 echo.
 echo   📋 PRÓXIMOS PASSOS:
 echo.
-echo   1. Adicionar 'https://samm.host' no CORS do server.js
-echo.
-echo   2. Configurar Supabase Coolify:
+echo   1. Configurar Supabase Coolify:
 echo      - ADDITIONAL_REDIRECT_URLS=https://samm.host/auth*,https://samm.host/*
 echo      - GOTRUE_SITE_URL=https://samm.host
 echo.
-echo   3. Configurar SMTP no Supabase ^(OBRIGATÓRIO^):
+echo   2. Configurar SMTP no Supabase (OBRIGATÓRIO):
 echo      - SMTP_HOST=smtp.sendgrid.net
 echo      - SMTP_PORT=587
 echo      - SMTP_USER=apikey
 echo      - SMTP_PASS=SUA_API_KEY
 echo      - SMTP_SENDER=noreply@samm.host
 echo.
-echo   4. Build do frontend:
-echo      cd tools-website-builder
-echo      npm run build
-echo.
-echo   5. Subir API:
+echo   3. Subir API na VPS:
 echo      cd api
 echo      npm start
-echo      ^(ou pm2 start server.js --name aji-api^)
+echo      (ou pm2 start server.js --name aji-api)
+echo.
+echo   4. Configurar firewall:
+echo      sudo ufw deny 3000    (bloquear API externamente)
+echo      sudo ufw allow 80     (frontend)
+echo      sudo ufw allow 443    (HTTPS)
+echo.
+echo   5. Configurar Nginx apenas para frontend:
+echo      Server na porta 443 apontando para localhost:80
 echo.
 echo ================================================
 echo.

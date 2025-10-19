@@ -3,13 +3,13 @@ chcp 65001 >nul
 cls
 echo.
 echo ================================================
-echo   📋 MENU DE CONFIGURAÇÃO - AJI
+echo   📋 API - MENU DE CONFIGURAÇÃO
 echo ================================================
 echo.
 echo   Escolha o ambiente:
 echo.
-echo   [1] 🏠 DESENVOLVIMENTO (localhost)
-echo   [2] 🚀 PRODUÇÃO (samm.host)
+echo   [1] 🏠 DESENVOLVIMENTO (localhost:5173)
+echo   [2] 🚀 PRODUÇÃO (rede local VPS)
 echo   [3] ❌ Sair
 echo.
 echo ================================================
