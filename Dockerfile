@@ -11,7 +11,7 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copiar os arquivos estáticos da sua pasta 'dist' (que está no GitHub)
 # para o diretório público do Nginx
 # IMPORTANTE: Se a pasta 'dist' não estiver na raiz, ajuste o caminho.
-COPY ./dist/ /usr/share/nginx/html/
+COPY ./dist-api/ /usr/share/nginx/html/
 
 # Copiar configuração customizada do Nginx (com proxy reverso para API)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
