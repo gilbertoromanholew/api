@@ -60,11 +60,19 @@ router.post('/check-cpf', async (req, res) => {
             throw error;
         }
 
+        // Mascarar email para segurança (LGPD)
+        let maskedEmail = null;
+        if (data?.email) {
+            const [localPart, domain] = data.email.split('@');
+            const visibleChars = Math.min(3, Math.floor(localPart.length / 2));
+            maskedEmail = localPart.substring(0, visibleChars) + '***' + '@' + domain;
+        }
+
         res.json({
             success: true,
             data: {
                 exists: !!data,
-                email: data?.email || null,
+                email: maskedEmail, // Email mascarado para segurança
                 cpf: cleanCPF
             },
             message: data ? 'CPF já cadastrado' : 'CPF disponível'
