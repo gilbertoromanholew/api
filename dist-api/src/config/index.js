@@ -7,9 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Debug: verificar se o .env existe e tentar carregá-lo
-const envPath = path.resolve(__dirname, '../../../.env');
+const envPath = path.resolve(process.cwd(), '.env');  // Usar process.cwd() em vez de __dirname
 console.log(`🔍 Procurando .env em: ${envPath}`);
-console.log(`📁 Diretório atual: ${process.cwd()}`);
+console.log(`📁 Diretório atual (process.cwd()): ${process.cwd()}`);
 console.log(`📂 __dirname: ${__dirname}`);
 
 if (fs.existsSync(envPath)) {
@@ -18,13 +18,11 @@ if (fs.existsSync(envPath)) {
     console.log('📄 Conteúdo do .env (primeiras 200 chars):', envContent.substring(0, 200));
 } else {
     console.log('❌ Arquivo .env NÃO encontrado');
-    console.log('📋 Arquivos no diretório:', fs.readdirSync(path.dirname(envPath)));
+    console.log('📋 Arquivos no diretório atual:', fs.readdirSync(process.cwd()));
 }
 
-const result = dotenv.config();
+const result = dotenv.config({ path: envPath });  // Especificar o caminho explicitamente
 console.log('🔧 dotenv.config() result:', result);
-
-dotenv.config();
 
 // Debug: mostrar variáveis carregadas
 console.log('🔍 Variáveis de ambiente carregadas:');
