@@ -192,6 +192,13 @@ app.listen(config.server.port, config.server.host, () => {
         .then(({ logStartup }) => logStartup())
         .catch(() => {
             // Fallback caso o logger falhe
-            console.log(`\n� Servidor rodando em ${config.server.host}:${config.server.port}\n`);
+            console.log(`\n🚀 Servidor rodando em ${config.server.host}:${config.server.port}\n`);
+        });
+    
+    // Iniciar Alert Worker (Fase 3)
+    import('./src/utils/alertSystem.js')
+        .then(({ startAlertWorker }) => startAlertWorker())
+        .catch((err) => {
+            console.error('⚠️  Erro ao iniciar Alert Worker:', err);
         });
 });

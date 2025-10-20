@@ -1,7 +1,8 @@
 import rateLimit from 'express-rate-limit';
+import { analyzeAndAlert } from '../utils/alertSystem.js';
 
 /**
- * DUAL RATE LIMITER - FASE 2
+ * DUAL RATE LIMITER - FASE 2/3
  * 
  * Sistema de rate limiting que rastreia tentativas por IP E por CPF simultaneamente.
  * 
@@ -10,11 +11,13 @@ import rateLimit from 'express-rate-limit';
  * - Limiter por CPF: Mais restritivo (protege contas individuais)
  * - Bloqueio progressivo: Informa qual dos dois limites foi excedido
  * - Whitelist: IPs confiáveis pulam o rate limiting
+ * - NOVO (Fase 3): Sistema de alertas integrado
  * 
  * ARQUITETURA:
  * - MemoryStore customizado com TTL automático
  * - Rastreamento separado de IP e CPF
  * - Logging detalhado de todas as tentativas
+ * - Análise de ameaças e geração de alertas
  */
 
 // ============================================================================
@@ -344,6 +347,21 @@ function createDualRateLimiter(options = {}) {
                     cpfLimit: cpfMax
                 }
             });
+        }
+
+        // Analisar tentativas e gerar alertas se necessário (Fase 3)
+        try {
+            analyzeAndAlert({
+                ip,
+                cpf,
+                ipAttempts: ipCount,
+                cpfAttempts: cpfCount,
+                ipLimit: ipMax,
+                cpfLimit: cpfMax
+            });
+        } catch (err) {
+            console.error('[Dual Rate Limiter] Erro ao analisar alertas:', err);
+            // Não bloquear requisição por erro no sistema de alertas
         }
 
         // Adicionar informações ao request para uso posterior

@@ -9,6 +9,8 @@ import {
     loginLimiter
 } from '../middlewares/rateLimiter.js';
 import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
+import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
+import { alertStore } from '../utils/alertSystem.js';
 
 const router = express.Router();
 
@@ -1226,21 +1228,27 @@ router.get('/rate-limit-status', async (req, res) => {
 /**
  * GET /auth/security-stats
  * Estatísticas gerais de segurança (apenas para admins)
- * TODO: Adicionar autenticação de admin
+ * Requer: autenticação + role admin
  */
-router.get('/security-stats', async (req, res) => {
+router.get('/security-stats', requireAuth, requireAdmin, async (req, res) => {
     try {
-        // TODO: Verificar se usuário é admin
-        // const { user } = req; // Após implementar middleware de auth
-
         const stats = dualStore.getStats();
         const recentLogs = dualStore.getRecentLogs(50);
+        const alertStats = alertStore.getStats();
+        const recentAlerts = alertStore.getAllAlerts(20);
 
         res.json({
             success: true,
             data: {
-                stats,
+                rateLimiting: stats,
+                alerts: alertStats,
                 recentAttempts: recentLogs,
+                recentAlerts,
+                adminUser: {
+                    id: req.user.id,
+                    email: req.user.email,
+                    role: req.user.role
+                },
                 timestamp: new Date().toISOString()
             }
         });
@@ -1256,18 +1264,20 @@ router.get('/security-stats', async (req, res) => {
 /**
  * POST /auth/reset-rate-limit
  * Reseta rate limit de um IP ou CPF específico (apenas para admins)
- * TODO: Adicionar autenticação de admin
+ * Requer: autenticação + role admin
  */
-router.post('/reset-rate-limit', async (req, res) => {
+router.post('/reset-rate-limit', requireAuth, requireAdmin, async (req, res) => {
     try {
-        // TODO: Verificar se usuário é admin
         const { ip, cpf, resetAll } = req.body;
+
+        console.log(`[Admin Action] Reset rate limit por ${req.user.email}: IP=${ip}, CPF=${cpf}, resetAll=${resetAll}`);
 
         if (resetAll === true) {
             dualStore.resetAll();
             return res.json({
                 success: true,
-                message: 'Todos os rate limits foram resetados'
+                message: 'Todos os rate limits foram resetados',
+                admin: req.user.email
             });
         }
 
@@ -1281,13 +1291,154 @@ router.post('/reset-rate-limit', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Rate limit resetado com sucesso'
+            message: 'Rate limit resetado com sucesso',
+            admin: req.user.email
         });
     } catch (error) {
         console.error('Erro ao resetar rate limit:', error);
         res.status(500).json({
             success: false,
             error: 'Erro ao resetar rate limit'
+        });
+    }
+});
+
+/**
+ * GET /auth/alerts
+ * Lista todos os alertas de segurança (apenas para admins)
+ * Requer: autenticação + role admin
+ */
+router.get('/alerts', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { limit = 100, status } = req.query;
+        
+        let alerts = alertStore.getAllAlerts(parseInt(limit));
+        
+        // Filtrar por status se fornecido
+        if (status) {
+            alerts = alerts.filter(a => a.status === status);
+        }
+
+        const stats = alertStore.getStats();
+
+        res.json({
+            success: true,
+            data: {
+                alerts,
+                stats,
+                filters: { limit, status },
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao buscar alertas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao buscar alertas'
+        });
+    }
+});
+
+/**
+ * POST /auth/alerts/process
+ * Processa fila de alertas pendentes manualmente (apenas para admins)
+ * Requer: autenticação + role admin
+ */
+router.post('/alerts/process', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        console.log(`[Admin Action] Processamento manual de alertas por ${req.user.email}`);
+        
+        const { processAlertQueue } = await import('../utils/alertSystem.js');
+        const result = await processAlertQueue();
+
+        res.json({
+            success: true,
+            data: result,
+            message: `${result.sent} alertas enviados, ${result.failed} falharam`,
+            admin: req.user.email
+        });
+    } catch (error) {
+        console.error('Erro ao processar alertas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao processar alertas',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * GET /auth/dashboard
+ * Dashboard completo de segurança (apenas para admins)
+ * Requer: autenticação + role admin
+ */
+router.get('/dashboard', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const rateLimitStats = dualStore.getStats();
+        const recentAttempts = dualStore.getRecentLogs(100);
+        const alertStats = alertStore.getStats();
+        const recentAlerts = alertStore.getAllAlerts(50);
+        const pendingAlerts = alertStore.getPendingAlerts();
+
+        // Calcular métricas adicionais
+        const now = Date.now();
+        const last1h = recentAttempts.filter(a => 
+            new Date(a.timestamp).getTime() > (now - 60 * 60 * 1000)
+        );
+        const last24h = recentAttempts.filter(a => 
+            new Date(a.timestamp).getTime() > (now - 24 * 60 * 60 * 1000)
+        );
+
+        const blockedAttemptsLast1h = last1h.filter(a => a.ipBlocked || a.cpfBlocked).length;
+        const blockedAttemptsLast24h = last24h.filter(a => a.ipBlocked || a.cpfBlocked).length;
+
+        // Top IPs com mais tentativas
+        const ipCounts = {};
+        recentAttempts.forEach(a => {
+            ipCounts[a.ip] = (ipCounts[a.ip] || 0) + 1;
+        });
+        const topIPs = Object.entries(ipCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([ip, count]) => ({ ip, count }));
+
+        res.json({
+            success: true,
+            data: {
+                overview: {
+                    totalIPsTracked: rateLimitStats.totalIPsTracked,
+                    totalCPFsTracked: rateLimitStats.totalCPFsTracked,
+                    totalAlertsCreated: alertStats.total,
+                    pendingAlerts: pendingAlerts.length,
+                    blockedAttemptsLast1h,
+                    blockedAttemptsLast24h
+                },
+                rateLimiting: rateLimitStats,
+                alerts: {
+                    stats: alertStats,
+                    recent: recentAlerts,
+                    pending: pendingAlerts
+                },
+                attempts: {
+                    last1h: last1h.length,
+                    last24h: last24h.length,
+                    recent: recentAttempts.slice(0, 20)
+                },
+                topIPs,
+                adminUser: {
+                    id: req.user.id,
+                    email: req.user.email,
+                    role: req.user.role
+                },
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao buscar dashboard:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao buscar dashboard',
+            message: error.message
         });
     }
 });

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   referral_code VARCHAR(20) UNIQUE NOT NULL,
   referred_by UUID REFERENCES auth.users(id),
   email_verified BOOLEAN DEFAULT false,
+  role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE INDEX IF NOT EXISTS idx_profiles_cpf ON profiles(cpf);
 CREATE INDEX IF NOT EXISTS idx_profiles_referral_code ON profiles(referral_code);
 CREATE INDEX IF NOT EXISTS idx_profiles_referred_by ON profiles(referred_by);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
 
 -- ============================================
 -- 2. SISTEMA DE PONTOS (Duplo)

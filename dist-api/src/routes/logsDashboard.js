@@ -2649,6 +2649,74 @@ export const getLogsDashboard = (req, res) => {
             </div>
         </div>
 
+        <!-- Rate Limiting & Alertas de Segurança (Fase 3) -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;" onclick="toggleRateLimitSection()">
+                    <span id="ratelimit-section-icon">▶</span>
+                    🛡️ Rate Limiting & Alertas de Segurança
+                    <span class="badge badge-warning" id="ratelimit-status-badge">Carregando...</span>
+                </h2>
+            </div>
+            <div id="ratelimit-section-content" style="display: none; padding-top: 20px;">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card info">
+                        <div class="stat-label">🌐 IPs Monitorados</div>
+                        <div class="stat-value" id="rl-ips-tracked">...</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-label">👤 CPFs Monitorados</div>
+                        <div class="stat-value" id="rl-cpfs-tracked">...</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">⚠️ Alertas Pendentes</div>
+                        <div class="stat-value" id="rl-pending-alerts">...</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-label">🚨 Tentativas Bloqueadas (1h)</div>
+                        <div class="stat-value" id="rl-blocked-1h">...</div>
+                    </div>
+                </div>
+
+                <!-- Alertas Recentes -->
+                <div style="margin-top: 25px;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 16px; color: var(--warning); display: flex; align-items: center; gap: 8px;">
+                        <span>🔔</span> Alertas Recentes
+                        <button class="btn" style="margin-left: auto; padding: 8px 15px; font-size: 13px;" onclick="refreshRateLimitData()">
+                            🔄 Atualizar
+                        </button>
+                    </h3>
+                    <div id="recent-alerts-container" style="max-height: 400px; overflow-y: auto;">
+                        <div class="loading">Carregando alertas...</div>
+                    </div>
+                </div>
+
+                <!-- Top IPs com mais tentativas -->
+                <div style="margin-top: 25px;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 16px; color: var(--info);">
+                        🏆 Top 10 IPs (Mais Tentativas)
+                    </h3>
+                    <div id="top-ips-container" style="max-height: 350px; overflow-y: auto;">
+                        <div class="loading">Carregando top IPs...</div>
+                    </div>
+                </div>
+
+                <!-- Métricas de Bloqueio -->
+                <div style="margin-top: 25px; padding: 20px; background: rgba(220, 38, 38, 0.1); border-radius: 12px; border-left: 4px solid var(--danger);">
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--danger);">🛡️ Detalhes de Proteção:</h4>
+                    <ul style="margin: 0; padding-left: 25px; font-size: 13px; line-height: 2; color: var(--text-muted);">
+                        <li><strong>Bloqueios (Última 1h):</strong> <span id="rl-blocks-1h-detail">...</span></li>
+                        <li><strong>Bloqueios (Últimas 24h):</strong> <span id="rl-blocks-24h-detail">...</span></li>
+                        <li><strong>Total de Alertas Criados:</strong> <span id="rl-total-alerts">...</span></li>
+                        <li><strong>Alertas por Tipo:</strong> 
+                            <div id="rl-alerts-by-type" style="margin-top: 5px; padding-left: 20px;">...</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <!-- ZeroTier Status -->
         <div class="section">
             <div class="section-header">
@@ -2908,6 +2976,256 @@ export const getLogsDashboard = (req, res) => {
                 console.error('Erro ao detectar meu IP:', error);
             }
         }
+
+        // ============================================
+        // FASE 3: Rate Limiting & Alertas
+        // ============================================
+
+        /**
+         * Carregar dados de Rate Limiting e Alertas
+         * Chamado automaticamente no loadGeneralStats()
+         */
+        async function loadRateLimitData() {
+            try {
+                const response = await fetch('/auth/dashboard');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    console.error('Erro ao carregar dados de rate limiting:', data.error);
+                    document.getElementById('ratelimit-status-badge').textContent = 'Erro';
+                    document.getElementById('ratelimit-status-badge').className = 'badge badge-danger';
+                    return;
+                }
+
+                const { overview, alerts, attempts, topIPs } = data.data;
+
+                // Atualizar badge de status
+                const badge = document.getElementById('ratelimit-status-badge');
+                if (overview.pendingAlerts > 0) {
+                    badge.textContent = \`\${overview.pendingAlerts} Pendente(s)\`;
+                    badge.className = 'badge badge-warning';
+                } else {
+                    badge.textContent = 'Ativo';
+                    badge.className = 'badge badge-success';
+                }
+
+                // Atualizar cards de estatísticas
+                document.getElementById('rl-ips-tracked').textContent = overview.totalIPsTracked || 0;
+                document.getElementById('rl-cpfs-tracked').textContent = overview.totalCPFsTracked || 0;
+                document.getElementById('rl-pending-alerts').textContent = overview.pendingAlerts || 0;
+                document.getElementById('rl-blocked-1h').textContent = overview.blockedAttemptsLast1h || 0;
+
+                // Atualizar métricas detalhadas
+                document.getElementById('rl-blocks-1h-detail').textContent = overview.blockedAttemptsLast1h || 0;
+                document.getElementById('rl-blocks-24h-detail').textContent = overview.blockedAttemptsLast24h || 0;
+                document.getElementById('rl-total-alerts').textContent = alerts.stats.total || 0;
+
+                // Alertas por tipo
+                if (alerts.stats.byType) {
+                    const typesList = Object.entries(alerts.stats.byType)
+                        .map(([type, count]) => {
+                            const typeLabels = {
+                                'brute_force': '🔨 Força Bruta',
+                                'suspicious_activity': '🕵️ Atividade Suspeita',
+                                'account_compromise': '⚠️ Comprometimento de Conta'
+                            };
+                            return \`<li>\${typeLabels[type] || type}: <strong>\${count}</strong></li>\`;
+                        })
+                        .join('');
+                    document.getElementById('rl-alerts-by-type').innerHTML = \`<ul style="margin: 0; padding-left: 20px;">\${typesList}</ul>\`;
+                } else {
+                    document.getElementById('rl-alerts-by-type').textContent = 'Nenhum alerta';
+                }
+
+                // Renderizar alertas recentes
+                renderRecentAlerts(alerts.recent || []);
+
+                // Renderizar top IPs
+                renderTopIPs(topIPs || []);
+
+            } catch (error) {
+                console.error('Erro ao carregar dados de rate limiting:', error);
+                document.getElementById('ratelimit-status-badge').textContent = 'Offline';
+                document.getElementById('ratelimit-status-badge').className = 'badge badge-danger';
+            }
+        }
+
+        /**
+         * Renderizar lista de alertas recentes
+         */
+        function renderRecentAlerts(alerts) {
+            const container = document.getElementById('recent-alerts-container');
+            
+            if (alerts.length === 0) {
+                container.innerHTML = \`
+                    <div style="padding: 30px; text-align: center; color: var(--text-muted);">
+                        <div style="font-size: 3em; margin-bottom: 10px;">✅</div>
+                        <div>Nenhum alerta de segurança</div>
+                    </div>
+                \`;
+                return;
+            }
+
+            const alertsHTML = alerts.map(alert => {
+                const typeIcons = {
+                    'brute_force': '🔨',
+                    'suspicious_activity': '🕵️',
+                    'account_compromise': '⚠️'
+                };
+                const statusColors = {
+                    'pending': 'warning',
+                    'sent': 'success',
+                    'failed': 'danger'
+                };
+                const statusLabels = {
+                    'pending': 'Pendente',
+                    'sent': 'Enviado',
+                    'failed': 'Falhou'
+                };
+
+                const timestamp = new Date(alert.timestamp).toLocaleString('pt-BR');
+                const icon = typeIcons[alert.type] || '🔔';
+                const statusColor = statusColors[alert.status] || 'info';
+                const statusLabel = statusLabels[alert.status] || alert.status;
+
+                return \`
+                    <div style="
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        background: rgba(255, 255, 255, 0.03);
+                        border-radius: 8px;
+                        border-left: 4px solid var(--\${statusColor});
+                        transition: all 0.3s;
+                    " onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
+                       onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.5em;">\${icon}</span>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 14px;">\${alert.message}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">
+                                        📅 \${timestamp}
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="badge badge-\${statusColor}" style="font-size: 11px;">
+                                \${statusLabel}
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); padding-left: 42px;">
+                            <strong>CPF:</strong> \${alert.cpf} | 
+                            <strong>IP:</strong> \${alert.ip || 'N/A'}
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+
+            container.innerHTML = alertsHTML;
+        }
+
+        /**
+         * Renderizar top IPs com mais tentativas
+         */
+        function renderTopIPs(topIPs) {
+            const container = document.getElementById('top-ips-container');
+            
+            if (topIPs.length === 0) {
+                container.innerHTML = \`
+                    <div style="padding: 30px; text-align: center; color: var(--text-muted);">
+                        <div style="font-size: 3em; margin-bottom: 10px;">📊</div>
+                        <div>Nenhum dado disponível</div>
+                    </div>
+                \`;
+                return;
+            }
+
+            const maxCount = topIPs[0].count;
+            const topIPsHTML = topIPs.map((item, index) => {
+                const percentage = (item.count / maxCount) * 100;
+                const medalIcons = ['🥇', '🥈', '🥉'];
+                const medal = index < 3 ? medalIcons[index] : \`\${index + 1}º\`;
+                
+                return \`
+                    <div style="
+                        margin-bottom: 12px;
+                        padding: 12px;
+                        background: rgba(255, 255, 255, 0.03);
+                        border-radius: 8px;
+                        transition: all 0.3s;
+                    " onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
+                       onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="font-size: 1.3em; min-width: 35px;">\${medal}</span>
+                                <span style="font-family: 'Courier New', monospace; font-weight: 600;">
+                                    \${item.ip}
+                                </span>
+                            </div>
+                            <span style="font-weight: 700; color: var(--primary);">
+                                \${item.count} tentativas
+                            </span>
+                        </div>
+                        <div style="
+                            height: 6px;
+                            background: rgba(255, 255, 255, 0.1);
+                            border-radius: 3px;
+                            overflow: hidden;
+                        ">
+                            <div style="
+                                height: 100%;
+                                width: \${percentage}%;
+                                background: linear-gradient(90deg, var(--primary), var(--primary-light));
+                                border-radius: 3px;
+                                transition: width 0.5s ease;
+                            "></div>
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+
+            container.innerHTML = topIPsHTML;
+        }
+
+        /**
+         * Atualizar dados de rate limiting manualmente
+         */
+        async function refreshRateLimitData() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Atualizando...';
+            btn.disabled = true;
+
+            try {
+                await loadRateLimitData();
+                showToast('✅ Dados atualizados com sucesso!', 'success');
+            } catch (error) {
+                showToast('❌ Erro ao atualizar dados', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        /**
+         * Toggle da seção de Rate Limiting
+         */
+        function toggleRateLimitSection() {
+            const content = document.getElementById('ratelimit-section-content');
+            const icon = document.getElementById('ratelimit-section-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+                loadRateLimitData(); // Carregar dados ao abrir
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // ============================================
+        // FIM: Rate Limiting & Alertas
+        // ============================================
 
         // Carregar estatísticas gerais
         async function loadGeneralStats() {
@@ -5254,6 +5572,12 @@ export const getLogsDashboard = (req, res) => {
             const unifiedContent = document.getElementById('unified-section-content');
             if (unifiedContent && unifiedContent.style.display !== 'none') {
                 loadUnifiedList(true); // true = preservar estado
+            }
+
+            // 🔄 FASE 3: Auto-refresh de Rate Limiting se estiver aberto
+            const rateLimitContent = document.getElementById('ratelimit-section-content');
+            if (rateLimitContent && rateLimitContent.style.display !== 'none') {
+                loadRateLimitData();
             }
         }
         
