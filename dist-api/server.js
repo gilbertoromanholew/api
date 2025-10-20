@@ -40,6 +40,15 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Health check endpoint (para Docker healthcheck) - ANTES do filtro de IP
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // Middleware de segurança - filtro de IP
 app.use(ipFilter);
 
