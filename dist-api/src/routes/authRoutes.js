@@ -439,7 +439,7 @@ router.post('/login-cpf', loginLimiter, async (req, res) => {
 
         // 1️⃣ Buscar profile pelo CPF para pegar o ID (que é FK de auth.users.id)
         console.log('🔍 Buscando profile pelo CPF em public.profiles...');
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('id, cpf, full_name')
             .eq('cpf', cleanCPF)
