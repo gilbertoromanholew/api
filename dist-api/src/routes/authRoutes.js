@@ -39,6 +39,8 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
     try {
         const { cpf } = req.body;
 
+        console.log('📝 /check-cpf chamado com:', { cpf: cpf ? 'presente' : 'ausente', body: req.body });
+
         if (!cpf) {
             return res.status(400).json({
                 success: false,
@@ -48,6 +50,7 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
 
         // Limpar formatação do CPF
         const cleanCPF = cpf.replace(/\D/g, '');
+        console.log('🧹 CPF limpo:', cleanCPF);
 
         // Validar se CPF tem 11 dígitos
         if (cleanCPF.length !== 11) {
@@ -58,13 +61,17 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         }
 
         // Buscar usuário com este CPF
+        console.log('🔍 Buscando usuário no Supabase...');
         const { data, error } = await supabase
             .from('profiles')
             .select('id, email')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
+        console.log('📊 Resultado da busca:', { found: !!data, error: error?.message });
+
         if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+            console.error('❌ Erro do Supabase:', error);
             throw error;
         }
 
@@ -79,6 +86,8 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         // Mascarar CPF para segurança (LGPD Art. 46)
         const maskedCPF = cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.$3-**');
 
+        console.log('✅ Resposta preparada:', { exists: !!data, maskedEmail, maskedCPF });
+
         res.json({
             success: true,
             data: {
@@ -90,6 +99,7 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('[SECURITY] Erro ao verificar CPF:', error.message);
+        console.error('[SECURITY] Stack trace:', error.stack);
         res.status(500).json({
             success: false,
             error: 'Erro ao verificar CPF'
