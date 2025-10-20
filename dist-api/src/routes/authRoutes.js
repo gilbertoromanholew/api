@@ -713,11 +713,14 @@ router.post('/verify-email-token', async (req, res) => {
 
         // Confirmar email do usuário no Supabase Auth
         console.log('📧 Confirmando email do usuário:', otpData.user_id);
+        
+        const now = new Date().toISOString();
         const { data: updateData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
             otpData.user_id,
             { 
-                email_confirmed: true,
-                email_confirmed_at: new Date().toISOString()
+                email_confirm: true,
+                email_confirmed_at: now,
+                confirmed_at: now
             }
         );
 
@@ -727,7 +730,10 @@ router.post('/verify-email-token', async (req, res) => {
             throw new Error(`Erro ao confirmar email: ${confirmError.message}`);
         }
         
-        console.log('✅ Email confirmado com sucesso no Supabase Auth');
+        console.log('✅ Email confirmado com sucesso:', {
+            email_confirmed_at: now,
+            confirmed_at: now
+        });
 
         // Atualizar perfil
         console.log('👤 Atualizando perfil do usuário');
