@@ -39,9 +39,15 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
     try {
         const { cpf } = req.body;
 
-        console.log('📝 /check-cpf chamado com:', { cpf: cpf ? 'presente' : 'ausente', body: req.body });
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📝 /check-cpf CHAMADO');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('CPF recebido:', cpf);
+        console.log('Body completo:', JSON.stringify(req.body, null, 2));
+        console.log('Headers:', JSON.stringify(req.headers, null, 2));
 
         if (!cpf) {
+            console.log('❌ CPF não fornecido');
             return res.status(400).json({
                 success: false,
                 error: 'CPF é obrigatório'
@@ -51,9 +57,11 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         // Limpar formatação do CPF
         const cleanCPF = cpf.replace(/\D/g, '');
         console.log('🧹 CPF limpo:', cleanCPF);
+        console.log('🧹 Tamanho do CPF limpo:', cleanCPF.length);
 
         // Validar se CPF tem 11 dígitos
         if (cleanCPF.length !== 11) {
+            console.log('❌ CPF inválido - tamanho diferente de 11');
             return res.status(400).json({
                 success: false,
                 error: 'CPF deve conter 11 dígitos'
@@ -61,21 +69,28 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         }
 
         // Buscar usuário com este CPF na tabela profiles
-        console.log('🔍 Buscando usuário no Supabase profiles...');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔍 BUSCANDO NO SUPABASE');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('Tabela: profiles');
+        console.log('Campo de busca: cpf');
+        console.log('Valor de busca:', cleanCPF);
+        console.log('Tipo do valor:', typeof cleanCPF);
+        
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('id, cpf, full_name')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
-        console.log('📊 Resultado da busca profile:', { 
-            found: !!profileData, 
-            error: profileError?.message,
-            cpfBuscado: cleanCPF,
-            profileId: profileData?.id,
-            profileCpf: profileData?.cpf,
-            profileName: profileData?.full_name
-        });
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📊 RESULTADO DA BUSCA');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('Encontrado:', !!profileData);
+        console.log('Profile completo:', JSON.stringify(profileData, null, 2));
+        console.log('Erro:', profileError ? JSON.stringify(profileError, null, 2) : 'nenhum');
+        console.log('Código do erro:', profileError?.code);
+        console.log('Mensagem do erro:', profileError?.message);
 
         if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = not found
             console.error('❌ Erro do Supabase:', profileError);
@@ -107,16 +122,24 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         // Mascarar CPF para segurança (LGPD Art. 46)
         const maskedCPF = cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.$3-**');
 
-        console.log('✅ Resposta preparada:', { exists: !!profileData, maskedEmail, maskedCPF });
+        const exists = !!profileData;
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('✅ RESPOSTA FINAL');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('exists:', exists);
+        console.log('maskedEmail:', maskedEmail);
+        console.log('maskedCPF:', maskedCPF);
+        console.log('message:', exists ? 'CPF já cadastrado' : 'CPF disponível');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
         res.json({
             success: true,
             data: {
-                exists: !!profileData,
+                exists: exists,
                 email: maskedEmail, // Email mascarado para segurança
                 cpf: maskedCPF // CPF mascarado para segurança
             },
-            message: profileData ? 'CPF já cadastrado' : 'CPF disponível'
+            message: exists ? 'CPF já cadastrado' : 'CPF disponível'
         });
     } catch (error) {
         console.error('[SECURITY] Erro ao verificar CPF:', error.message);
