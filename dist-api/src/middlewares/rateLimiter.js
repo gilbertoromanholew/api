@@ -5,17 +5,18 @@ import rateLimit from 'express-rate-limit';
  * Protege contra ataques de força bruta e abuse
  */
 
-// Rate limiter para verificação de OTP (mais restritivo)
+// Rate limiter para verificação de OTP (balanceado)
 export const otpVerificationLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5, // Máximo 5 tentativas por janela
+    windowMs: 20 * 60 * 1000, // 20 minutos (era 15)
+    max: 10, // Máximo 10 tentativas (era 5) - código tem 6 dígitos, pode errar
     message: {
         success: false,
-        error: 'Muitas tentativas de verificação. Tente novamente em 15 minutos.',
-        retryAfter: 15
+        error: 'Por segurança, bloqueamos temporariamente as tentativas de verificação. Aguarde alguns minutos ou solicite um novo código.',
+        retryAfter: 20
     },
     standardHeaders: true, // Retorna info no `RateLimit-*` headers
     legacyHeaders: false, // Desabilita `X-RateLimit-*` headers
+    skipSuccessfulRequests: true, // Zera contador em tentativa bem-sucedida
     skip: (req) => {
         // Skip para IPs permitidos (opcional)
         return false;
@@ -24,12 +25,12 @@ export const otpVerificationLimiter = rateLimit({
 
 // Rate limiter para reenvio de código OTP
 export const otpResendLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000, // 10 minutos
-    max: 3, // Máximo 3 reenvios por janela
+    windowMs: 15 * 60 * 1000, // 15 minutos (era 10)
+    max: 5, // Máximo 5 reenvios (era 3) - mais flexível
     message: {
         success: false,
-        error: 'Muitas solicitações de reenvio. Aguarde 10 minutos.',
-        retryAfter: 10
+        error: 'Já enviamos vários códigos recentemente. Verifique sua caixa de entrada e spam antes de solicitar outro.',
+        retryAfter: 15
     },
     standardHeaders: true,
     legacyHeaders: false
@@ -37,12 +38,12 @@ export const otpResendLimiter = rateLimit({
 
 // Rate limiter para verificação de CPF
 export const cpfCheckLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutos
-    max: 10, // Máximo 10 verificações por janela
+    windowMs: 10 * 60 * 1000, // 10 minutos (era 5)
+    max: 20, // Máximo 20 verificações (era 10) - operação leve, pode ser mais permissivo
     message: {
         success: false,
-        error: 'Muitas verificações de CPF. Tente novamente em alguns minutos.',
-        retryAfter: 5
+        error: 'Você está consultando CPFs com muita frequência. Aguarde alguns instantes e tente novamente.',
+        retryAfter: 10
     },
     standardHeaders: true,
     legacyHeaders: false
@@ -50,28 +51,37 @@ export const cpfCheckLimiter = rateLimit({
 
 // Rate limiter para registro de usuário
 export const registerLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hora
-    max: 3, // Máximo 3 registros por hora
+    windowMs: 30 * 60 * 1000, // 30 minutos (era 1 hora)
+    max: 5, // Máximo 5 registros (era 3) - mais tentativas para usuários legítimos
     message: {
         success: false,
-        error: 'Muitas tentativas de registro. Tente novamente em 1 hora.',
-        retryAfter: 60
+        error: 'Muitas tentativas de cadastro. Aguarde alguns minutos ou entre em contato com o suporte se estiver enfrentando dificuldades.',
+        retryAfter: 30
     },
     standardHeaders: true,
     legacyHeaders: false
 });
 
-// Rate limiter para login
+// Rate limiter para login (balanceado para prevenir DoS contra usuário legítimo)
 export const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5, // Máximo 5 tentativas de login
+    windowMs: 10 * 60 * 1000, // 10 minutos (era 15)
+    max: 10, // Máximo 10 tentativas (era 5) - usuário pode errar senha
     message: {
         success: false,
-        error: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
-        retryAfter: 15
+        error: 'Por segurança, bloqueamos temporariamente o acesso. Aguarde alguns minutos ou recupere sua senha.',
+        retryAfter: 10
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skipSuccessfulRequests: true, // ✅ Zera contador quando login bem-sucedido
+    handler: (req, res) => {
+        res.status(429).json({
+            success: false,
+            error: 'Por segurança, bloqueamos temporariamente o acesso. Aguarde alguns minutos ou recupere sua senha.',
+            retryAfter: 10,
+            statusCode: 429
+        });
+    }
 });
 
 // Rate limiter geral para rotas de autenticação

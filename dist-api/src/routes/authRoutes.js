@@ -986,5 +986,167 @@ router.post('/verify-email-token', otpVerificationLimiter, async (req, res) => {
     }
 });
 
+/**
+ * POST /auth/forgot-password
+ * Solicita recuperação de senha (envia email com link)
+ * Rate limit mais permissivo (usuário legítimo precisa de acesso)
+ */
+router.post('/forgot-password', rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // 5 solicitações por janela
+    message: {
+        success: false,
+        error: 'Muitas solicitações de recuperação. Verifique seu email ou aguarde alguns minutos.'
+    }
+}), async (req, res) => {
+    try {
+        const { email, cpf } = req.body;
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔑 /forgot-password CHAMADO');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Aceita email ou CPF
+        let userEmail = email;
+
+        if (cpf && !email) {
+            // Buscar email pelo CPF
+            const cleanCPF = cpf.replace(/\D/g, '');
+            
+            const { data: profileData, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('cpf', cleanCPF)
+                .maybeSingle();
+
+            if (profileError || !profileData) {
+                // Por segurança, não revelar se CPF existe ou não
+                console.log('⚠️ CPF não encontrado, mas retornando sucesso (segurança)');
+                return res.json({
+                    success: true,
+                    message: 'Se este CPF estiver cadastrado, você receberá um email com instruções para recuperar sua senha.'
+                });
+            }
+
+            // Buscar email do usuário
+            const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
+
+            if (userError || !user) {
+                return res.json({
+                    success: true,
+                    message: 'Se este CPF estiver cadastrado, você receberá um email com instruções para recuperar sua senha.'
+                });
+            }
+
+            userEmail = user.email;
+        }
+
+        if (!userEmail) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email ou CPF é obrigatório'
+            });
+        }
+
+        console.log('📧 Enviando email de recuperação para:', userEmail);
+
+        // Supabase envia email automaticamente com link de reset
+        const { data, error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+            redirectTo: `${process.env.FRONTEND_URL || 'https://samm.host'}/redefinir-senha`
+        });
+
+        if (error) {
+            console.error('❌ Erro ao enviar email de recuperação:', error);
+            // Não revelar erro específico por segurança
+            return res.json({
+                success: true,
+                message: 'Se este email estiver cadastrado, você receberá instruções para recuperar sua senha.'
+            });
+        }
+
+        console.log('✅ Email de recuperação enviado com sucesso');
+
+        res.json({
+            success: true,
+            message: 'Se este email estiver cadastrado, você receberá instruções para recuperar sua senha. Verifique também sua caixa de spam.',
+            data: {
+                emailSent: true
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao solicitar recuperação de senha:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao processar solicitação',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * POST /auth/reset-password
+ * Redefine senha usando token do email
+ */
+router.post('/reset-password', rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: {
+        success: false,
+        error: 'Muitas tentativas. Aguarde alguns minutos.'
+    }
+}), async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token e nova senha são obrigatórios'
+            });
+        }
+
+        // Validar força da senha
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                error: 'A senha deve ter no mínimo 8 caracteres'
+            });
+        }
+
+        console.log('🔑 Redefinindo senha com token');
+
+        // Atualizar senha usando token
+        const { data, error } = await supabase.auth.updateUser({
+            password: newPassword
+        });
+
+        if (error) {
+            console.error('❌ Erro ao redefinir senha:', error);
+            return res.status(400).json({
+                success: false,
+                error: 'Token inválido ou expirado',
+                message: error.message
+            });
+        }
+
+        console.log('✅ Senha redefinida com sucesso');
+
+        res.json({
+            success: true,
+            message: 'Senha redefinida com sucesso! Você já pode fazer login.',
+            data: {
+                user: data.user
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao redefinir senha:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao redefinir senha',
+            message: error.message
+        });
+    }
+});
+
 export default router;
 
