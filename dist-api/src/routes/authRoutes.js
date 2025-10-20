@@ -719,8 +719,8 @@ router.post('/verify-email-token', async (req, res) => {
             otpData.user_id,
             { 
                 email_confirm: true,
-                email_confirmed_at: now,
-                confirmed_at: now
+                email_confirmed_at: now
+                // confirmed_at é uma coluna gerada automaticamente, não pode ser definida
             }
         );
 
@@ -732,7 +732,7 @@ router.post('/verify-email-token', async (req, res) => {
         
         console.log('✅ Email confirmado com sucesso:', {
             email_confirmed_at: now,
-            confirmed_at: now
+            updated_user: updateData
         });
 
         // Atualizar perfil
