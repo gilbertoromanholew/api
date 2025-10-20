@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { errorHandler, notFoundHandler } from './src/middlewares/errorHandler.js';
 import { requireAdmin, trackViolations, validateRouteAccess } from './src/middlewares/accessLevel.js';
+import { requireAuth, optionalAuth } from './src/functions/auth/authMiddleware.js';
 import { getApiInfo } from './src/routes/index.js';
 import { getApiDocs } from './src/routes/docs.js';
 import { getLogsDashboard } from './src/routes/logsDashboard.js';
@@ -67,14 +68,10 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Middleware de segurança - filtro de IP
-app.use(ipFilter);
-
-// Middleware de validação de acesso por rota
-app.use(validateRouteAccess);
-
-// Middleware de rastreamento de violações
-app.use(trackViolations);
+// =========================================================================
+// 📍 ROTAS PÚBLICAS (sem filtro de IP)
+// =========================================================================
+// Estas rotas são acessíveis a qualquer usuário da internet
 
 // 🔄 PROXY REVERSO SUPABASE
 // Redireciona /supabase/* para o Supabase interno (sem domínio público)
@@ -83,12 +80,15 @@ app.use('/supabase', supabaseProxyCors, supabaseProxy);
 // 🔐 ROTAS DE AUTENTICAÇÃO (customizadas, integradas com Supabase)
 app.use('/auth', authRoutes);
 
+// =========================================================================
+// 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
+// =========================================================================
+
 // Rotas de sistema (documentação e logs)
 app.get('/', getApiInfo);           // JSON com toda documentação (público)
 app.get('/docs', getApiDocs);       // Página HTML bonita (público)
-app.get('/logs', requireAdmin, getLogsDashboard); // 🔒 Dashboard APENAS para admin
 
-// Rota para listar funções disponíveis (público, mas filtrado por nível de acesso)
+// Rota para listar funções disponíveis (público, mas pode estar limitado por nível de acesso)
 app.get('/functions', async (req, res) => {
     try {
         const { readdir, readFile } = await import('fs/promises');
@@ -183,9 +183,22 @@ app.get('/functions', async (req, res) => {
     }
 });
 
-app.use('/logs', requireAdmin, logsRoutes);   // 🔒 API de logs APENAS para admin
-app.use('/zerotier', requireAdmin, zerotierRoutes); // 🔒 ZeroTier APENAS para admin
-app.use('/security', requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
+// =========================================================================
+// 📍 ROTAS ADMINISTRATIVAS (IP Filter + requireAdmin)
+// =========================================================================
+// Estas rotas são acessíveis APENAS via VPN (ZeroTier) ou IPs autorizados
+
+app.get('/logs', ipFilter, requireAdmin, getLogsDashboard); // 🔒 Dashboard APENAS para admin
+app.use('/logs', ipFilter, requireAdmin, logsRoutes);   // 🔒 API de logs APENAS para admin
+app.use('/zerotier', ipFilter, requireAdmin, zerotierRoutes); // 🔒 ZeroTier APENAS para admin
+app.use('/security', ipFilter, requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
+
+// =========================================================================
+// 📍 ROTAS DE API (funções dinâmicas - COM validateRouteAccess)
+// =========================================================================
+// Aplica middlewares de validação e rastreamento apenas nas rotas de API
+
+app.use('/api', validateRouteAccess, trackViolations);
 
 // Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
