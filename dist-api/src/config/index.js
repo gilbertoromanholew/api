@@ -17,28 +17,28 @@ const config = {
     
     // Configurações de segurança
     security: {
-        allowedIPs: process.env.ALLOWED_IPS?.split(',').map(ip => ip.trim()) || ['127.0.0.1', 'localhost', '::1'],
+        allowedIPs: process.env.ALLOWED_IPS?.split(',').map(ip => ip.trim()) || [],
         corsOrigin: process.env.CORS_ORIGIN || '*',
         rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW) || 60000, // 1 minuto
         rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX) || 100
     },
     
-    // Configurações do Supabase (com fallbacks)
+    // Configurações do Supabase
     supabase: {
-        url: process.env.SUPABASE_URL || 'https://mpanel.samm.host',
-        anonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxma2hmeXp5Z2FkenJ3dWdzZWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk4MjQ4NjgsImV4cCI6MjA0NTQwMDg2OH0.L1hcEF8NAmPaTutkq2qQU_3y-vdg2g4vZJM_0vUWJgA',
-        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxma2hmeXp5Z2FkenJ3dWdzZWd5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyOTgyNDg2OCwiZXhwIjoyMDQ1NDAwODY4fQ.y1R1gQOg_8FcG3YcNXIdGMTYa_y2T7KqIxg5BLIyAT4'
+        url: process.env.SUPABASE_URL,
+        anonKey: process.env.SUPABASE_ANON_KEY,
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
     },
     
     // Configurações da sessão
     session: {
-        secret: process.env.SESSION_SECRET || 'seu-secret-super-seguro-aqui-min-32-chars',
-        maxAge: parseInt(process.env.SESSION_MAX_AGE) || 86400000
+        secret: process.env.SESSION_SECRET,
+        maxAge: parseInt(process.env.SESSION_MAX_AGE)
     },
     
     // Configurações do frontend
     frontend: {
-        url: process.env.FRONTEND_URL || 'https://samm.host'
+        url: process.env.FRONTEND_URL
     },
     
     // Configurações de logs
@@ -54,10 +54,17 @@ const config = {
     }
 };
 
-// Validar configurações críticas
+// Validar configurações críticas de segurança
+if (!config.session.secret) {
+    throw new Error('❌ SESSION_SECRET não configurada! Defina uma chave secreta forte no ambiente.');
+}
+
 if (config.security.allowedIPs.length === 0) {
-    console.warn('⚠️  WARNING: Nenhum IP autorizado configurado no .env!');
-    console.warn('⚠️  A API só permitirá acesso de localhost (127.0.0.1, ::1)');
+    throw new Error('❌ ALLOWED_IPS não configurada! Defina os IPs autorizados no ambiente.');
+}
+
+if (!config.supabase.url || !config.supabase.anonKey) {
+    throw new Error('❌ Configuração do Supabase incompleta! Verifique SUPABASE_URL e SUPABASE_ANON_KEY.');
 }
 
 // Compatibilidade com código antigo
