@@ -28,16 +28,25 @@ app.use(securityHeaders);
 // Middlewares globais
 app.use(cors({
     origin: [
-        'http://localhost',                  // Frontend na porta 80 (rede local VPS)
+        // Produção
+        'https://samm.host',                 // Frontend produção
+        'http://samm.host',                  // Frontend produção (HTTP fallback)
+        'http://177.73.207.121',             // IP público (HTTP)
+        'http://177.73.207.121:80',          // IP público porta 80
+        'https://177.73.207.121',            // IP público (HTTPS)
+        'https://177.73.207.121:443',        // IP público porta 443
+        
+        // Desenvolvimento local
+        'http://localhost',
         'http://localhost:80',
+        'http://localhost:3000',
+        'http://localhost:5173',
         'http://127.0.0.1',
         'http://127.0.0.1:80',
-        'https://samm.host',                 // Frontend público (se usar Nginx/Caddy)
-        'https://api.samm.host',             // API pública (se usar Nginx/Caddy)
-        'http://localhost:3000',             // API local
-        'http://localhost:5173',             // Dev local
         'http://127.0.0.1:3000',
         'http://127.0.0.1:5173',
+        
+        // Regex patterns
         /^http:\/\/10\.244\.\d+\.\d+:\d+$/,  // ZeroTier range (10.244.0.0/16)
         /^http:\/\/localhost:\d+$/,          // Localhost com qualquer porta
         /^http:\/\/127\.0\.0\.1:\d+$/        // 127.0.0.1 com qualquer porta
