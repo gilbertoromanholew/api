@@ -34,6 +34,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Copiar arquivo de configuração de ambiente (ANTES de mudar usuário)
 COPY ./.env ./.env
 
+# Verificar se o .env foi copiado corretamente
+RUN ls -la .env && echo "Conteúdo do .env:" && cat .env
+
 # Copiar código do builder
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/server.js ./server.js
