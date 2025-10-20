@@ -631,8 +631,8 @@ router.post('/logout', async (req, res) => {
  */
 router.get('/session', async (req, res) => {
     try {
-        // Pegar token do header Authorization
-        const token = req.headers.authorization?.replace('Bearer ', '');
+        // Pegar token do header Authorization OU do cookie
+        const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies['sb-access-token'];
 
         if (!token) {
             return res.status(401).json({
