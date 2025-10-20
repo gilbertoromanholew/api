@@ -386,6 +386,115 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 /**
+ * POST /auth/login-cpf
+ * Fazer login com CPF e senha
+ * Rate limit: 5 tentativas a cada 15 minutos
+ */
+router.post('/login-cpf', loginLimiter, async (req, res) => {
+    try {
+        const { cpf, password } = req.body;
+
+        console.log('🔐 Tentativa de login com CPF:', {
+            cpf: cpf ? 'presente' : 'VAZIO',
+            password: password ? '***' : 'VAZIO',
+            bodyKeys: Object.keys(req.body)
+        });
+
+        if (!cpf || !password) {
+            console.log('❌ Login rejeitado: CPF ou senha faltando');
+            return res.status(400).json({
+                success: false,
+                error: 'CPF e senha são obrigatórios'
+            });
+        }
+
+        // Limpar formatação do CPF
+        const cleanCPF = cpf.replace(/\D/g, '');
+        console.log('🧹 CPF limpo:', cleanCPF);
+
+        // Validar se CPF tem 11 dígitos
+        if (cleanCPF.length !== 11) {
+            return res.status(400).json({
+                success: false,
+                error: 'CPF deve conter 11 dígitos'
+            });
+        }
+
+        // 1️⃣ Buscar profile pelo CPF para pegar o ID (que é FK de auth.users.id)
+        console.log('🔍 Buscando profile pelo CPF em public.profiles...');
+        const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, cpf, full_name')
+            .eq('cpf', cleanCPF)
+            .maybeSingle();
+
+        console.log('📊 Resultado da busca profile:', { found: !!profileData, id: profileData?.id });
+
+        if (profileError && profileError.code !== 'PGRST116') {
+            console.error('❌ Erro do Supabase:', profileError);
+            throw profileError;
+        }
+
+        if (!profileData) {
+            console.log('❌ CPF não encontrado no banco');
+            return res.status(401).json({
+                success: false,
+                error: 'CPF ou senha inválidos'
+            });
+        }
+
+        // 2️⃣ Buscar email em auth.users usando o ID do profile
+        console.log('👤 Buscando email em auth.users pelo ID:', profileData.id);
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
+
+        if (userError) {
+            console.error('❌ Erro ao buscar usuário:', userError);
+            throw userError;
+        }
+
+        if (!user?.email) {
+            console.log('❌ Email não encontrado para este usuário');
+            return res.status(401).json({
+                success: false,
+                error: 'CPF ou senha inválidos'
+            });
+        }
+
+        console.log('📧 Email encontrado:', user.email);
+
+        // 3️⃣ Fazer login com email + senha (Supabase verifica a senha em auth.users)
+        console.log('🔑 Tentando autenticação com email e senha...');
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: user.email,
+            password
+        });
+
+        if (error) {
+            console.error('❌ Erro na autenticação:', error.message);
+            throw error;
+        }
+
+        console.log('✅ Login com CPF realizado com sucesso');
+
+        res.json({
+            success: true,
+            message: 'Login realizado com sucesso',
+            data: {
+                user: data.user,
+                session: data.session
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao fazer login com CPF:', error);
+        res.status(401).json({
+            success: false,
+            error: 'CPF ou senha inválidos',
+            message: error.message
+        });
+    }
+});
+
+/**
  * POST /auth/logout
  * Fazer logout
  */
