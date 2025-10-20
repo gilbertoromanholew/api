@@ -679,6 +679,18 @@ router.post('/verify-email-token', async (req, res) => {
             })
             .eq('id', otpData.user_id);
 
+        // Buscar dados completos do usuário
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(otpData.user_id);
+
+        if (userError) {
+            console.error('Erro ao buscar usuário:', userError);
+        }
+
+        // Criar sessão para o usuário (login automático)
+        const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
+            user_id: otpData.user_id
+        });
+
         console.log('✅ Email verificado com sucesso:', email);
 
         res.json({
@@ -687,7 +699,9 @@ router.post('/verify-email-token', async (req, res) => {
             data: {
                 verified: true,
                 user_id: otpData.user_id,
-                email: email
+                email: email,
+                user: user,
+                session: sessionData?.session || null
             }
         });
     } catch (error) {
