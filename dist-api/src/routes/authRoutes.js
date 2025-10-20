@@ -1,5 +1,12 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
+import {
+    otpVerificationLimiter,
+    otpResendLimiter,
+    cpfCheckLimiter,
+    registerLimiter,
+    loginLimiter
+} from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
@@ -26,8 +33,9 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 /**
  * POST /auth/check-cpf
  * Verifica se CPF já está cadastrado
+ * Rate limit: 10 requisições a cada 5 minutos
  */
-router.post('/check-cpf', async (req, res) => {
+router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
     try {
         const { cpf } = req.body;
 
@@ -68,21 +76,24 @@ router.post('/check-cpf', async (req, res) => {
             maskedEmail = localPart.substring(0, visibleChars) + '***' + '@' + domain;
         }
 
+        // Mascarar CPF para segurança (LGPD Art. 46)
+        const maskedCPF = cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.$3-**');
+
         res.json({
             success: true,
             data: {
                 exists: !!data,
                 email: maskedEmail, // Email mascarado para segurança
-                cpf: cleanCPF
+                cpf: maskedCPF // CPF mascarado para segurança
             },
             message: data ? 'CPF já cadastrado' : 'CPF disponível'
         });
     } catch (error) {
-        console.error('Erro ao verificar CPF:', error);
+        console.error('[SECURITY] Erro ao verificar CPF:', error.message);
         res.status(500).json({
             success: false,
-            error: 'Erro ao verificar CPF',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Erro ao verificar CPF'
+            // Detalhes do erro não são expostos por segurança
         });
     }
 });
@@ -102,26 +113,31 @@ router.post('/check-email', async (req, res) => {
             });
         }
 
-        // Verificar se email existe no auth.users através do SDK Admin
-        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+        // Buscar apenas o usuário específico (segurança e performance)
+        // Não carrega todos os usuários, apenas verifica se o email existe
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('email', email)
+            .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
             throw error;
         }
 
-        const emailExists = users?.some(user => user.email === email);
-
         res.json({
             success: true,
-            exists: emailExists,
-            message: emailExists ? 'Email já cadastrado' : 'Email disponível'
+            data: {
+                available: !profile
+            },
+            message: profile ? 'Email já cadastrado' : 'Email disponível'
         });
     } catch (error) {
-        console.error('Erro ao verificar email:', error);
+        console.error('[SECURITY] Erro ao verificar email:', error.message);
         res.status(500).json({
             success: false,
-            error: 'Erro ao verificar email',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Erro ao verificar email'
+            // Detalhes do erro não são expostos por segurança
         });
     }
 });
@@ -129,8 +145,9 @@ router.post('/check-email', async (req, res) => {
 /**
  * POST /auth/register
  * Registrar novo usuário
+ * Rate limit: 3 registros por hora
  */
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
     try {
         const { email, password, full_name, cpf } = req.body;
 
@@ -285,12 +302,12 @@ router.post('/register', async (req, res) => {
             expiresIn: 3 // minutos
         });
     } catch (error) {
-        console.error('Erro ao registrar usuário:', error);
+        console.error('[SECURITY] Erro ao registrar usuário:', error.message);
         res.status(500).json({
             success: false,
             error: 'Erro ao registrar usuário',
-            message: error.message,
-            details: process.env.NODE_ENV === 'development' ? error : undefined
+            message: 'Não foi possível completar o registro. Tente novamente.'
+            // Detalhes do erro não são expostos por segurança
         });
     }
 });
@@ -298,8 +315,9 @@ router.post('/register', async (req, res) => {
 /**
  * POST /auth/login
  * Fazer login
+ * Rate limit: 5 tentativas a cada 15 minutos
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -493,7 +511,7 @@ router.post('/verify-otp', async (req, res) => {
  * POST /auth/resend-otp
  * Reenviar código OTP
  */
-router.post('/resend-otp', async (req, res) => {
+router.post('/resend-otp', otpResendLimiter, async (req, res) => {
     try {
         const { email } = req.body;
 
@@ -583,7 +601,7 @@ router.post('/resend-otp', async (req, res) => {
  * POST /auth/resend-confirmation
  * Alias para /auth/resend-otp (compatibilidade com frontend)
  */
-router.post('/resend-confirmation', async (req, res) => {
+router.post('/resend-confirmation', otpResendLimiter, async (req, res) => {
     try {
         const { email } = req.body;
 
@@ -674,7 +692,7 @@ router.post('/resend-confirmation', async (req, res) => {
  * Alias para /auth/verify-otp (compatibilidade com frontend)
  * Aceita tanto { email, code } quanto { email, token }
  */
-router.post('/verify-email-token', async (req, res) => {
+router.post('/verify-email-token', otpVerificationLimiter, async (req, res) => {
     try {
         const { email, code, token } = req.body;
         const otpCode = code || token; // Aceita ambos os nomes

@@ -13,9 +13,13 @@ import zerotierRoutes from './src/routes/zerotier.js';
 import securityRoutes from './src/routes/securityRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
+import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
 
 const app = express();
+
+// Security Headers (CSP, HSTS, X-Frame-Options, etc) - PRIMEIRO
+app.use(securityHeaders);
 
 // Middlewares globais
 app.use(cors({
