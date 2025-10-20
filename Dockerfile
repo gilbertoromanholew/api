@@ -35,6 +35,9 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/server.js ./server.js
 
+# Copiar arquivo de configuração de ambiente
+COPY --chown=nodejs:nodejs ./.env ./.env
+
 # Mudar para usuário não-root
 USER nodejs
 
