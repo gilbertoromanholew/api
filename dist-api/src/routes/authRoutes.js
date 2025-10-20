@@ -8,6 +8,7 @@ import {
     registerLimiter,
     loginLimiter
 } from '../middlewares/rateLimiter.js';
+import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
 
 const router = express.Router();
 
@@ -31,12 +32,36 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Cliente com service role (para operações administrativas)
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+// ============================================================================
+// DUAL RATE LIMITERS - Rastreamento IP + CPF
+// ============================================================================
+
+// Login: 20 tentativas por IP em 10min | 10 tentativas por CPF em 15min
+const dualLoginLimiter = createDualRateLimiter({
+    ipMax: 20,
+    cpfMax: 10,
+    ipWindowMs: 10 * 60 * 1000,
+    cpfWindowMs: 15 * 60 * 1000,
+    message: 'Por segurança, bloqueamos temporariamente o acesso. Aguarde alguns minutos ou use a opção "Esqueci minha senha".',
+    extractCPF: (req) => req.body?.cpf || null
+});
+
+// Verificação de CPF: 30 tentativas por IP em 10min | 20 tentativas por CPF em 10min
+const dualCPFCheckLimiter = createDualRateLimiter({
+    ipMax: 30,
+    cpfMax: 20,
+    ipWindowMs: 10 * 60 * 1000,
+    cpfWindowMs: 10 * 60 * 1000,
+    message: 'Por segurança, bloqueamos temporariamente as consultas. Aguarde alguns minutos.',
+    extractCPF: (req) => req.body?.cpf || null
+});
+
 /**
  * POST /auth/check-cpf
- * Verifica se CPF já está cadastrado
- * Rate limit: 10 requisições a cada 5 minutos
+ * Verifica se CPF já está cadastrado com rate limiting dual (IP + CPF)
+ * Limites: 30 tentativas por IP em 10min | 20 tentativas por CPF em 10min
  */
-router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
+router.post('/check-cpf', dualCPFCheckLimiter, async (req, res) => {
     try {
         const { cpf } = req.body;
 
@@ -354,10 +379,10 @@ router.post('/register', registerLimiter, async (req, res) => {
 
 /**
  * POST /auth/login
- * Fazer login
- * Rate limit: 5 tentativas a cada 15 minutos
+ * Fazer login com rate limiting dual (IP + CPF)
+ * Limites: 20 tentativas por IP em 10min | 10 tentativas por CPF em 15min
  */
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', dualLoginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -1145,6 +1170,124 @@ router.post('/reset-password', rateLimit({
             success: false,
             error: 'Erro ao redefinir senha',
             message: error.message
+        });
+    }
+});
+
+// ============================================================================
+// ENDPOINTS DE SEGURANÇA - FASE 2
+// ============================================================================
+
+/**
+ * GET /auth/rate-limit-status
+ * Consulta status de rate limiting (IP + CPF)
+ * Retorna informações sem comprometer segurança
+ */
+router.get('/rate-limit-status', async (req, res) => {
+    try {
+        const ip = req.ip || req.connection.remoteAddress;
+        const cpf = req.query.cpf || null;
+
+        const ipCount = dualStore.getIPCount(ip);
+        const cpfCount = cpf ? dualStore.getCPFCount(cpf) : 0;
+        const timeRemaining = dualStore.getTimeRemaining(ip, cpf);
+
+        // Não revelar limites exatos (segurança)
+        const ipStatus = ipCount > 0 ? 'active' : 'clear';
+        const cpfStatus = cpfCount > 0 ? 'active' : 'clear';
+
+        res.json({
+            success: true,
+            data: {
+                ip: {
+                    status: ipStatus,
+                    attempts: ipCount,
+                    timeRemaining: timeRemaining.ip
+                },
+                cpf: cpf ? {
+                    status: cpfStatus,
+                    attempts: cpfCount,
+                    timeRemaining: timeRemaining.cpf
+                } : null,
+                message: timeRemaining.max > 0 
+                    ? `Aguarde ${Math.ceil(timeRemaining.max / 60)} minutos antes de tentar novamente.`
+                    : 'Você pode fazer login normalmente.'
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao consultar status de rate limit:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao consultar status'
+        });
+    }
+});
+
+/**
+ * GET /auth/security-stats
+ * Estatísticas gerais de segurança (apenas para admins)
+ * TODO: Adicionar autenticação de admin
+ */
+router.get('/security-stats', async (req, res) => {
+    try {
+        // TODO: Verificar se usuário é admin
+        // const { user } = req; // Após implementar middleware de auth
+
+        const stats = dualStore.getStats();
+        const recentLogs = dualStore.getRecentLogs(50);
+
+        res.json({
+            success: true,
+            data: {
+                stats,
+                recentAttempts: recentLogs,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao buscar estatísticas de segurança:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao buscar estatísticas'
+        });
+    }
+});
+
+/**
+ * POST /auth/reset-rate-limit
+ * Reseta rate limit de um IP ou CPF específico (apenas para admins)
+ * TODO: Adicionar autenticação de admin
+ */
+router.post('/reset-rate-limit', async (req, res) => {
+    try {
+        // TODO: Verificar se usuário é admin
+        const { ip, cpf, resetAll } = req.body;
+
+        if (resetAll === true) {
+            dualStore.resetAll();
+            return res.json({
+                success: true,
+                message: 'Todos os rate limits foram resetados'
+            });
+        }
+
+        if (ip) {
+            dualStore.resetIP(ip);
+        }
+
+        if (cpf) {
+            dualStore.resetCPF(cpf);
+        }
+
+        res.json({
+            success: true,
+            message: 'Rate limit resetado com sucesso'
+        });
+    } catch (error) {
+        console.error('Erro ao resetar rate limit:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao resetar rate limit'
         });
     }
 });
