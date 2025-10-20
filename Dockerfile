@@ -32,10 +32,14 @@ COPY ./dist-api/package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copiar arquivo de configuração de ambiente (ANTES de mudar usuário)
-COPY ./.env ./.env
+COPY ./.env.local ./.env
 
 # Verificar se o .env foi copiado corretamente
-RUN ls -la .env && echo "Conteúdo do .env:" && cat .env
+RUN echo "=== VERIFICAÇÃO DO .ENV ===" && \
+    ls -la .env && \
+    echo "Conteúdo completo do .env:" && \
+    cat .env && \
+    echo "=== FIM VERIFICAÇÃO ==="
 
 # Copiar código do builder
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src

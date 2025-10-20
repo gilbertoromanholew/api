@@ -1,34 +1,10 @@
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Carregar variáveis de ambiente
+dotenv.config();
 
-// Debug: verificar se o .env existe e tentar carregá-lo
-const envPath = path.resolve(process.cwd(), '.env');  // Usar process.cwd() em vez de __dirname
-console.log(`🔍 Procurando .env em: ${envPath}`);
-console.log(`📁 Diretório atual (process.cwd()): ${process.cwd()}`);
-console.log(`📂 __dirname: ${__dirname}`);
-
-if (fs.existsSync(envPath)) {
-    console.log('✅ Arquivo .env encontrado');
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    console.log('📄 Conteúdo do .env (primeiras 200 chars):', envContent.substring(0, 200));
-} else {
-    console.log('❌ Arquivo .env NÃO encontrado');
-    console.log('📋 Arquivos no diretório atual:', fs.readdirSync(process.cwd()));
-}
-
-const result = dotenv.config({ path: envPath });  // Especificar o caminho explicitamente
-console.log('🔧 dotenv.config() result:', result);
-
-// Debug: mostrar variáveis carregadas
-console.log('🔍 Variáveis de ambiente carregadas:');
-console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Definida' : '❌ Não definida');
-console.log('  SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✅ Definida' : '❌ Não definida');
-console.log('  ALLOWED_IPS:', process.env.ALLOWED_IPS ? '✅ Definida' : '❌ Não definida');
+// Debug básico
+console.log('� dotenv carregado, SUPABASE_URL:', process.env.SUPABASE_URL ? '✅' : '❌');
 
 // Configurações centralizadas da aplicação
 const config = {
@@ -41,10 +17,28 @@ const config = {
     
     // Configurações de segurança
     security: {
-        allowedIPs: process.env.ALLOWED_IPS?.split(',').map(ip => ip.trim()) || [],
+        allowedIPs: process.env.ALLOWED_IPS?.split(',').map(ip => ip.trim()) || ['127.0.0.1', 'localhost', '::1'],
         corsOrigin: process.env.CORS_ORIGIN || '*',
         rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW) || 60000, // 1 minuto
         rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX) || 100
+    },
+    
+    // Configurações do Supabase (com fallbacks)
+    supabase: {
+        url: process.env.SUPABASE_URL || 'https://mpanel.samm.host',
+        anonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxma2hmeXp5Z2FkenJ3dWdzZWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk4MjQ4NjgsImV4cCI6MjA0NTQwMDg2OH0.L1hcEF8NAmPaTutkq2qQU_3y-vdg2g4vZJM_0vUWJgA',
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxma2hmeXp5Z2FkenJ3dWdzZWd5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyOTgyNDg2OCwiZXhwIjoyMDQ1NDAwODY4fQ.y1R1gQOg_8FcG3YcNXIdGMTYa_y2T7KqIxg5BLIyAT4'
+    },
+    
+    // Configurações da sessão
+    session: {
+        secret: process.env.SESSION_SECRET || 'seu-secret-super-seguro-aqui-min-32-chars',
+        maxAge: parseInt(process.env.SESSION_MAX_AGE) || 86400000
+    },
+    
+    // Configurações do frontend
+    frontend: {
+        url: process.env.FRONTEND_URL || 'https://samm.host'
     },
     
     // Configurações de logs
