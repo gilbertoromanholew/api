@@ -22,12 +22,19 @@ export const supabaseProxy = createProxyMiddleware({
     changeOrigin: true,
     pathRewrite: {
         '^/supabase': '', // Remove /supabase do path antes de enviar pro Supabase
+        '^/auth': '/auth', // Mantém /auth no path (Supabase espera /auth/*)
     },
     
     // Headers personalizados
     onProxyReq: (proxyReq, req, res) => {
+        // Detectar qual caminho original
+        const originalPath = req.path;
+        const targetPath = originalPath.startsWith('/auth') 
+            ? originalPath 
+            : originalPath.replace('/supabase', '');
+        
         // Log para debug (remover em produção se quiser)
-        console.log(`🔄 Proxy Supabase: ${req.method} ${req.path} → ${SUPABASE_INTERNAL_URL}${req.path.replace('/supabase', '')}`);
+        console.log(`🔄 Proxy Supabase: ${req.method} ${originalPath} → ${SUPABASE_INTERNAL_URL}${targetPath}`);
         
         // Adicionar headers customizados se necessário
         proxyReq.setHeader('X-Forwarded-Host', req.headers.host);
