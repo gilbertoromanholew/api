@@ -61,14 +61,21 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         }
 
         // Buscar usuário com este CPF na tabela profiles
-        console.log('🔍 Buscando usuário no Supabase...');
+        console.log('🔍 Buscando usuário no Supabase profiles...');
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, cpf, full_name')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
-        console.log('📊 Resultado da busca profile:', { found: !!profileData, error: profileError?.message });
+        console.log('📊 Resultado da busca profile:', { 
+            found: !!profileData, 
+            error: profileError?.message,
+            cpfBuscado: cleanCPF,
+            profileId: profileData?.id,
+            profileCpf: profileData?.cpf,
+            profileName: profileData?.full_name
+        });
 
         if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = not found
             console.error('❌ Erro do Supabase:', profileError);
@@ -130,6 +137,8 @@ router.post('/check-email', async (req, res) => {
     try {
         const { email } = req.body;
 
+        console.log('📧 /check-email chamado com:', { email: email ? 'presente' : 'ausente' });
+
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -137,25 +146,38 @@ router.post('/check-email', async (req, res) => {
             });
         }
 
-        // Buscar usuário por email usando Supabase Admin API
-        // (auth.users tem o email, não profiles)
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email inválido'
+            });
+        }
+
+        // Buscar usuário por email usando getUserByEmail
+        console.log('🔍 Buscando email em auth.users...');
         const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
         
         if (error) {
+            console.error('❌ Erro do Supabase:', error);
             throw error;
         }
 
-        const emailExists = users?.some(user => user.email === email);
+        const emailExists = users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
+        console.log('📊 Resultado da busca:', { email, exists: emailExists, totalUsers: users?.length });
 
         res.json({
             success: true,
             data: {
-                available: !emailExists
+                available: !emailExists,
+                exists: emailExists
             },
-            message: profile ? 'Email já cadastrado' : 'Email disponível'
+            message: emailExists ? 'Email já cadastrado' : 'Email disponível'
         });
     } catch (error) {
         console.error('[SECURITY] Erro ao verificar email:', error.message);
+        console.error('[SECURITY] Stack trace:', error.stack);
         res.status(500).json({
             success: false,
             error: 'Erro ao verificar email'
