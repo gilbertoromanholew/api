@@ -232,7 +232,7 @@ router.post('/register', async (req, res) => {
 
             // Gerar código OTP de 6 dígitos
             const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+            const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutos
 
             // Salvar OTP no banco
             const { error: otpError } = await supabaseAdmin
@@ -269,7 +269,8 @@ router.post('/register', async (req, res) => {
                 user: authData.user,
                 session: null, // Não retorna sessão até confirmar OTP
                 requiresEmailVerification: true
-            }
+            },
+            expiresIn: 3 // minutos
         });
     } catch (error) {
         console.error('Erro ao registrar usuário:', error);
@@ -507,16 +508,23 @@ router.post('/resend-otp', async (req, res) => {
             });
         }
 
-        // Invalidar códigos antigos
-        await supabaseAdmin
+        // Invalidar códigos antigos não utilizados (marca como "usado" ao solicitar reenvio)
+        const { data: invalidatedCodes, error: invalidateError } = await supabaseAdmin
             .from('otp_codes')
             .update({ used_at: new Date().toISOString() })
             .eq('email', email)
-            .is('used_at', null);
+            .is('used_at', null)
+            .select();
+
+        if (invalidateError) {
+            console.error('❌ Erro ao invalidar códigos antigos:', invalidateError);
+        } else if (invalidatedCodes && invalidatedCodes.length > 0) {
+            console.log(`✓ ${invalidatedCodes.length} código(s) anterior(es) invalidado(s) para ${email}`);
+        }
 
         // Gerar novo código OTP
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+        const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutos
 
         // Salvar OTP no banco
         const { error: otpError } = await supabaseAdmin
@@ -546,7 +554,8 @@ router.post('/resend-otp', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Código reenviado com sucesso!'
+            message: 'Código reenviado com sucesso!',
+            expiresIn: 3 // minutos
         });
     } catch (error) {
         console.error('Erro ao reenviar OTP:', error);
@@ -589,16 +598,23 @@ router.post('/resend-confirmation', async (req, res) => {
             });
         }
 
-        // Invalidar códigos antigos
-        await supabaseAdmin
+        // Invalidar códigos antigos não utilizados (marca como "usado" ao solicitar reenvio)
+        const { data: invalidatedCodes, error: invalidateError } = await supabaseAdmin
             .from('otp_codes')
             .update({ used_at: new Date().toISOString() })
             .eq('email', email)
-            .is('used_at', null);
+            .is('used_at', null)
+            .select();
+
+        if (invalidateError) {
+            console.error('❌ Erro ao invalidar códigos antigos:', invalidateError);
+        } else if (invalidatedCodes && invalidatedCodes.length > 0) {
+            console.log(`✓ ${invalidatedCodes.length} código(s) anterior(es) invalidado(s) para ${email}`);
+        }
 
         // Gerar novo código OTP
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+        const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutos
 
         // Salvar OTP no banco
         const { error: otpError } = await supabaseAdmin
@@ -628,7 +644,8 @@ router.post('/resend-confirmation', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Email de confirmação reenviado com sucesso!'
+            message: 'Email de confirmação reenviado com sucesso!',
+            expiresIn: 3 // minutos
         });
     } catch (error) {
         console.error('Erro ao reenviar confirmação:', error);
