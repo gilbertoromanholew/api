@@ -31,12 +31,12 @@ COPY ./dist-api/package*.json ./
 # Instalar apenas dependências de produção
 RUN npm ci --only=production && npm cache clean --force
 
+# Copiar arquivo de configuração de ambiente (ANTES de mudar usuário)
+COPY ./.env ./.env
+
 # Copiar código do builder
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/server.js ./server.js
-
-# Copiar arquivo de configuração de ambiente
-COPY --chown=nodejs:nodejs ./.env ./.env
 
 # Mudar para usuário não-root
 USER nodejs
