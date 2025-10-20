@@ -41,7 +41,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Health check endpoint (para Docker healthcheck) - ANTES do filtro de IP
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -68,7 +68,7 @@ app.get('/docs', getApiDocs);       // Página HTML bonita (público)
 app.get('/logs', requireAdmin, getLogsDashboard); // 🔒 Dashboard APENAS para admin
 
 // Rota para listar funções disponíveis (público, mas filtrado por nível de acesso)
-app.get('/api/functions', async (req, res) => {
+app.get('/functions', async (req, res) => {
     try {
         const { readdir, readFile } = await import('fs/promises');
         const { join, dirname } = await import('path');
@@ -162,9 +162,9 @@ app.get('/api/functions', async (req, res) => {
     }
 });
 
-app.use('/api/logs', requireAdmin, logsRoutes);   // 🔒 API de logs APENAS para admin
+app.use('/logs', requireAdmin, logsRoutes);   // 🔒 API de logs APENAS para admin
 app.use('/zerotier', requireAdmin, zerotierRoutes); // 🔒 ZeroTier APENAS para admin
-app.use('/api/security', requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
+app.use('/security', requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
 
 // Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
