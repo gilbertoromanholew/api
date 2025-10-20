@@ -60,25 +60,39 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
             });
         }
 
-        // Buscar usuário com este CPF
+        // Buscar usuário com este CPF na tabela profiles
         console.log('🔍 Buscando usuário no Supabase...');
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id, email')
+            .select('id')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
-        console.log('📊 Resultado da busca:', { found: !!data, error: error?.message });
+        console.log('📊 Resultado da busca profile:', { found: !!profileData, error: profileError?.message });
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-            console.error('❌ Erro do Supabase:', error);
-            throw error;
+        if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = not found
+            console.error('❌ Erro do Supabase:', profileError);
+            throw profileError;
+        }
+
+        // Se encontrou o profile, buscar email do auth.users
+        let userEmail = null;
+        if (profileData?.id) {
+            console.log('👤 Buscando email do usuário em auth.users...');
+            const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
+            
+            if (userError) {
+                console.error('❌ Erro ao buscar usuário:', userError);
+            } else {
+                userEmail = user?.email;
+                console.log('📧 Email encontrado:', userEmail ? 'sim' : 'não');
+            }
         }
 
         // Mascarar email para segurança (LGPD)
         let maskedEmail = null;
-        if (data?.email) {
-            const [localPart, domain] = data.email.split('@');
+        if (userEmail) {
+            const [localPart, domain] = userEmail.split('@');
             const visibleChars = Math.min(3, Math.floor(localPart.length / 2));
             maskedEmail = localPart.substring(0, visibleChars) + '***' + '@' + domain;
         }
@@ -86,16 +100,16 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         // Mascarar CPF para segurança (LGPD Art. 46)
         const maskedCPF = cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.$3-**');
 
-        console.log('✅ Resposta preparada:', { exists: !!data, maskedEmail, maskedCPF });
+        console.log('✅ Resposta preparada:', { exists: !!profileData, maskedEmail, maskedCPF });
 
         res.json({
             success: true,
             data: {
-                exists: !!data,
+                exists: !!profileData,
                 email: maskedEmail, // Email mascarado para segurança
                 cpf: maskedCPF // CPF mascarado para segurança
             },
-            message: data ? 'CPF já cadastrado' : 'CPF disponível'
+            message: profileData ? 'CPF já cadastrado' : 'CPF disponível'
         });
     } catch (error) {
         console.error('[SECURITY] Erro ao verificar CPF:', error.message);
@@ -123,22 +137,20 @@ router.post('/check-email', async (req, res) => {
             });
         }
 
-        // Buscar apenas o usuário específico (segurança e performance)
-        // Não carrega todos os usuários, apenas verifica se o email existe
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('id, email')
-            .eq('email', email)
-            .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        // Buscar usuário por email usando Supabase Admin API
+        // (auth.users tem o email, não profiles)
+        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (error) {
             throw error;
         }
+
+        const emailExists = users?.some(user => user.email === email);
 
         res.json({
             success: true,
             data: {
-                available: !profile
+                available: !emailExists
             },
             message: profile ? 'Email já cadastrado' : 'Email disponível'
         });

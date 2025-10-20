@@ -18,6 +18,10 @@ import config from './src/config/index.js';
 
 const app = express();
 
+// Trust proxy - IMPORTANTE: Permite que o Express confie no Traefik/Nginx
+// Necessário para rate limiting e logs corretos quando atrás de proxy
+app.set('trust proxy', 1);
+
 // Security Headers (CSP, HSTS, X-Frame-Options, etc) - PRIMEIRO
 app.use(securityHeaders);
 
