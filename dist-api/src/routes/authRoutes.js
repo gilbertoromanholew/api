@@ -715,15 +715,19 @@ router.post('/verify-email-token', async (req, res) => {
         console.log('📧 Confirmando email do usuário:', otpData.user_id);
         const { data: updateData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
             otpData.user_id,
-            { email_confirmed: true } // Corrigido: email_confirmed (não email_confirm)
+            { 
+                email_confirmed: true,
+                email_confirmed_at: new Date().toISOString()
+            }
         );
 
         if (confirmError) {
             console.error('❌ Erro ao confirmar email:', confirmError);
-            // Não interrompe - continua mesmo com erro na confirmação
-        } else {
-            console.log('✅ Email confirmado com sucesso');
+            console.error('Detalhes do erro:', JSON.stringify(confirmError, null, 2));
+            throw new Error(`Erro ao confirmar email: ${confirmError.message}`);
         }
+        
+        console.log('✅ Email confirmado com sucesso no Supabase Auth');
 
         // Atualizar perfil
         console.log('👤 Atualizando perfil do usuário');
@@ -759,22 +763,40 @@ router.post('/verify-email-token', async (req, res) => {
                 email: email
             });
             
+            console.log('📦 Resposta do generateLink:', {
+                hasData: !!linkData,
+                hasProperties: !!linkData?.properties,
+                hasHashes: !!linkData?.properties?.hashed_token,
+                properties: linkData?.properties ? Object.keys(linkData.properties) : [],
+                error: linkError
+            });
+            
             if (linkError) {
                 console.error('❌ Erro ao gerar tokens:', linkError);
+                console.error('Detalhes:', JSON.stringify(linkError, null, 2));
             } else if (linkData?.properties) {
                 // Extrai os tokens do link gerado
+                const props = linkData.properties;
                 sessionData = {
-                    access_token: linkData.properties.access_token,
-                    refresh_token: linkData.properties.refresh_token,
-                    expires_in: linkData.properties.expires_in || 3600,
+                    access_token: props.access_token || props.hashed_token,
+                    refresh_token: props.refresh_token,
+                    expires_in: props.expires_in || 3600,
+                    expires_at: props.expires_at,
                     token_type: 'bearer',
                     user: user
                 };
-                console.log('✅ Tokens de sessão gerados com sucesso');
+                console.log('✅ Tokens de sessão gerados:', {
+                    hasAccessToken: !!sessionData.access_token,
+                    hasRefreshToken: !!sessionData.refresh_token,
+                    expiresIn: sessionData.expires_in
+                });
+            } else {
+                console.warn('⚠️ generateLink não retornou properties esperadas');
+                console.log('Estrutura recebida:', JSON.stringify(linkData, null, 2));
             }
         } catch (sessionError) {
             console.error('❌ Erro ao gerar sessão:', sessionError);
-            // Não interrompe - retorna dados sem sessão
+            console.error('Stack:', sessionError.stack);
         }
 
         console.log('✅ Email verificado com sucesso:', email);
