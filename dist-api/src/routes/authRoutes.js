@@ -752,64 +752,24 @@ router.post('/verify-email-token', async (req, res) => {
             throw new Error(`Erro ao buscar usuário: ${userError.message}`);
         }
 
-        // Gerar tokens de acesso para login automático
-        console.log('🔐 Gerando tokens de acesso para usuário');
-        let sessionData = null;
+        // ⚠️ IMPORTANTE: Não podemos criar sessão server-side de forma segura
+        // O Supabase não permite criar sessões completas via admin API
+        // A sessão deve ser criada pelo client após o email ser confirmado
         
-        try {
-            // Gera tokens de sessão usando generateLink
-            const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-                type: 'magiclink',
-                email: email
-            });
-            
-            console.log('📦 Resposta do generateLink:', {
-                hasData: !!linkData,
-                hasProperties: !!linkData?.properties,
-                hasHashes: !!linkData?.properties?.hashed_token,
-                properties: linkData?.properties ? Object.keys(linkData.properties) : [],
-                error: linkError
-            });
-            
-            if (linkError) {
-                console.error('❌ Erro ao gerar tokens:', linkError);
-                console.error('Detalhes:', JSON.stringify(linkError, null, 2));
-            } else if (linkData?.properties) {
-                // Extrai os tokens do link gerado
-                const props = linkData.properties;
-                sessionData = {
-                    access_token: props.access_token || props.hashed_token,
-                    refresh_token: props.refresh_token,
-                    expires_in: props.expires_in || 3600,
-                    expires_at: props.expires_at,
-                    token_type: 'bearer',
-                    user: user
-                };
-                console.log('✅ Tokens de sessão gerados:', {
-                    hasAccessToken: !!sessionData.access_token,
-                    hasRefreshToken: !!sessionData.refresh_token,
-                    expiresIn: sessionData.expires_in
-                });
-            } else {
-                console.warn('⚠️ generateLink não retornou properties esperadas');
-                console.log('Estrutura recebida:', JSON.stringify(linkData, null, 2));
-            }
-        } catch (sessionError) {
-            console.error('❌ Erro ao gerar sessão:', sessionError);
-            console.error('Stack:', sessionError.stack);
-        }
+        console.log('✅ Email confirmado - usuário pode fazer login agora');
 
         console.log('✅ Email verificado com sucesso:', email);
 
         res.json({
             success: true,
-            message: 'Email verificado com sucesso!',
+            message: 'Email verificado com sucesso! Faça login para continuar.',
             data: {
                 verified: true,
                 user_id: otpData.user_id,
                 email: email,
                 user: user,
-                session: sessionData
+                // Não retorna sessão - usuário deve fazer login via client
+                requiresLogin: true
             }
         });
     } catch (error) {
