@@ -210,8 +210,10 @@ router.post('/register', async (req, res) => {
         res.json({
             success: true,
             message: 'Usuário registrado com sucesso',
-            user: authData.user,
-            session: authData.session
+            data: {
+                user: authData.user,
+                session: authData.session
+            }
         });
     } catch (error) {
         console.error('Erro ao registrar usuário:', error);
@@ -251,8 +253,10 @@ router.post('/login', async (req, res) => {
         res.json({
             success: true,
             message: 'Login realizado com sucesso',
-            user: data.user,
-            session: data.session
+            data: {
+                user: data.user,
+                session: data.session
+            }
         });
     } catch (error) {
         console.error('Erro ao fazer login:', error);
@@ -314,7 +318,9 @@ router.get('/session', async (req, res) => {
 
         res.json({
             success: true,
-            user
+            data: {
+                user
+            }
         });
     } catch (error) {
         console.error('Erro ao obter sessão:', error);
