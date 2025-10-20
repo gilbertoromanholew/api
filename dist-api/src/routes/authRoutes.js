@@ -532,5 +532,173 @@ router.post('/resend-otp', async (req, res) => {
     }
 });
 
+/**
+ * POST /auth/resend-confirmation
+ * Alias para /auth/resend-otp (compatibilidade com frontend)
+ */
+router.post('/resend-confirmation', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email é obrigatório'
+            });
+        }
+
+        // Buscar usuário pelo email
+        const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+
+        if (userError) {
+            throw userError;
+        }
+
+        const user = users?.find(u => u.email === email);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Usuário não encontrado'
+            });
+        }
+
+        // Invalidar códigos antigos
+        await supabaseAdmin
+            .from('otp_codes')
+            .update({ used_at: new Date().toISOString() })
+            .eq('email', email)
+            .is('used_at', null);
+
+        // Gerar novo código OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+        // Salvar OTP no banco
+        const { error: otpError } = await supabaseAdmin
+            .from('otp_codes')
+            .insert([
+                {
+                    user_id: user.id,
+                    email: email,
+                    code: otpCode,
+                    expires_at: expiresAt.toISOString(),
+                    created_at: new Date().toISOString()
+                }
+            ]);
+
+        if (otpError) {
+            throw otpError;
+        }
+
+        // TODO: Enviar email com código OTP
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📧 CÓDIGO OTP REENVIADO (resend-confirmation)');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`Email: ${email}`);
+        console.log(`Código: ${otpCode}`);
+        console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        res.json({
+            success: true,
+            message: 'Email de confirmação reenviado com sucesso!'
+        });
+    } catch (error) {
+        console.error('Erro ao reenviar confirmação:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao reenviar email',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * POST /auth/verify-email-token
+ * Alias para /auth/verify-otp (compatibilidade com frontend)
+ * Aceita tanto { email, code } quanto { email, token }
+ */
+router.post('/verify-email-token', async (req, res) => {
+    try {
+        const { email, code, token } = req.body;
+        const otpCode = code || token; // Aceita ambos os nomes
+
+        if (!email || !otpCode) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email e código são obrigatórios'
+            });
+        }
+
+        // Buscar código OTP válido
+        const { data: otpData, error: otpError } = await supabaseAdmin
+            .from('otp_codes')
+            .select('*')
+            .eq('email', email)
+            .eq('code', otpCode)
+            .is('used_at', null)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (otpError) {
+            throw otpError;
+        }
+
+        if (!otpData) {
+            return res.status(400).json({
+                success: false,
+                error: 'Código inválido ou expirado'
+            });
+        }
+
+        // Marcar código como usado
+        await supabaseAdmin
+            .from('otp_codes')
+            .update({ used_at: new Date().toISOString() })
+            .eq('id', otpData.id);
+
+        // Confirmar email do usuário no Supabase Auth
+        const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
+            otpData.user_id,
+            { email_confirm: true }
+        );
+
+        if (confirmError) {
+            console.error('Erro ao confirmar email:', confirmError);
+        }
+
+        // Atualizar perfil
+        await supabaseAdmin
+            .from('profiles')
+            .update({ 
+                email_verified: true,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', otpData.user_id);
+
+        console.log('✅ Email verificado com sucesso:', email);
+
+        res.json({
+            success: true,
+            message: 'Email verificado com sucesso!',
+            data: {
+                verified: true,
+                user_id: otpData.user_id,
+                email: email
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao verificar email:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao verificar código',
+            message: error.message
+        });
+    }
+});
+
 export default router;
 
