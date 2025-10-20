@@ -412,6 +412,33 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
             throw error;
         }
 
+        // ✅ FIXAR SESSÃO: Setar cookies HTTP-only para autenticação
+        if (data.session) {
+            // Cookie de access token (usado pelo requireAuth middleware)
+            res.cookie('sb-access-token', data.session.access_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+                sameSite: 'lax',
+                maxAge: data.session.expires_in * 1000, // Converter para ms
+                path: '/'
+            });
+
+            // Cookie de refresh token (para renovar sessão)
+            res.cookie('sb-refresh-token', data.session.refresh_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
+                path: '/'
+            });
+
+            console.log('✅ Cookies de sessão definidos:', {
+                access_token: 'SET (HTTP-only)',
+                refresh_token: 'SET (HTTP-only)',
+                expires_in: data.session.expires_in
+            });
+        }
+
         res.json({
             success: true,
             message: 'Login realizado com sucesso',
@@ -521,6 +548,33 @@ router.post('/login-cpf', loginLimiter, async (req, res) => {
 
         console.log('✅ Login com CPF realizado com sucesso');
 
+        // ✅ FIXAR SESSÃO: Setar cookies HTTP-only para autenticação
+        if (data.session) {
+            // Cookie de access token (usado pelo requireAuth middleware)
+            res.cookie('sb-access-token', data.session.access_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+                sameSite: 'lax',
+                maxAge: data.session.expires_in * 1000, // Converter para ms
+                path: '/'
+            });
+
+            // Cookie de refresh token (para renovar sessão)
+            res.cookie('sb-refresh-token', data.session.refresh_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
+                path: '/'
+            });
+
+            console.log('✅ Cookies de sessão definidos:', {
+                access_token: 'SET (HTTP-only)',
+                refresh_token: 'SET (HTTP-only)',
+                expires_in: data.session.expires_in
+            });
+        }
+
         res.json({
             success: true,
             message: 'Login realizado com sucesso',
@@ -550,6 +604,12 @@ router.post('/logout', async (req, res) => {
         if (error) {
             throw error;
         }
+
+        // Limpar cookies de sessão
+        res.clearCookie('sb-access-token', { path: '/' });
+        res.clearCookie('sb-refresh-token', { path: '/' });
+
+        console.log('✅ Logout realizado e cookies limpos');
 
         res.json({
             success: true,
