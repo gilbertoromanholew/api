@@ -126,7 +126,7 @@ router.post('/register', async (req, res) => {
         const cleanCPF = cpf.replace(/\D/g, '');
 
         // Gerar referral code
-        const { data: refCodeData, error: refCodeError } = await supabase
+        const { data: refCodeData, error: refCodeError } = await supabaseAdmin
             .rpc('generate_referral_code');
 
         if (refCodeError) {
@@ -135,15 +135,14 @@ router.post('/register', async (req, res) => {
 
         const referralCode = refCodeData || 'DEFAULT';
 
-        // Criar usuário no Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        // Criar usuário no Supabase Auth (com email_confirm DESABILITADO)
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
-            options: {
-                data: {
-                    full_name,
-                    cpf: cleanCPF
-                }
+            email_confirm: false, // Usuário não confirmado ainda
+            user_metadata: {
+                full_name,
+                cpf: cleanCPF
             }
         });
 
@@ -153,7 +152,7 @@ router.post('/register', async (req, res) => {
 
         // Criar perfil do usuário
         if (authData.user) {
-            const { error: profileError } = await supabase
+            const { error: profileError } = await supabaseAdmin
                 .from('profiles')
                 .insert([
                     {
@@ -169,11 +168,10 @@ router.post('/register', async (req, res) => {
 
             if (profileError) {
                 console.error('Erro ao criar perfil:', profileError);
-                // Não retornar erro para o usuário, pois o auth já foi criado
             }
 
             // Criar registro de pontos inicial
-            const { error: pointsError } = await supabase
+            const { error: pointsError } = await supabaseAdmin
                 .from('user_points')
                 .insert([
                     {
@@ -190,7 +188,7 @@ router.post('/register', async (req, res) => {
                 console.error('Erro ao criar pontos iniciais:', pointsError);
             } else {
                 // Criar transação de bônus de cadastro
-                await supabase
+                await supabaseAdmin
                     .from('point_transactions')
                     .insert([
                         {
@@ -205,14 +203,46 @@ router.post('/register', async (req, res) => {
                         }
                     ]);
             }
+
+            // Gerar código OTP de 6 dígitos
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+            // Salvar OTP no banco
+            const { error: otpError } = await supabaseAdmin
+                .from('otp_codes')
+                .insert([
+                    {
+                        user_id: authData.user.id,
+                        email: email,
+                        code: otpCode,
+                        expires_at: expiresAt.toISOString(),
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+
+            if (otpError) {
+                console.error('Erro ao criar OTP:', otpError);
+            } else {
+                // TODO: Enviar email com código OTP
+                // Por enquanto, apenas logar no console do servidor
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('📧 CÓDIGO OTP GERADO');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log(`Email: ${email}`);
+                console.log(`Código: ${otpCode}`);
+                console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            }
         }
 
         res.json({
             success: true,
-            message: 'Usuário registrado com sucesso',
+            message: 'Usuário registrado com sucesso. Verifique seu email para o código de confirmação.',
             data: {
                 user: authData.user,
-                session: authData.session
+                session: null, // Não retorna sessão até confirmar OTP
+                requiresEmailVerification: true
             }
         });
     } catch (error) {
@@ -332,4 +362,175 @@ router.get('/session', async (req, res) => {
     }
 });
 
+/**
+ * POST /auth/verify-otp
+ * Verificar código OTP e ativar conta
+ */
+router.post('/verify-otp', async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        if (!email || !code) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email e código são obrigatórios'
+            });
+        }
+
+        // Buscar código OTP válido
+        const { data: otpData, error: otpError } = await supabaseAdmin
+            .from('otp_codes')
+            .select('*')
+            .eq('email', email)
+            .eq('code', code)
+            .is('used_at', null)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (otpError) {
+            throw otpError;
+        }
+
+        if (!otpData) {
+            return res.status(400).json({
+                success: false,
+                error: 'Código inválido ou expirado'
+            });
+        }
+
+        // Marcar código como usado
+        await supabaseAdmin
+            .from('otp_codes')
+            .update({ used_at: new Date().toISOString() })
+            .eq('id', otpData.id);
+
+        // Confirmar email do usuário no Supabase Auth
+        const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
+            otpData.user_id,
+            { email_confirm: true }
+        );
+
+        if (confirmError) {
+            console.error('Erro ao confirmar email:', confirmError);
+        }
+
+        // Atualizar perfil
+        await supabaseAdmin
+            .from('profiles')
+            .update({ email_verified: true })
+            .eq('id', otpData.user_id);
+
+        // Criar sessão para o usuário (fazer login automático)
+        const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink',
+            email: email
+        });
+
+        if (sessionError) {
+            console.error('Erro ao gerar sessão:', sessionError);
+        }
+
+        res.json({
+            success: true,
+            message: 'Email verificado com sucesso!',
+            data: {
+                verified: true,
+                user_id: otpData.user_id
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao verificar OTP:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao verificar código',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * POST /auth/resend-otp
+ * Reenviar código OTP
+ */
+router.post('/resend-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email é obrigatório'
+            });
+        }
+
+        // Buscar usuário pelo email
+        const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+
+        if (userError) {
+            throw userError;
+        }
+
+        const user = users?.find(u => u.email === email);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Usuário não encontrado'
+            });
+        }
+
+        // Invalidar códigos antigos
+        await supabaseAdmin
+            .from('otp_codes')
+            .update({ used_at: new Date().toISOString() })
+            .eq('email', email)
+            .is('used_at', null);
+
+        // Gerar novo código OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+        // Salvar OTP no banco
+        const { error: otpError } = await supabaseAdmin
+            .from('otp_codes')
+            .insert([
+                {
+                    user_id: user.id,
+                    email: email,
+                    code: otpCode,
+                    expires_at: expiresAt.toISOString(),
+                    created_at: new Date().toISOString()
+                }
+            ]);
+
+        if (otpError) {
+            throw otpError;
+        }
+
+        // TODO: Enviar email com código OTP
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📧 CÓDIGO OTP REENVIADO');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`Email: ${email}`);
+        console.log(`Código: ${otpCode}`);
+        console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        res.json({
+            success: true,
+            message: 'Código reenviado com sucesso!'
+        });
+    } catch (error) {
+        console.error('Erro ao reenviar OTP:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao reenviar código',
+            message: error.message
+        });
+    }
+});
+
 export default router;
+
