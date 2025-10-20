@@ -76,8 +76,9 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
         console.log('Campo de busca: cpf');
         console.log('Valor de busca:', cleanCPF);
         console.log('Tipo do valor:', typeof cleanCPF);
+        console.log('Cliente usado: supabaseAdmin (com service role)');
         
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('id, cpf, full_name')
             .eq('cpf', cleanCPF)
