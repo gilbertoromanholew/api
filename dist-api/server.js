@@ -78,7 +78,8 @@ app.get('/health', (req, res) => {
 app.use('/supabase', supabaseProxyCors, supabaseProxy);
 
 // 🔐 ROTAS DE AUTENTICAÇÃO (customizadas, integradas com Supabase)
-app.use('/auth', authRoutes);
+// Movido para /api/auth/* para funcionar com proxy Nginx/Caddy existente
+app.use('/api/auth', authRoutes);
 
 // =========================================================================
 // 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
