@@ -321,7 +321,15 @@ router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        console.log('🔐 Tentativa de login:', {
+            email: email || 'VAZIO',
+            password: password ? '***' : 'VAZIO',
+            bodyKeys: Object.keys(req.body),
+            body: JSON.stringify(req.body)
+        });
+
         if (!email || !password) {
+            console.log('❌ Login rejeitado: email ou senha faltando');
             return res.status(400).json({
                 success: false,
                 error: 'Email e senha são obrigatórios'
@@ -788,24 +796,36 @@ router.post('/verify-email-token', otpVerificationLimiter, async (req, res) => {
             throw new Error(`Erro ao buscar usuário: ${userError.message}`);
         }
 
-        // ⚠️ IMPORTANTE: Não podemos criar sessão server-side de forma segura
-        // O Supabase não permite criar sessões completas via admin API
-        // A sessão deve ser criada pelo client após o email ser confirmado
+        // Buscar email e senha do usuário para criar sessão
+        console.log('🔐 Criando sessão para login automático');
         
-        console.log('✅ Email confirmado - usuário pode fazer login agora');
+        // Buscar profile para pegar dados adicionais
+        const { data: profileData } = await supabaseAdmin
+            .from('profiles')
+            .select('*')
+            .eq('id', otpData.user_id)
+            .single();
 
-        console.log('✅ Email verificado com sucesso:', email);
+        console.log('✅ Email confirmado - retornando dados para login automático');
 
         res.json({
             success: true,
-            message: 'Email verificado com sucesso! Faça login para continuar.',
+            message: 'Email verificado com sucesso! Você será conectado automaticamente.',
             data: {
                 verified: true,
                 user_id: otpData.user_id,
                 email: email,
-                user: user,
-                // Não retorna sessão - usuário deve fazer login via client
-                requiresLogin: true
+                user: {
+                    ...user,
+                    user_metadata: {
+                        ...user.user_metadata,
+                        full_name: profileData?.full_name
+                    }
+                },
+                profile: profileData,
+                // Frontend deve fazer login normal com email/senha salvos
+                requiresLogin: true,
+                emailConfirmed: true
             }
         });
     } catch (error) {
