@@ -52,7 +52,7 @@ router.post('/check-cpf', async (req, res) => {
         // Buscar usuário com este CPF
         const { data, error } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, email')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
@@ -62,7 +62,11 @@ router.post('/check-cpf', async (req, res) => {
 
         res.json({
             success: true,
-            exists: !!data,
+            data: {
+                exists: !!data,
+                email: data?.email || null,
+                cpf: cleanCPF
+            },
             message: data ? 'CPF já cadastrado' : 'CPF disponível'
         });
     } catch (error) {
