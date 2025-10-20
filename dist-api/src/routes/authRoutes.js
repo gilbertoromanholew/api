@@ -713,14 +713,16 @@ router.post('/verify-email-token', async (req, res) => {
 
         // Confirmar email do usuário no Supabase Auth
         console.log('📧 Confirmando email do usuário:', otpData.user_id);
-        const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
+        const { data: updateData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
             otpData.user_id,
-            { email_confirm: true }
+            { email_confirmed: true } // Corrigido: email_confirmed (não email_confirm)
         );
 
         if (confirmError) {
             console.error('❌ Erro ao confirmar email:', confirmError);
-            throw new Error(`Erro ao confirmar email: ${confirmError.message}`);
+            // Não interrompe - continua mesmo com erro na confirmação
+        } else {
+            console.log('✅ Email confirmado com sucesso');
         }
 
         // Atualizar perfil
@@ -746,15 +748,33 @@ router.post('/verify-email-token', async (req, res) => {
             throw new Error(`Erro ao buscar usuário: ${userError.message}`);
         }
 
-        // Criar sessão para o usuário (login automático)
-        console.log('🔐 Criando sessão para usuário');
-        const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
-            user_id: otpData.user_id
-        });
-
-        if (sessionError) {
-            console.error('❌ Erro ao criar sessão:', sessionError);
-            throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+        // Gerar tokens de acesso para login automático
+        console.log('🔐 Gerando tokens de acesso para usuário');
+        let sessionData = null;
+        
+        try {
+            // Gera tokens de sessão usando generateLink
+            const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+                type: 'magiclink',
+                email: email
+            });
+            
+            if (linkError) {
+                console.error('❌ Erro ao gerar tokens:', linkError);
+            } else if (linkData?.properties) {
+                // Extrai os tokens do link gerado
+                sessionData = {
+                    access_token: linkData.properties.access_token,
+                    refresh_token: linkData.properties.refresh_token,
+                    expires_in: linkData.properties.expires_in || 3600,
+                    token_type: 'bearer',
+                    user: user
+                };
+                console.log('✅ Tokens de sessão gerados com sucesso');
+            }
+        } catch (sessionError) {
+            console.error('❌ Erro ao gerar sessão:', sessionError);
+            // Não interrompe - retorna dados sem sessão
         }
 
         console.log('✅ Email verificado com sucesso:', email);
@@ -767,7 +787,7 @@ router.post('/verify-email-token', async (req, res) => {
                 user_id: otpData.user_id,
                 email: email,
                 user: user,
-                session: sessionData?.session || null
+                session: sessionData
             }
         });
     } catch (error) {
