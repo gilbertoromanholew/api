@@ -667,6 +667,8 @@ router.post('/verify-email-token', async (req, res) => {
         const { email, code, token } = req.body;
         const otpCode = code || token; // Aceita ambos os nomes
 
+        console.log('🔍 Verificando código OTP:', { email, code: otpCode });
+
         if (!email || !otpCode) {
             return res.status(400).json({
                 success: false,
@@ -686,6 +688,12 @@ router.post('/verify-email-token', async (req, res) => {
             .limit(1)
             .maybeSingle();
 
+        console.log('📋 Resultado da busca OTP:', { 
+            found: !!otpData, 
+            error: otpError?.message,
+            otpData: otpData ? { id: otpData.id, expires_at: otpData.expires_at, used_at: otpData.used_at } : null
+        });
+
         if (otpError) {
             throw otpError;
         }
@@ -704,17 +712,20 @@ router.post('/verify-email-token', async (req, res) => {
             .eq('id', otpData.id);
 
         // Confirmar email do usuário no Supabase Auth
+        console.log('📧 Confirmando email do usuário:', otpData.user_id);
         const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
             otpData.user_id,
             { email_confirm: true }
         );
 
         if (confirmError) {
-            console.error('Erro ao confirmar email:', confirmError);
+            console.error('❌ Erro ao confirmar email:', confirmError);
+            throw new Error(`Erro ao confirmar email: ${confirmError.message}`);
         }
 
         // Atualizar perfil
-        await supabaseAdmin
+        console.log('👤 Atualizando perfil do usuário');
+        const { error: profileError } = await supabaseAdmin
             .from('profiles')
             .update({ 
                 email_verified: true,
@@ -722,21 +733,28 @@ router.post('/verify-email-token', async (req, res) => {
             })
             .eq('id', otpData.user_id);
 
+        if (profileError) {
+            console.error('❌ Erro ao atualizar perfil:', profileError);
+        }
+
         // Buscar dados completos do usuário
+        console.log('🔍 Buscando dados do usuário');
         const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(otpData.user_id);
 
         if (userError) {
-            console.error('Erro ao buscar usuário:', userError);
+            console.error('❌ Erro ao buscar usuário:', userError);
+            throw new Error(`Erro ao buscar usuário: ${userError.message}`);
         }
 
         // Criar sessão para o usuário (login automático)
+        console.log('🔐 Criando sessão para usuário');
         const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
             user_id: otpData.user_id
         });
 
         if (sessionError) {
-            console.error('Erro ao criar sessão:', sessionError);
-            // Continuar sem sessão - usuário pode fazer login manual depois
+            console.error('❌ Erro ao criar sessão:', sessionError);
+            throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
         }
 
         console.log('✅ Email verificado com sucesso:', email);
