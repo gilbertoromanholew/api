@@ -41,6 +41,14 @@ router.post('/check-cpf', async (req, res) => {
         // Limpar formatação do CPF
         const cleanCPF = cpf.replace(/\D/g, '');
 
+        // Validar se CPF tem 11 dígitos
+        if (cleanCPF.length !== 11) {
+            return res.status(400).json({
+                success: false,
+                error: 'CPF deve conter 11 dígitos'
+            });
+        }
+
         // Buscar usuário com este CPF
         const { data, error } = await supabase
             .from('profiles')
@@ -125,6 +133,23 @@ router.post('/register', async (req, res) => {
         // Limpar formatação do CPF
         const cleanCPF = cpf.replace(/\D/g, '');
 
+        // Validar se CPF tem 11 dígitos
+        if (cleanCPF.length !== 11) {
+            return res.status(400).json({
+                success: false,
+                error: 'CPF deve conter 11 dígitos'
+            });
+        }
+
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email inválido'
+            });
+        }
+
         // Gerar referral code
         const { data: refCodeData, error: refCodeError } = await supabaseAdmin
             .rpc('generate_referral_code');
@@ -133,7 +158,8 @@ router.post('/register', async (req, res) => {
             console.error('Erro ao gerar código de referência:', refCodeError);
         }
 
-        const referralCode = refCodeData || 'DEFAULT';
+        // Fallback: gerar código único se a função do banco falhar
+        const referralCode = refCodeData || `USER-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
         // Criar usuário no Supabase Auth (com email_confirm DESABILITADO)
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -690,6 +716,11 @@ router.post('/verify-email-token', async (req, res) => {
         const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
             user_id: otpData.user_id
         });
+
+        if (sessionError) {
+            console.error('Erro ao criar sessão:', sessionError);
+            // Continuar sem sessão - usuário pode fazer login manual depois
+        }
 
         console.log('✅ Email verificado com sucesso:', email);
 
