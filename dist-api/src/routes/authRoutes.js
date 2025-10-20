@@ -98,47 +98,18 @@ router.post('/check-cpf', cpfCheckLimiter, async (req, res) => {
             throw profileError;
         }
 
-        // Se encontrou o profile, buscar email do auth.users
-        let userEmail = null;
-        if (profileData?.id) {
-            console.log('👤 Buscando email do usuário em auth.users...');
-            const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
-            
-            if (userError) {
-                console.error('❌ Erro ao buscar usuário:', userError);
-            } else {
-                userEmail = user?.email;
-                console.log('📧 Email encontrado:', userEmail ? 'sim' : 'não');
-            }
-        }
-
-        // Mascarar email para segurança (LGPD)
-        let maskedEmail = null;
-        if (userEmail) {
-            const [localPart, domain] = userEmail.split('@');
-            const visibleChars = Math.min(3, Math.floor(localPart.length / 2));
-            maskedEmail = localPart.substring(0, visibleChars) + '***' + '@' + domain;
-        }
-
-        // Mascarar CPF para segurança (LGPD Art. 46)
-        const maskedCPF = cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.$3-**');
-
         const exists = !!profileData;
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('✅ RESPOSTA FINAL');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('exists:', exists);
-        console.log('maskedEmail:', maskedEmail);
-        console.log('maskedCPF:', maskedCPF);
         console.log('message:', exists ? 'CPF já cadastrado' : 'CPF disponível');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
         res.json({
             success: true,
             data: {
-                exists: exists,
-                email: maskedEmail, // Email mascarado para segurança
-                cpf: maskedCPF // CPF mascarado para segurança
+                exists: exists
             },
             message: exists ? 'CPF já cadastrado' : 'CPF disponível'
         });
