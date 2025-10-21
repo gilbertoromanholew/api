@@ -1,7 +1,8 @@
 import express from 'express';
 import { getProfile, updateProfile, getStats, getReferrals } from './userController.js';
 import { requireAuth } from '../auth/authMiddleware.js';
-import { validate } from '../../middlewares/validator.js';
+// Fase 2: Usar schemas Joi em vez de validação manual
+import { validate, updateProfileSchema } from '../../validators/schemas.js';
 
 const router = express.Router();
 
@@ -16,14 +17,7 @@ router.get('/profile', requireAuth, getProfile);
 router.put(
     '/profile',
     requireAuth,
-    validate({
-        type: 'object',
-        properties: {
-            full_name: { type: 'string', minLength: 3, maxLength: 100 }
-        },
-        required: ['full_name'],
-        additionalProperties: false
-    }),
+    validate(updateProfileSchema), // Fase 2: Usar schema Joi
     updateProfile
 );
 

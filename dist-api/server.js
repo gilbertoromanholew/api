@@ -16,6 +16,13 @@ import authRoutes from './src/routes/authRoutes.js';
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
+// Fase 2: Rate Limiting
+import { 
+    authLimiter, 
+    registerLimiter, 
+    apiLimiter, 
+    supabaseLimiter 
+} from './src/middlewares/rateLimiters.js';
 
 const app = express();
 
@@ -73,13 +80,15 @@ app.get('/health', (req, res) => {
 // =========================================================================
 // Estas rotas são acessíveis a qualquer usuário da internet
 
-// 🔄 PROXY REVERSO SUPABASE
+// 🔄 PROXY REVERSO SUPABASE (com rate limiting)
 // Redireciona /supabase/* para o Supabase interno (sem domínio público)
-app.use('/supabase', supabaseProxyCors, supabaseProxy);
+// Fase 2: Rate limiting aplicado (10 req/min)
+app.use('/supabase', supabaseLimiter, supabaseProxyCors, supabaseProxy);
 
 // 🔐 ROTAS DE AUTENTICAÇÃO (customizadas, integradas com Supabase)
 // Coolify roteia samm.host/api/* → container, então montamos em /auth
 // Resultado final: samm.host/api/auth/* → container /auth/*
+// Fase 2: Rate limiting aplicado (5 tentativas/15min para login, 3/hora para register)
 app.use('/auth', authRoutes);
 
 // =========================================================================
@@ -198,10 +207,12 @@ app.use('/security', ipFilter, requireAdmin, securityRoutes); // 🔒 Segurança
 // =========================================================================
 // 📍 ROTAS DE API (funções dinâmicas)
 // =========================================================================
-// autoLoadRoutes monta as rotas em /api/{category}
+// autoLoadRoutes monta as rotas em /{category}
+// Fase 2: Rate limiting aplicado (100 req/15min por usuário autenticado)
 
 // Auto-carregar funcionalidades do diretório src/functions/
-await autoLoadRoutes(app);
+// Rate limiting é aplicado globalmente nas rotas autenticadas
+await autoLoadRoutes(app, apiLimiter);
 
 // Nota: validateRouteAccess e trackViolations são aplicados dentro das rotas individuais
 // via requireAuth middleware em cada controller

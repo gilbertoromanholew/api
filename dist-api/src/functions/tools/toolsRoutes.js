@@ -2,7 +2,9 @@ import express from 'express';
 import { listTools, getToolDetails, executeTool, getUsageHistory } from './toolsController.js';
 import { requireAuth } from '../auth/authMiddleware.js';
 import { optionalAuth } from '../auth/authMiddleware.js';
-import { validate } from '../../middlewares/validator.js';
+// Fase 2: Usar schemas Joi + rate limiter específico para execução
+import { validate, toolExecutionSchema } from '../../validators/schemas.js';
+import { toolExecutionLimiter } from '../../middlewares/rateLimiters.js';
 
 const router = express.Router();
 
@@ -20,19 +22,12 @@ router.get('/history', requireAuth, getUsageHistory);
 router.get('/:tool_name', optionalAuth, getToolDetails);
 
 // POST /api/tools/execute/:tool_name - Executar ferramenta (autenticado)
+// Fase 2: Rate limiting específico (20 execuções/15min) + Schema Joi
 router.post(
     '/execute/:tool_name',
     requireAuth,
-    validate({
-        type: 'object',
-        properties: {
-            params: { 
-                type: 'object',
-                description: 'Parâmetros específicos da ferramenta'
-            }
-        },
-        additionalProperties: true // Permite propriedades adicionais
-    }),
+    toolExecutionLimiter, // Rate limiting específico para execução de ferramentas
+    validate(toolExecutionSchema),
     executeTool
 );
 

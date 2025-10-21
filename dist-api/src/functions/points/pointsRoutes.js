@@ -2,7 +2,8 @@ import express from 'express';
 import { getBalance, getHistory, consume, checkCanUse, addFree } from './pointsController.js';
 import { requireAuth } from '../auth/authMiddleware.js';
 import { requireAdmin } from '../../middlewares/accessLevel.js';
-import { validate } from '../../middlewares/validator.js';
+// Fase 2: Usar schemas Joi
+import { validate, consumePointsSchema, addFreePointsSchema } from '../../validators/schemas.js';
 
 const router = express.Router();
 
@@ -19,42 +20,20 @@ router.get('/history', requireAuth, getHistory);
 // GET /api/points/can-use/:tool_name - Verificar se pode usar ferramenta
 router.get('/can-use/:tool_name', requireAuth, checkCanUse);
 
-// POST /api/points/consume - Consumir pontos manualmente
+// POST /api/points/consume - Consumir pontos manualmente (Fase 2: Schema Joi)
 router.post(
     '/consume',
     requireAuth,
-    validate({
-        type: 'object',
-        properties: {
-            amount: { type: 'number', minimum: 1 },
-            description: { type: 'string', minLength: 3, maxLength: 200 },
-            tool_name: { type: 'string', maxLength: 100 },
-            type: { 
-                type: 'string', 
-                enum: ['tool_usage', 'manual_consumption', 'admin_adjustment'] 
-            }
-        },
-        required: ['amount'],
-        additionalProperties: false
-    }),
+    validate(consumePointsSchema),
     consume
 );
 
-// POST /api/points/add-free - Adicionar pontos gratuitos (ADMIN)
+// POST /api/points/add-free - Adicionar pontos gratuitos (ADMIN) (Fase 2: Schema Joi)
 router.post(
     '/add-free',
     requireAuth,
     requireAdmin,
-    validate({
-        type: 'object',
-        properties: {
-            user_id: { type: 'string', format: 'uuid' },
-            amount: { type: 'number', minimum: 1 },
-            description: { type: 'string', minLength: 3, maxLength: 200 }
-        },
-        required: ['user_id', 'amount'],
-        additionalProperties: false
-    }),
+    validate(addFreePointsSchema),
     addFree
 );
 

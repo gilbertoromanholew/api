@@ -10,9 +10,10 @@ const __dirname = path.dirname(__filename);
  * Busca por arquivos que terminam em 'Routes.js' em src/functions/
  * 
  * @param {Object} app - Instância do Express app
+ * @param {Function} rateLimiter - Middleware de rate limiting (opcional)
  * @returns {Promise<Array>} Lista de funcionalidades carregadas
  */
-export async function autoLoadRoutes(app) {
+export async function autoLoadRoutes(app, rateLimiter = null) {
     const funcionalidadesDir = path.join(__dirname, '../functions');
     const loadedRoutes = [];
     
@@ -47,14 +48,20 @@ export async function autoLoadRoutes(app) {
                     if (routeModule.default) {
                         // Registrar rotas SEM prefixo /api (Coolify já remove)
                         // Frontend: samm.host/api/{category} → Container: /{category}
-                        app.use(`/${category}`, routeModule.default);
+                        // Fase 2: Aplicar rate limiter se fornecido
+                        if (rateLimiter) {
+                            app.use(`/${category}`, rateLimiter, routeModule.default);
+                            console.log(`   ✅ ${category}/${routeFile} -> /${category} (com rate limiting)`);
+                        } else {
+                            app.use(`/${category}`, routeModule.default);
+                            console.log(`   ✅ ${category}/${routeFile} -> /${category}`);
+                        }
                         loadedRoutes.push({
                             category,
                             file: routeFile,
                             path: categoryPath,
                             prefix: `/${category}`
                         });
-                        console.log(`   ✅ ${category}/${routeFile} -> /${category}`);
                     } else {
                         console.log(`   ⚠️  ${category}/${routeFile} - sem export default`);
                     }
