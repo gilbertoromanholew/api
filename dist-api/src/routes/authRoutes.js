@@ -609,6 +609,9 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
             });
         }
 
+        // 🔐 Gerar e enviar CSRF token
+        setCsrfToken(req, res, data.session.expires_in * 1000);
+
         // ✅ Registrar auditoria de login com CPF bem-sucedido
         logLogin(data.user.id, req.ip, req.headers['user-agent'], { 
             cpf: cleanCPF,
