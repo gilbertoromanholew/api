@@ -411,8 +411,9 @@ server.js
 
 | Módulo | Status | Motivo | Ação |
 |--------|--------|--------|------|
-| `src/functions/auth/` | ⚠️ OBSOLETO | Movido para `src/routes/authRoutes.js` | Pode ser removido |
-| `src/middlewares/rateLimiter.js` | ⚠️ LEGADO | Substituído por `rateLimiters.js` | Pode ser removido |
+| `src/functions/auth/` | ✅ REMOVIDO | Movido para `src/routes/authRoutes.js` + `src/middlewares/adminAuth.js` | ~~Pode ser removido~~ **DELETADO** |
+| `src/middlewares/rateLimiter.js` | ✅ REMOVIDO | Substituído por `rateLimiters.js` | ~~Pode ser removido~~ **DELETADO** |
+| `authUtils.js` | ✅ MOVIDO | Movido de `functions/auth/` para `src/utils/` | Preservado (funções úteis) |
 
 ### 📝 **TEMPLATES / DOCUMENTAÇÃO:**
 
@@ -428,15 +429,17 @@ server.js
 ```
 server.js:                    ~150 linhas
 src/routes/:                  ~2500 linhas (authRoutes: 1500, auditRoutes: 400, etc)
-src/middlewares/:             ~1000 linhas (rateLimiters: 500, adminAuth: 200, etc)
+src/middlewares/:             ~1000 linhas (rateLimiters: 500, adminAuth: 250, etc)
 src/services/:                ~600 linhas (auditService)
-src/utils/:                   ~800 linhas (ipBlockingSystem: 400, etc)
+src/utils/:                   ~900 linhas (ipBlockingSystem: 400, authUtils: 130, etc)
 src/functions/:               ~1500 linhas (tools: 600, points: 400, user: 300, health: 200)
 src/config/:                  ~200 linhas
 src/core/:                    ~100 linhas
 src/validators/:              ~100 linhas
 
 TOTAL (sem node_modules):     ~6950 linhas de código próprio
+✅ REMOVIDO: ~500 linhas de código duplicado/obsoleto
+🎯 TOTAL LIMPO: ~6450 linhas de código próprio
 ```
 
 ### **Arquivos de código fonte:**
@@ -476,9 +479,10 @@ TOTAL:                        ~45 rotas HTTP
 
 ### 🟡 **PODE MELHORAR:**
 
-1. 🟡 **Remover código obsoleto:**
-   - `src/functions/auth/` (já movido para `src/routes/authRoutes.js`)
-   - `src/middlewares/rateLimiter.js` (substituído por `rateLimiters.js`)
+1. ✅ ~~**Remover código obsoleto:**~~ **CONCLUÍDO!** (Commit 4156347)
+   - ~~`src/functions/auth/`~~ → **DELETADO** (movido para `src/routes/authRoutes.js` + `src/middlewares/adminAuth.js`)
+   - ~~`src/middlewares/rateLimiter.js`~~ → **DELETADO** (substituído por `rateLimiters.js`)
+   - `authUtils.js` → **MOVIDO** para `src/utils/authUtils.js`
 
 2. 🟡 **Adicionar mais services:**
    - `emailService.js` - Para envio de emails (OTP, alertas)
@@ -552,8 +556,8 @@ A API está **bem arquitetada** com separação clara de responsabilidades:
 **Status Geral:** ✅ **API ROBUSTA E BEM ESTRUTURADA**
 
 **Próximos passos sugeridos:**
-1. 🧹 Limpar código obsoleto (`functions/auth/`, `rateLimiter.js`)
-2. 📝 Documentar arquitetura (este documento serve!)
+1. ✅ ~~Limpar código obsoleto~~ **CONCLUÍDO!** (Commit 4156347 - Removido ~500 linhas)
+2. ✅ ~~Documentar arquitetura~~ **CONCLUÍDO!** (Este documento + AUDITORIA_DUPLICACAO.md)
 3. 🧪 Adicionar testes unitários (Fase 4 - opcional)
 4. 📊 Adicionar métricas (Fase 4 - opcional)
 5. 🚀 Continuar adicionando ferramentas em `src/functions/` conforme necessidade
