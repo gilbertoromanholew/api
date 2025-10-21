@@ -97,13 +97,18 @@ export function validateCsrfToken(req, res, next) {
     }
     
     // Endpoints públicos (não autenticados)
+    // Estes endpoints não requerem CSRF porque não têm sessão ainda
     const publicEndpoints = [
         '/auth/login',
         '/auth/register',
         '/auth/login-cpf',
+        '/auth/check-cpf',        // Verificação de CPF (pré-cadastro)
+        '/auth/check-email',      // Verificação de email (pré-cadastro)
         '/auth/verify-email',
         '/auth/verify-otp',
         '/auth/resend-otp',
+        '/auth/resend-confirmation',
+        '/auth/verify-email-token',
         '/auth/forgot-password',
         '/auth/reset-password'
     ];
