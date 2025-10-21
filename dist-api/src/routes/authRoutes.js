@@ -2,11 +2,9 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import {
-    otpVerificationLimiter,
-    otpResendLimiter,
-    cpfCheckLimiter,
+    authLimiter,
     registerLimiter,
-    loginLimiter
+    apiLimiter
 } from '../middlewares/rateLimiters.js';
 import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
@@ -494,7 +492,7 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
  * Fazer login com CPF e senha
  * Rate limit: 5 tentativas a cada 15 minutos
  */
-router.post('/login-cpf', loginLimiter, async (req, res) => {
+router.post('/login-cpf', authLimiter, async (req, res) => {
     try {
         const { cpf, password } = req.body;
 
@@ -826,7 +824,7 @@ router.post('/verify-otp', async (req, res) => {
  * POST /auth/resend-otp
  * Reenviar código OTP
  */
-router.post('/resend-otp', otpResendLimiter, async (req, res) => {
+router.post('/resend-otp', authLimiter, async (req, res) => {
     try {
         const { email } = req.body;
 
@@ -916,7 +914,7 @@ router.post('/resend-otp', otpResendLimiter, async (req, res) => {
  * POST /auth/resend-confirmation
  * Alias para /auth/resend-otp (compatibilidade com frontend)
  */
-router.post('/resend-confirmation', otpResendLimiter, async (req, res) => {
+router.post('/resend-confirmation', authLimiter, async (req, res) => {
     try {
         const { email } = req.body;
 
@@ -1007,7 +1005,7 @@ router.post('/resend-confirmation', otpResendLimiter, async (req, res) => {
  * Alias para /auth/verify-otp (compatibilidade com frontend)
  * Aceita tanto { email, code } quanto { email, token }
  */
-router.post('/verify-email-token', otpVerificationLimiter, async (req, res) => {
+router.post('/verify-email-token', authLimiter, async (req, res) => {
     try {
         const { email, code, token } = req.body;
         const otpCode = code || token; // Aceita ambos os nomes
