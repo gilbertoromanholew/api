@@ -13,6 +13,8 @@ import logsRoutes from './src/routes/logsRoutes.js';
 import zerotierRoutes from './src/routes/zerotier.js';
 import securityRoutes from './src/routes/securityRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
+// Fase 3: Rotas de auditoria
+import auditRoutes from './src/routes/auditRoutes.js';
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
@@ -203,6 +205,8 @@ app.get('/logs', ipFilter, requireAdmin, getLogsDashboard); // 🔒 Dashboard AP
 app.use('/logs', ipFilter, requireAdmin, logsRoutes);   // 🔒 API de logs APENAS para admin
 app.use('/zerotier', ipFilter, requireAdmin, zerotierRoutes); // 🔒 ZeroTier APENAS para admin
 app.use('/security', ipFilter, requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
+// Fase 3: Rotas de auditoria (admin via VPN)
+app.use('/audit', ipFilter, auditRoutes); // 🔒 Auditoria (requireAdmin já aplicado dentro das rotas)
 
 // =========================================================================
 // 📍 ROTAS DE API (funções dinâmicas)

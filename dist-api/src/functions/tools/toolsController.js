@@ -1,6 +1,8 @@
 import { supabase, supabaseAdmin } from '../../config/supabase.js';
 import { supabaseQuery } from '../../config/supabaseRest.js';
 import { consumePoints, canUseTool } from '../points/pointsService.js';
+// Fase 3: Auditoria de execução de ferramentas
+import { logToolExecution } from '../../services/auditService.js';
 
 /**
  * GET /api/tools/list
@@ -100,8 +102,11 @@ export async function getToolDetails(req, res) {
 /**
  * POST /api/tools/execute/:tool_name
  * Executa uma ferramenta (consome pontos automaticamente)
+ * Fase 3: Registra execução no audit log
  */
 export async function executeTool(req, res) {
+    const startTime = Date.now(); // Fase 3: Medir tempo de execução
+    
     try {
         const userId = req.user.id;
         const { tool_name } = req.params;
@@ -116,6 +121,19 @@ export async function executeTool(req, res) {
             .single();
         
         if (toolError || !tool) {
+            // Fase 3: Registrar tentativa falhada
+            const executionTime = Date.now() - startTime;
+            logToolExecution(
+                userId,
+                tool_name,
+                params,
+                req.ip,
+                req.headers['user-agent'],
+                executionTime,
+                false,
+                'Ferramenta não encontrada ou inativa'
+            ).catch(err => console.error('[Audit] Failed to log tool execution:', err));
+            
             return res.status(404).json({
                 success: false,
                 error: 'Ferramenta não encontrada ou inativa'
@@ -133,6 +151,19 @@ export async function executeTool(req, res) {
             // AQUI: Executar a lógica da ferramenta
             // Por enquanto, retornar sucesso com dados de consumo
             // TODO: Integrar com as ferramentas reais
+            
+            // Fase 3: Registrar execução bem-sucedida
+            const executionTime = Date.now() - startTime;
+            logToolExecution(
+                userId,
+                tool_name,
+                params,
+                req.ip,
+                req.headers['user-agent'],
+                executionTime,
+                true,
+                null
+            ).catch(err => console.error('[Audit] Failed to log tool execution:', err));
             
             return res.json({
                 success: true,
@@ -152,12 +183,38 @@ export async function executeTool(req, res) {
                 }
             });
         } catch (error) {
+            // Fase 3: Registrar falha (pontos insuficientes)
+            const executionTime = Date.now() - startTime;
+            logToolExecution(
+                userId,
+                tool_name,
+                params,
+                req.ip,
+                req.headers['user-agent'],
+                executionTime,
+                false,
+                error.message
+            ).catch(err => console.error('[Audit] Failed to log tool execution:', err));
+            
             return res.status(400).json({
                 success: false,
                 error: error.message
             });
         }
     } catch (error) {
+        // Fase 3: Registrar erro geral
+        const executionTime = Date.now() - startTime;
+        logToolExecution(
+            req.user?.id,
+            req.params.tool_name,
+            req.body.params,
+            req.ip,
+            req.headers['user-agent'],
+            executionTime,
+            false,
+            error.message
+        ).catch(err => console.error('[Audit] Failed to log tool execution:', err));
+        
         return res.status(500).json({
             success: false,
             error: error.message

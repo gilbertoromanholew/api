@@ -14,6 +14,7 @@
  */
 
 import rateLimit from 'express-rate-limit';
+import { logRateLimitViolation } from '../services/auditService.js';
 
 /**
  * Rate limiter para autenticação (login)
@@ -45,6 +46,17 @@ export const authLimiter = rateLimit({
     // Handler customizado para logging
     handler: (req, res) => {
         console.warn(`[Rate Limit] Auth limit exceeded - IP: ${req.ip}, User-Agent: ${req.headers['user-agent']}`);
+        
+        // Fase 3: Registrar violação no banco de dados
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: req.userId || req.user?.id || null,
+            endpoint: req.path,
+            limiterType: 'auth',
+            attempts: 5,
+            userAgent: req.headers['user-agent']
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
         res.status(429).json({
             success: false,
             error: 'Too many authentication attempts',
@@ -91,6 +103,17 @@ export const registerLimiter = rateLimit({
     
     handler: (req, res) => {
         console.warn(`[Rate Limit] Register limit exceeded - IP: ${req.ip}`);
+        
+        // Fase 3: Registrar violação
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: null,
+            endpoint: req.path,
+            limiterType: 'register',
+            attempts: 3,
+            userAgent: req.headers['user-agent']
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
         res.status(429).json({
             success: false,
             error: 'Too many registration attempts',
@@ -145,6 +168,17 @@ export const apiLimiter = rateLimit({
     handler: (req, res) => {
         const identifier = req.userId || req.user?.id || req.ip;
         console.warn(`[Rate Limit] API limit exceeded - Identifier: ${identifier}`);
+        
+        // Fase 3: Registrar violação
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: req.userId || req.user?.id || null,
+            endpoint: req.path,
+            limiterType: 'api',
+            attempts: 100,
+            userAgent: req.headers['user-agent']
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
         res.status(429).json({
             success: false,
             error: 'Too many requests',
@@ -190,6 +224,17 @@ export const supabaseLimiter = rateLimit({
     
     handler: (req, res) => {
         console.warn(`[Rate Limit] Supabase proxy limit exceeded - IP: ${req.ip}`);
+        
+        // Fase 3: Registrar violação
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: req.userId || req.user?.id || null,
+            endpoint: req.path,
+            limiterType: 'supabase',
+            attempts: 10,
+            userAgent: req.headers['user-agent']
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
         res.status(429).json({
             success: false,
             error: 'Too many Supabase requests',
@@ -234,6 +279,18 @@ export const toolExecutionLimiter = rateLimit({
     handler: (req, res) => {
         const identifier = req.userId || req.user?.id || req.ip;
         console.warn(`[Rate Limit] Tool execution limit exceeded - User: ${identifier}, Tool: ${req.params.tool_name}`);
+        
+        // Fase 3: Registrar violação
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: req.userId || req.user?.id || null,
+            endpoint: req.path,
+            limiterType: 'tools',
+            attempts: 20,
+            userAgent: req.headers['user-agent'],
+            metadata: { tool_name: req.params.tool_name }
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
         res.status(429).json({
             success: false,
             error: 'Too many tool executions',
