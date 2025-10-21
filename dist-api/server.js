@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser';
 import { ipFilter } from './src/middlewares/ipFilter.js';
 import { errorHandler, notFoundHandler } from './src/middlewares/errorHandler.js';
 import { requireAdmin, trackViolations, validateRouteAccess } from './src/middlewares/accessLevel.js';
-import { requireAuth, optionalAuth } from './src/functions/auth/authMiddleware.js';
+import { requireAuth, optionalAuth } from './src/middlewares/adminAuth.js';
 import { getApiInfo } from './src/routes/index.js';
 import { getApiDocs } from './src/routes/docs.js';
 import { getLogsDashboard } from './src/routes/logsDashboard.js';

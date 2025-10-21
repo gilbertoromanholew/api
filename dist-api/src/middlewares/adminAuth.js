@@ -122,3 +122,40 @@ export function requireAdminAuth(req, res, next) {
         requireAdmin(req, res, next);
     });
 }
+
+/**
+ * Middleware: Autenticação opcional
+ * Anexa usuário ao req se autenticado, mas NÃO bloqueia se não autenticado
+ * Útil para endpoints que mudam comportamento baseado em autenticação
+ */
+export async function optionalAuth(req, res, next) {
+    try {
+        // Extrair token da sessão/cookie
+        const sessionCookie = req.cookies?.['sb-access-token'];
+        
+        if (!sessionCookie) {
+            // Sem cookie, continua sem usuário
+            req.user = null;
+            return next();
+        }
+
+        // Tentar validar token
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(sessionCookie);
+        
+        if (error || !user) {
+            // Token inválido, continua sem usuário
+            req.user = null;
+            return next();
+        }
+
+        // Token válido, anexa usuário
+        req.user = user;
+        console.log(`[Optional Auth] Usuário ${user.id} autenticado`);
+        next();
+    } catch (error) {
+        console.error('[Optional Auth] Erro ao validar token:', error);
+        // Em caso de erro, continua sem usuário (não bloqueia)
+        req.user = null;
+        next();
+    }
+}

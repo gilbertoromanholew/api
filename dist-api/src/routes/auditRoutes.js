@@ -12,8 +12,7 @@
  */
 
 import express from 'express';
-import { requireAuth } from '../functions/auth/authMiddleware.js';
-import { requireAdmin } from '../middlewares/accessLevel.js';
+import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
 import {
     getAuditStats,
     getFailedLoginAttempts,
