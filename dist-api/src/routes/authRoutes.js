@@ -7,7 +7,7 @@ import {
     cpfCheckLimiter,
     registerLimiter,
     loginLimiter
-} from '../middlewares/rateLimiter.js';
+} from '../middlewares/rateLimiters.js';
 import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
 import { alertStore } from '../utils/alertSystem.js';
