@@ -1,5 +1,17 @@
 # 🔧 Troubleshooting Rápido - CSRF Token
 
+**Última atualização**: 21/10/2025  
+**Versão**: 2.0 (Fixes críticos aplicados)
+
+## 📋 Fixes Aplicados
+
+| Data | Commit | Fix | Status |
+|------|--------|-----|--------|
+| 21/10/2025 | `733bbda` | sameSite: strict → lax | ✅ |
+| 21/10/2025 | `0664c89` | Remover warnings públicos | ✅ |
+| 21/10/2025 | `8d5af2c` | Remover domain do cookie | ✅ |
+| 21/10/2025 | `528de6d` | **CSRF em login-cpf** | ✅ **CRITICAL** |
+
 ## ✅ Como Testar se CSRF Está Funcionando
 
 ### 1. Verificar Cookie Após Login
@@ -24,7 +36,7 @@ Deve existir:
 ✅ HttpOnly: false (❗ importante!)
 ✅ Secure: true (em produção)
 ✅ SameSite: Lax
-✅ Domain: .samm.host
+✅ Domain: samm.host (SEM ponto inicial!)
 ✅ Path: /
 ```
 
@@ -295,15 +307,68 @@ if (!csrfToken && !isPublicEndpoint) {
 
 ---
 
+### ⭐ Problema 7: Login com CPF Não Gera CSRF Token
+
+**Sintomas:**
+```bash
+# Logs do backend após login com CPF:
+✅ Login com CPF realizado com sucesso
+✅ Cookies de sessão definidos
+❌ (CSRF token NÃO aparece!)
+
+# Ao tentar logout:
+⚠️ CSRF validation failed: Token ausente {
+  path: '/auth/logout',
+  hasHeader: false,
+  hasCookie: false
+}
+```
+
+**Causa:**
+Rota `/auth/login-cpf` não estava chamando `setCsrfToken()`.
+
+**Solução (commit `528de6d`):**
+```javascript
+// authRoutes.js - linha ~610
+router.post('/login-cpf', async (req, res) => {
+    // ... autenticação com CPF ...
+    
+    // Setar cookies de sessão
+    res.cookie('sb-access-token', ...);
+    res.cookie('sb-refresh-token', ...);
+    
+    // 🔐 Gerar e enviar CSRF token (ADICIONADO!)
+    setCsrfToken(req, res, data.session.expires_in * 1000);
+    
+    res.json({ success: true });
+});
+```
+
+**Como Identificar:**
+1. Fazer login com CPF (não email)
+2. Verificar logs do backend
+3. Deve aparecer: `🔐 CSRF token gerado`
+4. Se não aparecer, rota está sem `setCsrfToken()`
+
+**Como Validar Fix:**
+```bash
+# Após fix, logs devem mostrar:
+✅ Login com CPF realizado com sucesso
+✅ Cookies de sessão definidos
+✅ 🔐 CSRF token gerado: { token: 'abc...', expiresIn: '3600s' }
+```
+
+---
+
 ## 🧪 Testes Manuais
 
-### Teste 1: Login Gera Token
+### Teste 1: Login com Email Gera Token
 
 ```bash
 # 1. Limpar cookies
 DevTools → Application → Cookies → Clear all
 
-# 2. Fazer login
+# 2. Fazer login com EMAIL
 email: test@example.com
 password: senha123
 
@@ -318,7 +383,33 @@ console.log(document.cookie)
 # Deve conter: csrf-token=...
 ```
 
-### Teste 2: Requisição Autenticada
+### Teste 2: Login com CPF Gera Token ⭐ NOVO
+
+```bash
+# 1. Limpar cookies
+DevTools → Application → Cookies → Clear all
+
+# 2. Fazer login com CPF
+cpf: 701.099.484-67
+password: senha123
+
+# 3. Verificar console do backend:
+✅ Login com CPF realizado com sucesso
+✅ Cookies de sessão definidos
+✅ 🔐 CSRF token gerado ← DEVE APARECER!
+
+# 4. Verificar DevTools → Application → Cookies
+# Deve existir: csrf-token
+
+# 5. Verificar console do frontend:
+console.log(document.cookie)
+# Deve conter: csrf-token=...
+
+# 6. Tentar logout:
+# Deve funcionar com 200 OK (não 403!)
+```
+
+### Teste 3: Requisição Autenticada
 
 ```bash
 # 1. Após login, tentar fazer logout
@@ -336,7 +427,7 @@ console.log(document.cookie)
 # sb-access-token → (removido)
 ```
 
-### Teste 3: Endpoint Público (Sem CSRF)
+### Teste 4: Endpoint Público (Sem CSRF)
 
 ```bash
 # 1. Logout ou limpar cookies
