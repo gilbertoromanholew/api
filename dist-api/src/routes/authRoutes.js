@@ -8,6 +8,7 @@ import {
 } from '../middlewares/rateLimiters.js';
 import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
+import { setCsrfToken, clearCsrfToken } from '../middlewares/csrfProtection.js';
 import { alertStore } from '../utils/alertSystem.js';
 import { 
     logLogin, 
@@ -457,6 +458,9 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
             });
         }
 
+        // 🔐 Gerar e enviar CSRF token
+        setCsrfToken(req, res, data.session.expires_in * 1000);
+
         // ✅ Registrar auditoria de login bem-sucedido
         logLogin(data.user.id, req.ip, req.headers['user-agent'], { 
             email,
@@ -671,6 +675,9 @@ router.post('/logout', async (req, res) => {
         // Limpar cookies de sessão (SEMPRE fazer isso, mesmo se signOut falhar)
         res.clearCookie('sb-access-token', { path: '/' });
         res.clearCookie('sb-refresh-token', { path: '/' });
+        
+        // 🔐 Limpar CSRF token
+        clearCsrfToken(res);
 
         console.log('✅ Logout realizado e cookies limpos');
 

@@ -25,6 +25,8 @@ import {
     apiLimiter, 
     supabaseLimiter 
 } from './src/middlewares/rateLimiters.js';
+// Fase 1: CSRF Protection
+import { validateCsrfToken } from './src/middlewares/csrfProtection.js';
 
 const app = express();
 
@@ -63,10 +65,14 @@ app.use(cors({
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token']
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// 🔐 CSRF Protection - Valida tokens em requisições mutantes (POST/PUT/DELETE/PATCH)
+// Endpoints públicos (login, register) são automaticamente excluídos
+app.use(validateCsrfToken);
 
 // Health check endpoint (para Docker healthcheck) - ANTES do filtro de IP
 app.get('/health', (req, res) => {
