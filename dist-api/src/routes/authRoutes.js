@@ -649,20 +649,28 @@ router.post('/logout', async (req, res) => {
 
         if (accessToken) {
             try {
-                const { data: { user } } = await supabase.auth.getUser(accessToken);
-                userId = user?.id;
+                // Usar supabaseAdmin para validar o token
+                const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+                if (!userError && user) {
+                    userId = user.id;
+                    console.log(`[Logout] User ID encontrado: ${userId}`);
+                }
             } catch (err) {
-                console.error('[Audit] Could not get user for logout audit:', err.message);
+                console.error('[Logout] Could not get user for audit:', err.message);
             }
         }
 
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-            throw error;
+        // Fazer logout (não importa se falhar, vamos limpar os cookies de qualquer forma)
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.warn('[Logout] Supabase signOut error (não crítico):', error.message);
+            }
+        } catch (err) {
+            console.warn('[Logout] Supabase signOut failed (não crítico):', err.message);
         }
 
-        // Limpar cookies de sessão
+        // Limpar cookies de sessão (SEMPRE fazer isso, mesmo se signOut falhar)
         res.clearCookie('sb-access-token', { path: '/' });
         res.clearCookie('sb-refresh-token', { path: '/' });
 
