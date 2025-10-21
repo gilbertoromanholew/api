@@ -78,8 +78,9 @@ app.get('/health', (req, res) => {
 app.use('/supabase', supabaseProxyCors, supabaseProxy);
 
 // 🔐 ROTAS DE AUTENTICAÇÃO (customizadas, integradas com Supabase)
-// Movido para /api/auth/* para funcionar com proxy Nginx/Caddy existente
-app.use('/api/auth', authRoutes);
+// Coolify roteia samm.host/api/* → container, então montamos em /auth
+// Resultado final: samm.host/api/auth/* → container /auth/*
+app.use('/auth', authRoutes);
 
 // =========================================================================
 // 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
@@ -195,14 +196,15 @@ app.use('/zerotier', ipFilter, requireAdmin, zerotierRoutes); // 🔒 ZeroTier A
 app.use('/security', ipFilter, requireAdmin, securityRoutes); // 🔒 Segurança APENAS para admin
 
 // =========================================================================
-// 📍 ROTAS DE API (funções dinâmicas - COM validateRouteAccess)
+// 📍 ROTAS DE API (funções dinâmicas)
 // =========================================================================
-// Aplica middlewares de validação e rastreamento apenas nas rotas de API
-
-app.use('/api', validateRouteAccess, trackViolations);
+// autoLoadRoutes monta as rotas em /api/{category}
 
 // Auto-carregar funcionalidades do diretório src/functions/
 await autoLoadRoutes(app);
+
+// Nota: validateRouteAccess e trackViolations são aplicados dentro das rotas individuais
+// via requireAuth middleware em cada controller
 
 // Handlers de erro (devem ser os ÚLTIMOS middlewares)
 app.use(notFoundHandler);  // 404 - Rota não encontrada
