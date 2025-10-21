@@ -45,15 +45,16 @@ export async function autoLoadRoutes(app) {
                     const routeModule = await import(`file://${routePath}`);
                     
                     if (routeModule.default) {
-                        // Registrar rotas com prefixo /api/{category}
-                        app.use(`/api/${category}`, routeModule.default);
+                        // Registrar rotas SEM prefixo /api (Coolify já remove)
+                        // Frontend: samm.host/api/{category} → Container: /{category}
+                        app.use(`/${category}`, routeModule.default);
                         loadedRoutes.push({
                             category,
                             file: routeFile,
                             path: categoryPath,
-                            prefix: `/api/${category}`
+                            prefix: `/${category}`
                         });
-                        console.log(`   ✅ ${category}/${routeFile} -> /api/${category}`);
+                        console.log(`   ✅ ${category}/${routeFile} -> /${category}`);
                     } else {
                         console.log(`   ⚠️  ${category}/${routeFile} - sem export default`);
                     }
