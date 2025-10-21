@@ -49,21 +49,21 @@ export function setCsrfToken(req, res, expiresIn = 24 * 60 * 60 * 1000) {
     
     // Envia cookie legível por JavaScript (httpOnly=false)
     // Necessário para frontend ler e incluir no header
+    // Domain omitido: navegador usa o domínio atual automaticamente
     res.cookie('csrf-token', token, {
         httpOnly: false, // ⚠️ JS precisa ler este cookie
         secure: process.env.NODE_ENV === 'production', // HTTPS em produção
         sameSite: 'lax', // 🔒 Permite same-site navigation, bloqueia cross-site
         maxAge: expiresIn,
-        path: '/',
-        domain: process.env.NODE_ENV === 'production' ? '.samm.host' : undefined
+        path: '/'
     });
     
     console.log('🔐 CSRF token gerado:', {
         token: token.substring(0, 8) + '...',
         expiresIn: `${expiresIn / 1000}s`,
         sameSite: 'lax',
-        domain: process.env.NODE_ENV === 'production' ? '.samm.host' : 'localhost',
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false
     });
     
     return token;
@@ -185,10 +185,10 @@ export function validateCsrfToken(req, res, next) {
  * });
  */
 export function clearCsrfToken(res) {
+    // Domain omitido: deve corresponder ao cookie original
     res.clearCookie('csrf-token', {
         path: '/',
-        sameSite: 'lax',
-        domain: process.env.NODE_ENV === 'production' ? '.samm.host' : undefined
+        sameSite: 'lax'
     });
     
     console.log('🗑️ CSRF token removido');
