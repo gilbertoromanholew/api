@@ -11,6 +11,13 @@ import {
 import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
 import { alertStore } from '../utils/alertSystem.js';
+import { 
+    logLogin, 
+    logFailedLogin, 
+    logRegister, 
+    logFailedRegister,
+    logLogout 
+} from '../services/auditService.js';
 
 const router = express.Router();
 
@@ -358,6 +365,12 @@ router.post('/register', registerLimiter, async (req, res) => {
             }
         }
 
+        // ✅ Registrar auditoria de registro bem-sucedido
+        logRegister(authData.user.id, req.ip, req.headers['user-agent'], { 
+            full_name, 
+            cpf: cleanCPF 
+        }).catch(err => console.error('[Audit] Failed to log register:', err));
+
         res.json({
             success: true,
             message: 'Usuário registrado com sucesso. Verifique seu email para o código de confirmação.',
@@ -370,6 +383,13 @@ router.post('/register', registerLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('[SECURITY] Erro ao registrar usuário:', error.message);
+        
+        // ❌ Registrar auditoria de registro falhado
+        logFailedRegister(email, req.ip, req.headers['user-agent'], error.message, { 
+            full_name, 
+            cpf: cpf?.replace(/\D/g, '') 
+        }).catch(err => console.error('[Audit] Failed to log failed register:', err));
+
         res.status(500).json({
             success: false,
             error: 'Erro ao registrar usuário',
@@ -439,6 +459,12 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
             });
         }
 
+        // ✅ Registrar auditoria de login bem-sucedido
+        logLogin(data.user.id, req.ip, req.headers['user-agent'], { 
+            email,
+            method: 'email_password'
+        }).catch(err => console.error('[Audit] Failed to log login:', err));
+
         res.json({
             success: true,
             message: 'Login realizado com sucesso',
@@ -449,6 +475,12 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('Erro ao fazer login:', error);
+        
+        // ❌ Registrar auditoria de login falhado
+        logFailedLogin(email, req.ip, req.headers['user-agent'], error.message, { 
+            method: 'email_password'
+        }).catch(err => console.error('[Audit] Failed to log failed login:', err));
+
         res.status(401).json({
             success: false,
             error: 'Credenciais inválidas',
@@ -575,6 +607,12 @@ router.post('/login-cpf', loginLimiter, async (req, res) => {
             });
         }
 
+        // ✅ Registrar auditoria de login com CPF bem-sucedido
+        logLogin(data.user.id, req.ip, req.headers['user-agent'], { 
+            cpf: cleanCPF,
+            method: 'cpf_password'
+        }).catch(err => console.error('[Audit] Failed to log login:', err));
+
         res.json({
             success: true,
             message: 'Login realizado com sucesso',
@@ -585,6 +623,12 @@ router.post('/login-cpf', loginLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('Erro ao fazer login com CPF:', error);
+        
+        // ❌ Registrar auditoria de login falhado
+        logFailedLogin(cpf, req.ip, req.headers['user-agent'], error.message, { 
+            method: 'cpf_password'
+        }).catch(err => console.error('[Audit] Failed to log failed login:', err));
+
         res.status(401).json({
             success: false,
             error: 'CPF ou senha inválidos',
@@ -599,6 +643,19 @@ router.post('/login-cpf', loginLimiter, async (req, res) => {
  */
 router.post('/logout', async (req, res) => {
     try {
+        // Obter user_id antes de fazer logout (cookies ainda disponíveis)
+        const accessToken = req.cookies?.['sb-access-token'];
+        let userId = null;
+
+        if (accessToken) {
+            try {
+                const { data: { user } } = await supabase.auth.getUser(accessToken);
+                userId = user?.id;
+            } catch (err) {
+                console.error('[Audit] Could not get user for logout audit:', err.message);
+            }
+        }
+
         const { error } = await supabase.auth.signOut();
 
         if (error) {
@@ -610,6 +667,12 @@ router.post('/logout', async (req, res) => {
         res.clearCookie('sb-refresh-token', { path: '/' });
 
         console.log('✅ Logout realizado e cookies limpos');
+
+        // ✅ Registrar auditoria de logout
+        if (userId) {
+            logLogout(userId, req.ip, req.headers['user-agent'])
+                .catch(err => console.error('[Audit] Failed to log logout:', err));
+        }
 
         res.json({
             success: true,
