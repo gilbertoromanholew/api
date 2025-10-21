@@ -1,6 +1,7 @@
 import express from 'express';
 import { getBalance, getHistory, consume, checkCanUse, addFree } from './pointsController.js';
 import { requireAuth } from '../auth/authMiddleware.js';
+import { requireAdmin } from '../../middlewares/accessLevel.js';
 import { validate } from '../../middlewares/validator.js';
 
 const router = express.Router();
@@ -40,10 +41,10 @@ router.post(
 );
 
 // POST /api/points/add-free - Adicionar pontos gratuitos (ADMIN)
-// TODO: Adicionar middleware requireAdmin quando implementar níveis de acesso
 router.post(
     '/add-free',
     requireAuth,
+    requireAdmin,
     validate({
         type: 'object',
         properties: {
