@@ -45,14 +45,12 @@ export function isValidCPF(cpf) {
  */
 export function isValidPassword(password) {
     if (!password) return false;
-    
-    const hasMinMaxChars = password.length >= 6 && password.length <= 12;
+
+    const hasMinMaxChars = password.length >= 8 && password.length <= 12;
     const hasLowercase = /[a-z]/.test(password);
     const hasUppercase = /[A-Z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
-    return hasMinMaxChars && hasLowercase && hasUppercase && hasNumber && hasSymbol;
+    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);    return hasMinMaxChars && hasLowercase && hasUppercase && hasNumber && hasSymbol;
 }
 
 /**

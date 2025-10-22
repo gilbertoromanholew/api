@@ -40,18 +40,21 @@ export async function getProfile(req, res) {
         return res.json({
             success: true,
             data: {
-                user_id: userId,
-                email: user.email,
-                email_confirmed: user.email_confirmed_at !== null,
-                full_name: profile.full_name,
-                cpf: profile.cpf,
-                referral_code: profile.referral_code,
-                referred_by: profile.referred_by,
-                created_at: profile.created_at,
+                profile: {
+                    user_id: userId,
+                    email: user.email,
+                    email_confirmed: user.email_confirmed_at !== null,
+                    full_name: profile.full_name,
+                    cpf: profile.cpf,
+                    referral_code: profile.referral_code,
+                    referred_by: profile.referred_by,
+                    welcome_popup_shown: profile.welcome_popup_shown || false,
+                    created_at: profile.created_at
+                },
                 points: {
                     free_points: points.free_points,
                     paid_points: points.paid_points,
-                    total_points: points.free_points + points.paid_points,
+                    total: points.free_points + points.paid_points,
                     free_points_limit: points.free_points_limit,
                     total_earned: points.total_earned,
                     total_purchased: points.total_purchased,

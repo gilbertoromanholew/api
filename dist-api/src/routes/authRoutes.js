@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import {
     authLimiter,
     registerLimiter,
+    resendOTPLimiter,
     apiLimiter
 } from '../middlewares/rateLimiters.js';
 import { createDualRateLimiter, dualStore } from '../middlewares/dualRateLimiter.js';
@@ -17,6 +18,10 @@ import {
     logFailedRegister,
     logLogout 
 } from '../services/auditService.js';
+import { 
+    secureLog, 
+    secureErrorLog 
+} from '../utils/maskSensitiveData.js';
 
 const router = express.Router();
 
@@ -66,22 +71,20 @@ const dualCPFCheckLimiter = createDualRateLimiter({
 
 /**
  * POST /auth/check-cpf
- * Verifica se CPF já está cadastrado com rate limiting dual (IP + CPF)
+ * Verifica se CPF já está cadastrado
  * Limites: 30 tentativas por IP em 10min | 20 tentativas por CPF em 10min
+ * 
+ * ✅ SIMPLIFICADO: Apenas verifica existência
+ * - Cleanup automático via função agendada (não aqui)
+ * - Usa email_confirmed_at nativo do Supabase
  */
 router.post('/check-cpf', dualCPFCheckLimiter, async (req, res) => {
     try {
         const { cpf } = req.body;
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📝 /check-cpf CHAMADO');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('CPF recebido:', cpf);
-        console.log('Body completo:', JSON.stringify(req.body, null, 2));
-        console.log('Headers:', JSON.stringify(req.headers, null, 2));
+        secureLog('[Auth] /check-cpf chamado', { cpf, ip: req.ip });
 
         if (!cpf) {
-            console.log('❌ CPF não fornecido');
             return res.status(400).json({
                 success: false,
                 error: 'CPF é obrigatório'
@@ -90,12 +93,9 @@ router.post('/check-cpf', dualCPFCheckLimiter, async (req, res) => {
 
         // Limpar formatação do CPF
         const cleanCPF = cpf.replace(/\D/g, '');
-        console.log('🧹 CPF limpo:', cleanCPF);
-        console.log('🧹 Tamanho do CPF limpo:', cleanCPF.length);
 
         // Validar se CPF tem 11 dígitos
         if (cleanCPF.length !== 11) {
-            console.log('❌ CPF inválido - tamanho diferente de 11');
             return res.status(400).json({
                 success: false,
                 error: 'CPF deve conter 11 dígitos'
@@ -103,57 +103,36 @@ router.post('/check-cpf', dualCPFCheckLimiter, async (req, res) => {
         }
 
         // Buscar usuário com este CPF na tabela profiles
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🔍 BUSCANDO NO SUPABASE');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('Tabela: profiles');
-        console.log('Campo de busca: cpf');
-        console.log('Valor de busca:', cleanCPF);
-        console.log('Tipo do valor:', typeof cleanCPF);
-        console.log('Cliente usado: supabaseAdmin (com service role)');
-        
         const { data: profileData, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('id, cpf, full_name')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📊 RESULTADO DA BUSCA');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('Encontrado:', !!profileData);
-        console.log('Profile completo:', JSON.stringify(profileData, null, 2));
-        console.log('Erro:', profileError ? JSON.stringify(profileError, null, 2) : 'nenhum');
-        console.log('Código do erro:', profileError?.code);
-        console.log('Mensagem do erro:', profileError?.message);
-
         if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = not found
-            console.error('❌ Erro do Supabase:', profileError);
+            secureErrorLog('[Security] Erro ao buscar CPF', profileError, { cpf: cleanCPF });
             throw profileError;
         }
 
         const exists = !!profileData;
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('✅ RESPOSTA FINAL');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('exists:', exists);
-        console.log('message:', exists ? 'CPF já cadastrado' : 'CPF disponível');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        
+        secureLog('[Auth] Verificação de CPF concluída', { 
+            cpf: cleanCPF, 
+            exists
+        });
 
         res.json({
             success: true,
-            data: {
-                exists: exists
-            },
+            data: { exists },
             message: exists ? 'CPF já cadastrado' : 'CPF disponível'
         });
     } catch (error) {
-        console.error('[SECURITY] Erro ao verificar CPF:', error.message);
-        console.error('[SECURITY] Stack trace:', error.stack);
+        secureErrorLog('[Security] Erro ao verificar CPF', error, { 
+            ip: req.ip 
+        });
         res.status(500).json({
             success: false,
             error: 'Erro ao verificar CPF'
-            // Detalhes do erro não são expostos por segurança
         });
     }
 });
@@ -161,12 +140,16 @@ router.post('/check-cpf', dualCPFCheckLimiter, async (req, res) => {
 /**
  * POST /auth/check-email
  * Verifica se email já está cadastrado
+ * 
+ * ✅ OTIMIZADO: Query com índice em profiles.email
+ * Performance: O(1) com idx_profiles_email_lower
+ * Nota: Email sincronizado via trigger de auth.users
  */
 router.post('/check-email', async (req, res) => {
     try {
         const { email } = req.body;
 
-        console.log('📧 /check-email chamado com:', { email: email ? 'presente' : 'ausente' });
+        secureLog('[Auth] /check-email chamado', { email });
 
         if (!email) {
             return res.status(400).json({
@@ -184,17 +167,28 @@ router.post('/check-email', async (req, res) => {
             });
         }
 
-        // Buscar usuário por email usando getUserByEmail
-        console.log('🔍 Buscando email em auth.users...');
-        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
-        
+        // ✅ OTIMIZADO: Buscar em profiles.email com índice
+        // Performance: O(1) com idx_profiles_email_lower (case-insensitive)
+        const { data: profile, error } = await supabaseAdmin
+            .from('profiles')
+            .select('id, email')
+            .ilike('email', email)
+            .maybeSingle();
+            
         if (error) {
-            console.error('❌ Erro do Supabase:', error);
-            throw error;
+            secureErrorLog('[Security] Erro ao verificar email em profiles', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao verificar email'
+            });
         }
 
-        const emailExists = users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
-        console.log('📊 Resultado da busca:', { email, exists: emailExists, totalUsers: users?.length });
+        const emailExists = profile !== null;
+        
+        secureLog('[Auth] Verificação de email concluída', { 
+            email, 
+            exists: emailExists 
+        });
 
         res.json({
             success: true,
@@ -205,12 +199,12 @@ router.post('/check-email', async (req, res) => {
             message: emailExists ? 'Email já cadastrado' : 'Email disponível'
         });
     } catch (error) {
-        console.error('[SECURITY] Erro ao verificar email:', error.message);
-        console.error('[SECURITY] Stack trace:', error.stack);
+        secureErrorLog('[Security] Erro ao verificar email', error, { 
+            ip: req.ip 
+        });
         res.status(500).json({
             success: false,
             error: 'Erro ao verificar email'
-            // Detalhes do erro não são expostos por segurança
         });
     }
 });
@@ -219,10 +213,16 @@ router.post('/check-email', async (req, res) => {
  * POST /auth/register
  * Registrar novo usuário
  * Rate limit: 3 registros por hora
+ * 
+ * ✅ SIMPLIFICADO: Supabase gerencia verificação via email_confirmed_at
+ * - Cleanup automático via função agendada
+ * - Sem rollback manual (race conditions tratadas no DB)
  */
 router.post('/register', registerLimiter, async (req, res) => {
     try {
         const { email, password, full_name, cpf } = req.body;
+
+        secureLog('[Auth] /register chamado', { email, cpf });
 
         // Validações básicas
         if (!email || !password || !full_name || !cpf) {
@@ -257,17 +257,19 @@ router.post('/register', registerLimiter, async (req, res) => {
             .rpc('generate_referral_code');
 
         if (refCodeError) {
-            console.error('Erro ao gerar código de referência:', refCodeError);
+            secureErrorLog('[Auth] Erro ao gerar código de referência', refCodeError);
         }
 
         // Fallback: gerar código único se a função do banco falhar
         const referralCode = refCodeData || `USER-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-        // Criar usuário no Supabase Auth (com email_confirm DESABILITADO)
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        // ✅ PASSO 1: Criar usuário no Supabase Auth
+        secureLog('[Auth] Criando usuário em auth.users', { email });
+        
+        const { data: authResponse, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
-            email_confirm: false, // Usuário não confirmado ainda
+            email_confirm: false, // Usuário não confirmado ainda (Supabase gerencia via email_confirmed_at)
             user_metadata: {
                 full_name,
                 cpf: cleanCPF
@@ -275,87 +277,117 @@ router.post('/register', registerLimiter, async (req, res) => {
         });
 
         if (authError) {
+            secureErrorLog('[Auth] Erro ao criar usuário em auth.users', authError);
+            
+            // Mensagem de erro amigável
+            if (authError.message?.includes('already registered')) {
+                return res.status(409).json({
+                    success: false,
+                    error: 'Email já cadastrado',
+                    message: 'Este email já está em uso. Por favor, faça login ou use outro email.'
+                });
+            }
+            
             throw authError;
         }
 
-        // Criar perfil do usuário
-        if (authData.user) {
-            const { error: profileError } = await supabaseAdmin
-                .from('profiles')
-                .insert([
-                    {
-                        id: authData.user.id,
-                        cpf: cleanCPF,
-                        full_name,
-                        referral_code: referralCode,
-                        email_verified: false,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }
-                ]);
+        secureLog('[Auth] Usuário criado em auth.users', { userId: authResponse.user.id });
 
-            if (profileError) {
-                console.error('Erro ao criar perfil:', profileError);
+        // ✅ PASSO 2: Criar perfil
+        const { error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .insert([
+                {
+                    id: authResponse.user.id,
+                    cpf: cleanCPF,
+                    full_name,
+                    referral_code: referralCode,
+                    updated_at: new Date().toISOString()
+                }
+            ]);
+
+        if (profileError) {
+            secureErrorLog('[Auth] Erro ao criar perfil', profileError);
+            
+            // CPF duplicado (outro usuário registrou ao mesmo tempo)
+            if (profileError.code === '23505') {
+                return res.status(409).json({
+                    success: false,
+                    error: 'CPF já cadastrado',
+                    message: 'Este CPF já está em uso. Por favor, use outro CPF.'
+                });
             }
+            
+            throw profileError;
+        }
+        
+        secureLog('[Auth] Perfil criado com sucesso', { userId: authResponse.user.id });
 
-            // Criar registro de pontos inicial
-            const { error: pointsError } = await supabaseAdmin
-                .from('user_points')
+        // ✅ PASSO 3: Criar registro de pontos inicial
+        const { error: pointsError } = await supabaseAdmin
+            .from('user_points')
+            .insert([
+                {
+                    user_id: authResponse.user.id,
+                    free_points: 100, // Bônus de cadastro
+                    paid_points: 0,
+                    total_earned: 100,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }
+            ]);
+
+        if (pointsError) {
+            secureErrorLog('[Auth] Erro ao criar pontos iniciais', pointsError);
+        } else {
+            // Criar transação de bônus de cadastro
+            await supabaseAdmin
+                .from('point_transactions')
                 .insert([
                     {
-                        user_id: authData.user.id,
-                        free_points: 100, // Bônus de cadastro
-                        paid_points: 0,
-                        total_earned: 100,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }
-                ]);
-
-            if (pointsError) {
-                console.error('Erro ao criar pontos iniciais:', pointsError);
-            } else {
-                // Criar transação de bônus de cadastro
-                await supabaseAdmin
-                    .from('point_transactions')
-                    .insert([
-                        {
-                            user_id: authData.user.id,
-                            type: 'signup_bonus',
-                            point_type: 'free',
-                            amount: 100,
-                            balance_before: 0,
-                            balance_after: 100,
-                            description: 'Bônus de boas-vindas',
-                            created_at: new Date().toISOString()
-                        }
-                    ]);
-            }
-
-            // Gerar código OTP de 6 dígitos
-            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutos
-
-            // Salvar OTP no banco
-            const { error: otpError } = await supabaseAdmin
-                .from('otp_codes')
-                .insert([
-                    {
-                        user_id: authData.user.id,
-                        email: email,
-                        code: otpCode,
-                        expires_at: expiresAt.toISOString(),
+                        user_id: authResponse.user.id,
+                        type: 'signup_bonus',
+                        point_type: 'free',
+                        amount: 100,
+                        balance_before: 0,
+                        balance_after: 100,
+                        description: 'Bônus de boas-vindas',
                         created_at: new Date().toISOString()
                     }
                 ]);
+        }
 
-            if (otpError) {
-                console.error('Erro ao criar OTP:', otpError);
-            } else {
-                // TODO: Enviar email com código OTP
-                // Por enquanto, apenas logar no console do servidor
+        // ✅ PASSO 4: Gerar e salvar OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutos
+
+        const { error: otpError } = await supabaseAdmin
+            .from('otp_codes')
+            .insert([
+                {
+                    user_id: authResponse.user.id,
+                    email: email,
+                    code: otpCode,
+                    expires_at: expiresAt.toISOString(),
+                    created_at: new Date().toISOString()
+                }
+            ]);
+
+        if (otpError) {
+            secureErrorLog('[Auth] Erro ao criar OTP', otpError);
+        } else {
+            // ✅ Log seguro do OTP (mascarado em produção)
+            secureLog('[Auth] OTP gerado e salvo', { 
+                email, 
+                otp: otpCode, // Será mascarado automaticamente
+                expiresAt: expiresAt.toISOString() 
+            });
+            
+            // TODO: Enviar email com código OTP via Resend
+            // Por enquanto, apenas logar no console do servidor
+            if (process.env.NODE_ENV !== 'production') {
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('📧 CÓDIGO OTP GERADO');
+                console.log('📧 CÓDIGO OTP GERADO (DEV ONLY)');
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 console.log(`Email: ${email}`);
                 console.log(`Código: ${otpCode}`);
@@ -365,29 +397,38 @@ router.post('/register', registerLimiter, async (req, res) => {
         }
 
         // ✅ Registrar auditoria de registro bem-sucedido
-        logRegister(authData.user.id, req.ip, req.headers['user-agent'], { 
+        logRegister(authResponse.user.id, req.ip, req.headers['user-agent'], { 
             full_name, 
             cpf: cleanCPF 
-        }).catch(err => console.error('[Audit] Failed to log register:', err));
+        }).catch(err => secureErrorLog('[Audit] Failed to log register', err));
 
         res.json({
             success: true,
             message: 'Usuário registrado com sucesso. Verifique seu email para o código de confirmação.',
             data: {
-                user: authData.user,
+                user: authResponse.user,
                 session: null, // Não retorna sessão até confirmar OTP
                 requiresEmailVerification: true
             },
             expiresIn: 3 // minutos
         });
     } catch (error) {
-        console.error('[SECURITY] Erro ao registrar usuário:', error.message);
+        secureErrorLog('[Security] Erro ao registrar usuário', error, {
+            email: req.body.email,
+            cpf: req.body.cpf
+        });
         
         // ❌ Registrar auditoria de registro falhado
-        logFailedRegister(email, req.ip, req.headers['user-agent'], error.message, { 
-            full_name, 
-            cpf: cpf?.replace(/\D/g, '') 
-        }).catch(err => console.error('[Audit] Failed to log failed register:', err));
+        logFailedRegister(
+            req.body.email, 
+            req.ip, 
+            req.headers['user-agent'], 
+            error.message, 
+            { 
+                full_name: req.body.full_name, 
+                cpf: req.body.cpf?.replace(/\D/g, '') 
+            }
+        ).catch(err => secureErrorLog('[Audit] Failed to log failed register', err));
 
         res.status(500).json({
             success: false,
@@ -437,7 +478,7 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
             res.cookie('sb-access-token', data.session.access_token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
-                sameSite: 'lax',
+                sameSite: 'strict', // ✅ CSRF Protection
                 maxAge: data.session.expires_in * 1000, // Converter para ms
                 path: '/'
             });
@@ -446,7 +487,7 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
             res.cookie('sb-refresh-token', data.session.refresh_token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                sameSite: 'strict', // ✅ CSRF Protection
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
                 path: '/'
             });
@@ -588,7 +629,7 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
             res.cookie('sb-access-token', data.session.access_token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
-                sameSite: 'lax',
+                sameSite: 'strict', // ✅ CSRF Protection
                 maxAge: data.session.expires_in * 1000, // Converter para ms
                 path: '/'
             });
@@ -597,7 +638,7 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
             res.cookie('sb-refresh-token', data.session.refresh_token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                sameSite: 'strict', // ✅ CSRF Protection
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
                 path: '/'
             });
@@ -745,23 +786,62 @@ router.get('/session', async (req, res) => {
 /**
  * POST /auth/verify-otp
  * Verificar código OTP e ativar conta
+ * Aceita: email OU cpf
  */
 router.post('/verify-otp', async (req, res) => {
     try {
-        const { email, code } = req.body;
+        const { email, cpf, code } = req.body;
 
-        if (!email || !code) {
+        if ((!email && !cpf) || !code) {
             return res.status(400).json({
                 success: false,
-                error: 'Email e código são obrigatórios'
+                error: 'Email ou CPF e código são obrigatórios'
             });
+        }
+
+        let userEmail = email;
+        let userId = null;
+
+        // Se foi enviado CPF, buscar o email
+        if (cpf) {
+            const cleanCPF = cpf.replace(/\D/g, '');
+            
+            // Buscar profile pelo CPF
+            const { data: profile, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('cpf', cleanCPF)
+                .maybeSingle();
+
+            if (profileError) throw profileError;
+
+            if (!profile) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'CPF não encontrado'
+                });
+            }
+
+            userId = profile.id;
+
+            // Buscar email do usuário
+            const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+            
+            if (userError || !authUser.user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Usuário não encontrado'
+                });
+            }
+
+            userEmail = authUser.user.email;
         }
 
         // Buscar código OTP válido
         const { data: otpData, error: otpError } = await supabaseAdmin
             .from('otp_codes')
             .select('*')
-            .eq('email', email)
+            .eq('email', userEmail)
             .eq('code', code)
             .is('used_at', null)
             .gt('expires_at', new Date().toISOString())
@@ -793,24 +873,13 @@ router.post('/verify-otp', async (req, res) => {
         );
 
         if (confirmError) {
-            console.error('Erro ao confirmar email:', confirmError);
+            secureErrorLog('[Auth] Erro ao confirmar email', confirmError);
         }
 
-        // Atualizar perfil
-        await supabaseAdmin
-            .from('profiles')
-            .update({ email_verified: true })
-            .eq('id', otpData.user_id);
-
-        // Criar sessão para o usuário (fazer login automático)
-        const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
-            type: 'magiclink',
-            email: email
+        secureLog('[Auth] Email verificado com sucesso', { 
+            userId: otpData.user_id,
+            email: userEmail
         });
-
-        if (sessionError) {
-            console.error('Erro ao gerar sessão:', sessionError);
-        }
 
         res.json({
             success: true,
@@ -821,7 +890,7 @@ router.post('/verify-otp', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao verificar OTP:', error);
+        secureErrorLog('[Security] Erro ao verificar OTP', error);
         res.status(500).json({
             success: false,
             error: 'Erro ao verificar código',
@@ -831,62 +900,260 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 /**
- * POST /auth/resend-otp
- * Reenviar código OTP
+ * POST /auth/reset-password
+ * Redefinir senha após verificação OTP
  */
-router.post('/resend-otp', authLimiter, async (req, res) => {
+router.post('/reset-password', async (req, res) => {
     try {
-        const { email } = req.body;
+        const { cpf, code, newPassword } = req.body;
 
-        if (!email) {
+        if (!cpf || !code || !newPassword) {
             return res.status(400).json({
                 success: false,
-                error: 'Email é obrigatório'
+                error: 'CPF, código e nova senha são obrigatórios'
             });
         }
 
-        // Buscar usuário pelo email
-        const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-
-        if (userError) {
-            throw userError;
+        // Validar senha (8-12 caracteres)
+        if (newPassword.length < 8 || newPassword.length > 12) {
+            return res.status(400).json({
+                success: false,
+                error: 'Senha deve ter entre 8 e 12 caracteres'
+            });
         }
 
-        const user = users?.find(u => u.email === email);
+        const cleanCPF = cpf.replace(/\D/g, '');
 
-        if (!user) {
+        // Buscar profile pelo CPF
+        const { data: profile, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('cpf', cleanCPF)
+            .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        if (!profile) {
+            return res.status(404).json({
+                success: false,
+                error: 'CPF não encontrado'
+            });
+        }
+
+        // Buscar usuário
+        const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+        
+        if (userError || !authUser.user) {
             return res.status(404).json({
                 success: false,
                 error: 'Usuário não encontrado'
             });
         }
 
-        // Invalidar códigos antigos não utilizados (marca como "usado" ao solicitar reenvio)
+        // Verificar OTP válido
+        const { data: otpData, error: otpError } = await supabaseAdmin
+            .from('otp_codes')
+            .select('*')
+            .eq('email', authUser.user.email)
+            .eq('code', code)
+            .is('used_at', null)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (otpError) throw otpError;
+
+        if (!otpData) {
+            return res.status(400).json({
+                success: false,
+                error: 'Código inválido ou expirado'
+            });
+        }
+
+        // Marcar código como usado
+        await supabaseAdmin
+            .from('otp_codes')
+            .update({ used_at: new Date().toISOString() })
+            .eq('id', otpData.id);
+
+        // Atualizar senha do usuário
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            profile.id,
+            { password: newPassword }
+        );
+
+        if (updateError) {
+            secureErrorLog('[Security] Erro ao atualizar senha', updateError);
+            throw updateError;
+        }
+
+        secureLog('[Auth] Senha redefinida com sucesso', { 
+            userId: profile.id,
+            cpf: cleanCPF
+        });
+
+        res.json({
+            success: true,
+            message: 'Senha redefinida com sucesso!'
+        });
+    } catch (error) {
+        secureErrorLog('[Security] Erro ao redefinir senha', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao redefinir senha',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * POST /auth/resend-otp
+ * Reenviar código OTP
+ * Rate limit: 3 tentativas a cada 10 minutos
+ * Aceita: email OU cpf
+ * 🔒 PROTEÇÃO: Device lock - apenas 1 dispositivo por vez
+ */
+router.post('/resend-otp', resendOTPLimiter, async (req, res) => {
+    try {
+        const { email, cpf, deviceToken } = req.body;
+
+        if (!email && !cpf) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email ou CPF é obrigatório'
+            });
+        }
+
+        let user = null;
+        let userEmail = '';
+
+        // Buscar por CPF
+        if (cpf) {
+            const cleanCPF = cpf.replace(/\D/g, '');
+            
+            // Buscar profile pelo CPF
+            const { data: profile, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('cpf', cleanCPF)
+                .maybeSingle();
+
+            if (profileError) throw profileError;
+
+            if (!profile) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'CPF não encontrado'
+                });
+            }
+
+            // Buscar usuário pelo ID
+            const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+            
+            if (userError || !authUser.user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Usuário não encontrado'
+                });
+            }
+
+            user = authUser.user;
+            userEmail = user.email;
+
+            // Nota: Permitir reenvio mesmo se email já verificado
+            // Serve tanto para confirmação inicial quanto recuperação de senha
+
+            // 🔒 VERIFICAR DEVICE LOCK
+            const { data: lockCheck, error: lockError } = await supabaseAdmin
+                .rpc('check_otp_device_lock', {
+                    p_user_id: user.id,
+                    p_device_token: deviceToken || null
+                });
+
+            if (lockError) {
+                secureErrorLog('[Security] Erro ao verificar device lock', lockError);
+                // Continuar mesmo com erro (degradação graciosa)
+            } else if (lockCheck && lockCheck.length > 0) {
+                const lock = lockCheck[0];
+                
+                if (lock.is_locked && !lock.can_proceed) {
+                    // Outro dispositivo está verificando
+                    const minutesRemaining = Math.ceil(
+                        (new Date(lock.expires_at) - new Date()) / 60000
+                    );
+                    
+                    return res.status(409).json({
+                        success: false,
+                        error: 'Verificação em andamento',
+                        message: 'Outro dispositivo está verificando este código. Aguarde a expiração ou use o dispositivo original.',
+                        hint: 'Se você não iniciou verificação em outro dispositivo, aguarde alguns minutos.',
+                        waitMinutes: minutesRemaining,
+                        retryAfter: lock.expires_at,
+                        code: 'DEVICE_LOCK_ACTIVE'
+                    });
+                }
+            }
+        }
+        // Buscar por email
+        else if (email) {
+            const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+
+            if (userError) throw userError;
+
+            user = users?.find(u => u.email === email);
+            
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Usuário não encontrado'
+                });
+            }
+
+            userEmail = email;
+        }
+
+        // Invalidar códigos antigos não utilizados
         const { data: invalidatedCodes, error: invalidateError } = await supabaseAdmin
             .from('otp_codes')
             .update({ used_at: new Date().toISOString() })
-            .eq('email', email)
+            .eq('email', userEmail)
             .is('used_at', null)
             .select();
 
         if (invalidateError) {
             console.error('❌ Erro ao invalidar códigos antigos:', invalidateError);
         } else if (invalidatedCodes && invalidatedCodes.length > 0) {
-            console.log(`✓ ${invalidatedCodes.length} código(s) anterior(es) invalidado(s) para ${email}`);
+            console.log(`✓ ${invalidatedCodes.length} código(s) anterior(es) invalidado(s) para ${userEmail}`);
+        }
+
+        // 🔒 GERAR DEVICE TOKEN (se não foi fornecido)
+        let finalDeviceToken = deviceToken;
+        if (!finalDeviceToken) {
+            const { data: newToken, error: tokenError } = await supabaseAdmin
+                .rpc('generate_device_token');
+            
+            if (!tokenError && newToken) {
+                finalDeviceToken = newToken;
+            } else {
+                // Fallback: gerar token localmente
+                finalDeviceToken = `DEV_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+            }
         }
 
         // Gerar novo código OTP
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutos
 
-        // Salvar OTP no banco
+        // Salvar OTP no banco com device lock
         const { error: otpError } = await supabaseAdmin
             .from('otp_codes')
             .insert([
                 {
                     user_id: user.id,
-                    email: email,
+                    email: userEmail,
                     code: otpCode,
+                    device_token: finalDeviceToken,
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
                 }
@@ -896,22 +1163,38 @@ router.post('/resend-otp', authLimiter, async (req, res) => {
             throw otpError;
         }
 
-        // TODO: Enviar email com código OTP
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📧 CÓDIGO OTP REENVIADO');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`Email: ${email}`);
-        console.log(`Código: ${otpCode}`);
-        console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // Log do OTP (mascarado em produção)
+        secureLog('[Auth] OTP reenviado com device lock', { 
+            email: userEmail,
+            otp: otpCode,
+            deviceToken: finalDeviceToken,
+            expiresAt: expiresAt.toISOString() 
+        });
+
+        // TODO: Enviar email com código OTP via Resend
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📧 CÓDIGO OTP REENVIADO (DEV ONLY)');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log(`Email: ${userEmail}`);
+            console.log(`Código: ${otpCode}`);
+            console.log(`Device: ${finalDeviceToken}`);
+            console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
 
         res.json({
             success: true,
             message: 'Código reenviado com sucesso!',
+            data: {
+                email: userEmail, // Email completo (frontend vai mascarar)
+                userId: user.id,
+                deviceToken: finalDeviceToken // Retornar para frontend armazenar
+            },
             expiresIn: 3 // minutos
         });
     } catch (error) {
-        console.error('Erro ao reenviar OTP:', error);
+        secureErrorLog('[Security] Erro ao reenviar OTP', error);
         res.status(500).json({
             success: false,
             error: 'Erro ao reenviar código',
@@ -923,8 +1206,9 @@ router.post('/resend-otp', authLimiter, async (req, res) => {
 /**
  * POST /auth/resend-confirmation
  * Alias para /auth/resend-otp (compatibilidade com frontend)
+ * Rate limit: 3 tentativas a cada 10 minutos
  */
-router.post('/resend-confirmation', authLimiter, async (req, res) => {
+router.post('/resend-confirmation', resendOTPLimiter, async (req, res) => {
     try {
         const { email } = req.body;
 

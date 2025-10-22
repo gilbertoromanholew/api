@@ -132,6 +132,69 @@ export const registerLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter para reenvio de OTP
+ * Protege contra spam de emails e abuso do serviço de email
+ * 
+ * Limites:
+ * - 3 tentativas a cada 10 minutos
+ * - Key: IP (mais restritivo que user-agent)
+ */
+export const resendOTPLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutos
+    max: 3, // 3 tentativas
+    message: {
+        success: false,
+        error: 'Muitas tentativas de reenvio',
+        message: 'Você atingiu o limite de 3 reenvios em 10 minutos. Por segurança, aguarde antes de tentar novamente.',
+        retryAfter: 10 * 60, // segundos
+        hint: 'Verifique sua caixa de spam ou entre em contato com o suporte se não recebeu o código.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    
+    // Apenas IP (previne spam de múltiplos dispositivos)
+    keyGenerator: (req) => {
+        return req.ip || req.connection.remoteAddress;
+    },
+    
+    handler: (req, res) => {
+        console.warn(`[Rate Limit] Resend OTP limit exceeded - IP: ${req.ip}`);
+        
+        // Calcular tempo restante
+        const resetTime = new Date(Date.now() + 10 * 60 * 1000);
+        const minutesRemaining = Math.ceil((resetTime - new Date()) / 60000);
+        
+        // Registrar violação no banco
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: req.body?.userId || null,
+            endpoint: req.path,
+            limiterType: 'resend-otp',
+            attempts: 3,
+            userAgent: req.headers['user-agent']
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
+        res.status(429).json({
+            success: false,
+            error: 'Muitas tentativas de reenvio',
+            message: `Aguarde um momento. Tente novamente mais tarde!`,
+            hint: 'Verifique sua caixa de spam ou entre em contato com o suporte se não recebeu o código.',
+            retryAfter: 10 * 60,
+            waitMinutes: minutesRemaining
+        });
+    },
+    
+    skip: (req) => {
+        // Skip para VPN ZeroTier
+        const ip = req.ip || req.connection.remoteAddress;
+        if (ip && ip.startsWith('10.244.')) {
+            return true;
+        }
+        return false;
+    }
+});
+
+/**
  * Rate limiter para API geral (rotas autenticadas)
  * Protege contra DDoS e abuso
  * 

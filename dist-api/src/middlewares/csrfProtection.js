@@ -53,7 +53,7 @@ export function setCsrfToken(req, res, expiresIn = 24 * 60 * 60 * 1000) {
     res.cookie('csrf-token', token, {
         httpOnly: false, // ⚠️ JS precisa ler este cookie
         secure: process.env.NODE_ENV === 'production', // HTTPS em produção
-        sameSite: 'lax', // 🔒 Permite same-site navigation, bloqueia cross-site
+        sameSite: 'strict', // ✅ CSRF Protection: Nunca envia cookie em requisições externas
         maxAge: expiresIn,
         path: '/'
     });
@@ -61,7 +61,7 @@ export function setCsrfToken(req, res, expiresIn = 24 * 60 * 60 * 1000) {
     console.log('🔐 CSRF token gerado:', {
         token: token.substring(0, 8) + '...',
         expiresIn: `${expiresIn / 1000}s`,
-        sameSite: 'lax',
+        sameSite: 'strict',
         secure: process.env.NODE_ENV === 'production',
         httpOnly: false
     });
@@ -188,7 +188,7 @@ export function clearCsrfToken(res) {
     // Domain omitido: deve corresponder ao cookie original
     res.clearCookie('csrf-token', {
         path: '/',
-        sameSite: 'lax'
+        sameSite: 'strict' // ✅ Deve corresponder ao setCsrfToken
     });
     
     console.log('🗑️ CSRF token removido');
