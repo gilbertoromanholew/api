@@ -65,9 +65,9 @@ export const getApiInfo = (req, res) => {
             docs: '/docs',
             logs: '/logs',
             zerotier_status: '/zerotier/status',
-            api_logs: '/api/logs',
-            api_stats: '/api/logs/stats',
-            api_functions: '/api/functions',
+            api_logs: '/logs',
+            api_stats: '/logs/stats',
+            api_functions: '/functions',
             github: 'https://github.com/gilbertoromanholew/api'
         },
         
@@ -94,7 +94,7 @@ export const getApiInfo = (req, res) => {
                 description: 'ZeroTier network status'
             },
             functions: {
-                path: '/api/functions',
+                path: '/functions',
                 method: 'GET',
                 description: 'Auto-discovered functions list'
             }

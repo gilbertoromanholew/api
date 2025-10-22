@@ -710,7 +710,7 @@ export const allowedIPs = [
         async function detectPublicIP() {
             try {
                 // Tentar pegar do nosso próprio endpoint de logs
-                const response = await fetch('/api/logs/ips');
+                const response = await fetch('/logs/ips');
                 const data = await response.json();
                 
                 if (data.success && data.ips.length > 0) {
@@ -738,7 +738,7 @@ export const allowedIPs = [
         // Carregar funções disponíveis
         async function loadFunctions() {
             try {
-                const response = await fetch('/api/functions');
+                const response = await fetch('/functions');
                 const data = await response.json();
                 
                 if (data.success && data.functions.length > 0) {

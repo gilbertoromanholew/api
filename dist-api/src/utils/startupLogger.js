@@ -92,7 +92,7 @@ export function logStartup() {
         console.log(`   • API:          http://${localHost}:${config.server.port}`);
         console.log(`   • Docs:         http://${localHost}:${config.server.port}/docs`);
         console.log(`   • Dashboard:    http://${localHost}:${config.server.port}/logs`);
-        console.log(`   • Health:       http://${localHost}:${config.server.port}/api/health\n`);
+        console.log(`   • Health:       http://${localHost}:${config.server.port}/health\n`);
         
         console.log('✅ Servidor pronto para receber requisições!\n');
     } catch (error) {

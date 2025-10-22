@@ -2528,7 +2528,7 @@ export const getLogsDashboard = (req, res) => {
                             <option value="trusted">🤝 Trusted - API Completa (não pode gerenciar segurança)</option>
                         </select>
                         <small id="level-description" style="display: block; margin-top: 8px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px;">
-                            <strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis (ex: /api/exemplo, /api/pdf). Ideal para testar a API.
+                            <strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis (ex: /exemplo, /pdf). Ideal para testar a API.
                         </small>
                     </div>
                     
@@ -2880,7 +2880,7 @@ export const getLogsDashboard = (req, res) => {
                             <input type="text" 
                                    class="filter-input modern" 
                                    id="endpointFilter" 
-                                   placeholder="Digite o endpoint (ex: /api/logs, /docs...)" 
+                                   placeholder="Digite o endpoint (ex: /logs, /docs...)" 
                                    onkeyup="filterLogsLocally()">
                         </div>
                         
@@ -2957,11 +2957,11 @@ export const getLogsDashboard = (req, res) => {
         async function detectMyIP() {
             try {
                 // Fazer uma requisição para qualquer endpoint para que o servidor registre
-                const response = await fetch('/api/logs/stats');
+                const response = await fetch('/logs/stats');
                 const data = await response.json();
                 
                 // Buscar IPs registrados
-                const ipsResponse = await fetch('/api/logs/ips');
+                const ipsResponse = await fetch('/logs/ips');
                 const ipsData = await ipsResponse.json();
                 
                 if (ipsData.success && ipsData.ips.length > 0) {
@@ -3230,7 +3230,7 @@ export const getLogsDashboard = (req, res) => {
         // Carregar estatísticas gerais
         async function loadGeneralStats() {
             try {
-                const response = await fetch('/api/logs/stats');
+                const response = await fetch('/logs/stats');
                 const data = await response.json();
                 
                 if (data.success) {
@@ -3424,7 +3424,7 @@ export const getLogsDashboard = (req, res) => {
                 const authorized = document.getElementById('authorizedFilter').value;
                 const method = document.getElementById('methodFilter').value;
                 
-                let url = '/api/logs?limit=' + (limit * logsPage);
+                let url = '/logs?limit=' + (limit * logsPage);
                 if (authorized) url += '&authorized=' + authorized;
                 if (method) url += '&method=' + method;
                 
@@ -3601,7 +3601,7 @@ export const getLogsDashboard = (req, res) => {
         async function refreshIPDetails(ip) {
             try {
                 // Buscar logs específicos deste IP
-                const response = await fetch(\`/api/logs?ip=\${encodeURIComponent(ip)}\`);
+                const response = await fetch(\`/logs?ip=\${encodeURIComponent(ip)}\`);
                 const data = await response.json();
                 
                 if (data.success && data.logs) {
@@ -4145,7 +4145,7 @@ export const getLogsDashboard = (req, res) => {
             }
             
             try {
-                const response = await fetch('/api/logs/clear', { method: 'POST' });
+                const response = await fetch('/logs/clear', { method: 'POST' });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -4328,7 +4328,7 @@ export const getLogsDashboard = (req, res) => {
                     search: unifiedListState.searchTerm
                 });
                 
-                const response = await fetch(\`/api/security/unified?\${params}\`);
+                const response = await fetch(\`/security/unified?\${params}\`);
                 const data = await response.json();
                 
                 // Remover indicador
@@ -4868,7 +4868,7 @@ export const getLogsDashboard = (req, res) => {
             }
             
             try {
-                const response = await fetch('/api/security/add-ip', {
+                const response = await fetch('/security/add-ip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ip, status, reason })
@@ -4904,11 +4904,11 @@ export const getLogsDashboard = (req, res) => {
                 const description = document.getElementById('level-description');
                 
                 if (level === 'guest') {
-                    description.innerHTML = '<strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis (ex: <code>/api/exemplo</code>, <code>/api/pdf</code>). Ideal para testar a API.';
+                    description.innerHTML = '<strong>👤 Guest:</strong> Acesso a <code>/docs</code> e endpoints das funções disponíveis (ex: <code>/exemplo</code>, <code>/pdf</code>). Ideal para testar a API.';
                     description.style.borderColor = '#3b82f6';
                     description.style.background = 'rgba(59, 130, 246, 0.1)';
                 } else if (level === 'trusted') {
-                    description.innerHTML = '<strong>🤝 Trusted:</strong> API completa, incluindo todas as funções. <strong>Bloqueio:</strong> não pode acessar <code>/logs</code>, <code>/api/security</code> nem bloquear IPs admin.';
+                    description.innerHTML = '<strong>🤝 Trusted:</strong> API completa, incluindo todas as funções. <strong>Bloqueio:</strong> não pode acessar <code>/logs</code>, <code>/security</code> nem bloquear IPs admin.';
                     description.style.borderColor = '#10b981';
                     description.style.background = 'rgba(16, 185, 129, 0.1)';
                 }
@@ -4946,7 +4946,7 @@ export const getLogsDashboard = (req, res) => {
             const defaultReason = 'IP autorizado como ' + levelName;
             
             try {
-                const response = await fetch('/api/security/authorize-ip', {
+                const response = await fetch('/security/authorize-ip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -5019,7 +5019,7 @@ export const getLogsDashboard = (req, res) => {
         
         async function loadIPEndpointsHistory(ip) {
             try {
-                const response = await fetch(\`/api/logs?ip=\${encodeURIComponent(ip)}\`);
+                const response = await fetch(\`/logs?ip=\${encodeURIComponent(ip)}\`);
                 const data = await response.json();
                 
                 if (data.success && data.logs && data.logs.length > 0) {
@@ -5211,7 +5211,7 @@ export const getLogsDashboard = (req, res) => {
         
         async function loadIPHistory(ip) {
             try {
-                const response = await fetch(\`/api/security/history/\${ip}\`);
+                const response = await fetch(\`/security/history/\${ip}\`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -5342,7 +5342,7 @@ export const getLogsDashboard = (req, res) => {
             if (!reason) return;
             
             try {
-                const response = await fetch(\`/api/security/warn-manual/\${ip}\`, {
+                const response = await fetch(\`/security/warn-manual/\${ip}\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reason })
@@ -5584,7 +5584,7 @@ export const getLogsDashboard = (req, res) => {
         // Carregar dados de segurança
         async function loadSecurityData() {
             try {
-                const response = await fetch('/api/security/all');
+                const response = await fetch('/security/all');
                 const data = await response.json();
                 
                 if (data.success) {

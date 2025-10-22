@@ -8,7 +8,7 @@ import { ipBlockingSystem } from '../utils/ipBlockingSystem.js';
 const router = express.Router();
 
 /**
- * GET /api/security/stats
+ * GET /security/stats
  * Estatísticas gerais do sistema de bloqueio
  */
 router.get('/stats', (req, res) => {
@@ -29,7 +29,7 @@ router.get('/stats', (req, res) => {
 });
 
 /**
- * GET /api/security/blocked
+ * GET /security/blocked
  * Lista de IPs permanentemente bloqueados
  */
 router.get('/blocked', (req, res) => {
@@ -51,7 +51,7 @@ router.get('/blocked', (req, res) => {
 });
 
 /**
- * GET /api/security/suspended
+ * GET /security/suspended
  * Lista de IPs temporariamente suspensos
  */
 router.get('/suspended', (req, res) => {
@@ -73,7 +73,7 @@ router.get('/suspended', (req, res) => {
 });
 
 /**
- * GET /api/security/warnings
+ * GET /security/warnings
  * Lista de IPs com avisos (tentativas registradas)
  */
 router.get('/warnings', (req, res) => {
@@ -95,8 +95,8 @@ router.get('/warnings', (req, res) => {
 });
 
 /**
- * GET /api/security/check/:ip
- * Verificar status de um IP específico
+ * GET /security/check/:ip
+ * Verifica o status de um IP específico
  */
 router.get('/check/:ip', (req, res) => {
     try {
@@ -118,7 +118,7 @@ router.get('/check/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/unblock/:ip
+ * POST /security/unblock/:ip
  * Remover bloqueio permanente de um IP (apenas admin)
  */
 router.post('/unblock/:ip', (req, res) => {
@@ -149,7 +149,7 @@ router.post('/unblock/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/unsuspend/:ip
+ * POST /security/unsuspend/:ip
  * Remover suspensão temporária de um IP (apenas admin)
  */
 router.post('/unsuspend/:ip', (req, res) => {
@@ -180,7 +180,7 @@ router.post('/unsuspend/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/cleanup
+ * POST /security/cleanup
  * Limpar suspensões expiradas (manutenção)
  */
 router.post('/cleanup', (req, res) => {
@@ -202,7 +202,7 @@ router.post('/cleanup', (req, res) => {
 });
 
 /**
- * GET /api/security/all
+ * GET /security/all
  * Obter todas as informações de segurança de uma vez
  */
 router.get('/all', (req, res) => {
@@ -238,7 +238,7 @@ router.get('/all', (req, res) => {
 });
 
 /**
- * POST /api/security/suspend-manual/:ip
+ * POST /security/suspend-manual/:ip
  * Suspender IP manualmente por 1 hora (admin)
  */
 router.post('/suspend-manual/:ip', (req, res) => {
@@ -278,7 +278,7 @@ router.post('/suspend-manual/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/block-manual/:ip
+ * POST /security/block-manual/:ip
  * Bloquear IP manualmente de forma permanente (admin)
  */
 router.post('/block-manual/:ip', (req, res) => {
@@ -314,7 +314,7 @@ router.post('/block-manual/:ip', (req, res) => {
 });
 
 /**
- * GET /api/security/unified
+ * GET /security/unified
  * Lista unificada de IPs com paginação, filtros e busca
  * Query params: page, limit, filter (all|normal|warning|suspended|blocked), search
  */
@@ -521,7 +521,7 @@ router.get('/unified', async (req, res) => {
 });
 
 /**
- * GET /api/security/history/:ip
+ * GET /security/history/:ip
  * Histórico de mudanças de status de um IP
  */
 router.get('/history/:ip', (req, res) => {
@@ -555,7 +555,7 @@ router.get('/history/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/warn-manual/:ip
+ * POST /security/warn-manual/:ip
  * Colocar IP em aviso manualmente
  */
 router.post('/warn-manual/:ip', (req, res) => {
@@ -592,7 +592,7 @@ router.post('/warn-manual/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/clear-status/:ip
+ * POST /security/clear-status/:ip
  * Limpar status do IP (voltar ao normal)
  */
 router.post('/clear-status/:ip', (req, res) => {
@@ -626,7 +626,7 @@ router.post('/clear-status/:ip', (req, res) => {
 });
 
 /**
- * POST /api/security/add-ip
+ * POST /security/add-ip
  * Adicionar IP manualmente com status inicial
  */
 router.post('/add-ip', async (req, res) => {
@@ -703,7 +703,7 @@ router.post('/add-ip', async (req, res) => {
 });
 
 /**
- * GET /api/security/allowed-ips
+ * GET /security/allowed-ips
  * Listar todos os IPs autorizados
  */
 router.get('/allowed-ips', async (req, res) => {
@@ -725,7 +725,7 @@ router.get('/allowed-ips', async (req, res) => {
 });
 
 /**
- * POST /api/security/authorize-ip
+ * POST /security/authorize-ip
  * Adicionar IP à lista de autorizados (allowlist)
  * Body: { ip: string, level?: 'guest' | 'trusted', reason?: string }
  */
@@ -790,7 +790,7 @@ router.post('/authorize-ip', async (req, res) => {
 });
 
 /**
- * POST /api/security/unauthorize-ip/:ip
+ * POST /security/unauthorize-ip/:ip
  * Remover IP da lista de autorizados (allowlist)
  */
 router.post('/unauthorize-ip/:ip', async (req, res) => {

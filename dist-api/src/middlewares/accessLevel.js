@@ -59,9 +59,8 @@ export async function canAccessRoute(ip, method, path) {
     // Trusted: acesso a /docs + TODAS as rotas de functions (qualquer método)
     if (level === 'trusted') {
         // Bloquear rotas administrativas
-        if (path.startsWith('/logs') || 
-            path.startsWith('/api/logs') || 
-            path.startsWith('/api/security') || 
+        if (path.startsWith('/logs') ||
+            path.startsWith('/security') ||
             path.startsWith('/zerotier')) {
             return { 
                 allowed: false, 

@@ -70,7 +70,7 @@ Você **NÃO precisa** adicionar middleware nas rotas. O sistema já cuida disso
 
 
 
-## 🚀 Guia Rápido (4 Passos)| **TRUSTED** | 📝 | `/docs` + **TODAS as functions** | Rotas administrativas (`/logs`, `/api/logs`, `/zerotier`, `/api/security`) || **TRUSTED** | � | `/docs` + **TODAS as functions** | Não pode acessar rotas administrativas |
+## 🚀 Guia Rápido (4 Passos)| **TRUSTED** | 📝 | `/docs` + **TODAS as functions** | Rotas administrativas (`/logs`, `/zerotier`, `/security`) || **TRUSTED** | � | `/docs` + **TODAS as functions** | Não pode acessar rotas administrativas |
 
 
 
