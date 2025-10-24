@@ -1,7 +1,6 @@
 import express from 'express';
 import { listTools, getToolDetails, executeTool, getUsageHistory } from './toolsController.js';
-import { requireAuth } from '../auth/authMiddleware.js';
-import { optionalAuth } from '../auth/authMiddleware.js';
+import { requireAuth, optionalAuth } from '../../middlewares/adminAuth.js';
 // Fase 2: Usar schemas Joi + rate limiter específico para execução
 import { validate, toolExecutionSchema } from '../../validators/schemas.js';
 import { toolExecutionLimiter } from '../../middlewares/rateLimiters.js';

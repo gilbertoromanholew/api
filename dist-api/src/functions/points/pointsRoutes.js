@@ -1,6 +1,6 @@
 import express from 'express';
 import { getBalance, getHistory, consume, checkCanUse, addFree } from './pointsController.js';
-import { requireAuth } from '../auth/authMiddleware.js';
+import { requireAuth } from '../../middlewares/adminAuth.js';
 import { requireAdmin } from '../../middlewares/accessLevel.js';
 // Fase 2: Usar schemas Joi
 import { validate, consumePointsSchema, addFreePointsSchema } from '../../validators/schemas.js';

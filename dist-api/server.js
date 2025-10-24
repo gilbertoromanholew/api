@@ -15,6 +15,13 @@ import securityRoutes from './src/routes/securityRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
 // Fase 3: Rotas de auditoria
 import auditRoutes from './src/routes/auditRoutes.js';
+// V7: Rotas de conquistas e assinaturas
+import achievementsRoutes from './src/routes/achievementsRoutes.js';
+import subscriptionRoutes from './src/routes/subscriptionRoutes.js';
+// V7: Novas features - Tools, Promo Codes, Referrals
+import toolsRoutes from './src/routes/toolsRoutes.js';
+import promoCodesRoutes from './src/routes/promoCodesRoutes.js';
+import referralRoutes from './src/routes/referralRoutes.js';
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
@@ -98,6 +105,19 @@ app.use('/supabase', supabaseLimiter, supabaseProxyCors, supabaseProxy);
 // Resultado final: samm.host/api/auth/* → container /auth/*
 // Fase 2: Rate limiting aplicado (5 tentativas/15min para login, 3/hora para register)
 app.use('/auth', authRoutes);
+
+// =========================================================================
+// 📍 V7: ROTAS DE GAMIFICAÇÃO E ECONOMIA (público/autenticado)
+// =========================================================================
+// Conquistas e assinaturas Pro (Nova Economia V7)
+// Rate limiting aplicado (apiLimiter - 100 req/15min)
+app.use('/achievements', apiLimiter, achievementsRoutes);
+app.use('/subscription', apiLimiter, subscriptionRoutes);
+
+// Tracking de ferramentas, códigos promocionais e sistema de indicação
+app.use('/tools', apiLimiter, toolsRoutes);
+app.use('/promo-codes', apiLimiter, promoCodesRoutes);
+app.use('/referrals', apiLimiter, referralRoutes);
 
 // =========================================================================
 // 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
