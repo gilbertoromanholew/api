@@ -84,35 +84,42 @@ export async function redeemPromoCode(userId, code) {
       case 'BONUS_CREDITS':
         creditsAwarded = promoCode.value;
         
-        // Adicionar créditos ao usuário
-        const { data: userData, error: userError } = await supabaseAdmin
-          .from('users')
-          .select('bonus_credits')
-          .eq('id', userId)
+        // V7: Atualizar carteira do usuário
+        const { data: wallet } = await supabaseAdmin
+          .from('economy_user_wallets')
+          .select('bonus_credits, total_earned_bonus')
+          .eq('user_id', userId)
           .single();
 
-        if (userError) {
-          return { data: null, error: 'Erro ao buscar dados do usuário' };
-        }
+        const newBonusCredits = (wallet?.bonus_credits || 0) + creditsAwarded;
+        const newTotalEarnedBonus = (wallet?.total_earned_bonus || 0) + creditsAwarded;
 
         const { error: updateError } = await supabaseAdmin
-          .from('users')
-          .update({ bonus_credits: (userData.bonus_credits || 0) + creditsAwarded })
-          .eq('id', userId);
+          .from('economy_user_wallets')
+          .update({ 
+            bonus_credits: newBonusCredits,
+            total_earned_bonus: newTotalEarnedBonus
+          })
+          .eq('user_id', userId);
 
         if (updateError) {
           return { data: null, error: 'Erro ao adicionar créditos' };
         }
 
-        // Registrar transação de pontos
+        // V7: Registrar transação
         await supabaseAdmin
-          .from('point_transactions')
+          .from('economy_transactions')
           .insert({
             user_id: userId,
+            type: 'promo_code',
+            point_type: 'bonus',
             amount: creditsAwarded,
-            type: 'bonus',
-            source: 'promo_code',
-            description: `Código promocional: ${code}`
+            balance_before: wallet?.bonus_credits || 0,
+            balance_after: newBonusCredits,
+            description: `Código promocional: ${code}`,
+            metadata: {
+              promo_code: code
+            }
           });
 
         result = { type: 'credits', amount: creditsAwarded };

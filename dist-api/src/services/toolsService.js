@@ -8,22 +8,36 @@ import { supabase, supabaseAdmin } from '../config/supabase.js';
 /**
  * Registrar uso de uma ferramenta
  * @param {string} userId - ID do usuário
- * @param {string} toolName - Nome da ferramenta
+ * @param {string} toolName - Nome da ferramenta (slug)
  * @param {object} options - Opções adicionais
  * @returns {Promise<{data, error}>}
  */
 export async function trackToolUsage(userId, toolName, options = {}) {
   try {
-    const { durationSeconds, success = true, metadata = {} } = options;
+    const { durationSeconds, success = true, metadata = {}, costInPoints = 0 } = options;
 
+    // V7: Buscar tool_id do catálogo
+    const { data: tool } = await supabaseAdmin
+      .from('tools_catalog')
+      .select('id')
+      .eq('slug', toolName)
+      .single();
+
+    if (!tool) {
+      console.warn(`Ferramenta ${toolName} não encontrada no catálogo`);
+      return { data: null, error: 'Ferramenta não encontrada' };
+    }
+
+    // V7: Inserir em tools.executions
     const { data, error } = await supabaseAdmin
-      .from('tool_usage_stats')
+      .from('tools_executions')
       .insert({
         user_id: userId,
-        tool_name: toolName,
-        duration_seconds: durationSeconds,
+        tool_id: tool.id,
+        cost_in_points: costInPoints,
         success,
-        metadata
+        result: metadata,
+        executed_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -47,82 +61,78 @@ export async function trackToolUsage(userId, toolName, options = {}) {
  */
 export async function getMostUsedTools(limit = 4) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('tool_usage_stats')
-      .select('tool_name')
-      .eq('success', true);
+    // V7: Buscar de tools.executions
+    const { data: executions, error: execError } = await supabaseAdmin
+      .from('tools_executions')
+      .select('tool_id')
+      .eq('success', true)
+      .order('created_at', { ascending: false })
+      .limit(1000);
 
-    if (error) {
-      console.error('Erro ao buscar ferramentas mais usadas:', error);
-      return { data: null, error };
+    if (execError) {
+      console.error('Erro ao buscar execuções:', execError);
+      return { data: [], error: null }; // Retorna vazio ao invés de erro
     }
 
-    // Contar ocorrências manualmente
+    if (!executions || executions.length === 0) {
+      return { data: [], error: null }; // Nenhuma execução ainda
+    }
+
+    // Contar ocorrências por tool_id
     const counts = {};
-    data.forEach(item => {
-      counts[item.tool_name] = (counts[item.tool_name] || 0) + 1;
+    executions.forEach(item => {
+      if (item.tool_id) {
+        counts[item.tool_id] = (counts[item.tool_id] || 0) + 1;
+      }
     });
 
-    // Ordenar por contagem e pegar top N
+    // Ordenar por contagem
     const sorted = Object.entries(counts)
-      .map(([tool_name, usage_count]) => ({ tool_name, usage_count }))
+      .map(([tool_id, usage_count]) => ({ tool_id, usage_count }))
       .sort((a, b) => b.usage_count - a.usage_count)
       .slice(0, limit);
 
-    // Mapear para formato amigável com metadados das ferramentas
-    const toolsMetadata = {
-      rescisao: {
-        title: 'Rescisão',
-        description: 'Calcular verbas rescisórias',
-        icon: 'calculator',
-        route: '/dashboard/ferramentas?tool=rescisao'
-      },
-      ferias: {
-        title: 'Férias',
-        description: 'Calcular férias',
-        icon: 'calendar',
-        route: '/dashboard/ferramentas?tool=ferias'
-      },
-      decimoterceiro: {
-        title: '13º Salário',
-        description: 'Calcular décimo terceiro',
-        icon: 'money',
-        route: '/dashboard/ferramentas?tool=decimoterceiro'
-      },
-      cnis: {
-        title: 'CNIS',
-        description: 'Extrair dados do CNIS',
-        icon: 'document',
-        route: '/dashboard/ferramentas?tool=cnis'
-      },
-      holerite: {
-        title: 'Holerite',
-        description: 'Analisar holerite',
-        icon: 'document-text',
-        route: '/dashboard/ferramentas?tool=holerite'
-      },
-      pensao: {
-        title: 'Pensão Alimentícia',
-        description: 'Calcular pensão',
-        icon: 'users',
-        route: '/dashboard/ferramentas?tool=pensao'
-      }
-    };
+    if (sorted.length === 0) {
+      return { data: [], error: null };
+    }
 
-    const enrichedTools = sorted.map(tool => ({
-      ...tool,
-      ...(toolsMetadata[tool.tool_name] || {
-        title: tool.tool_name,
-        description: 'Ferramenta',
-        icon: 'tool',
-        route: `/dashboard/ferramentas?tool=${tool.tool_name}`
+    // Buscar detalhes das ferramentas
+    const toolIds = sorted.map(t => t.tool_id);
+    const { data: tools, error: toolsError } = await supabaseAdmin
+      .from('tools_catalog')
+      .select('*')
+      .in('id', toolIds)
+      .eq('is_active', true);
+
+    if (toolsError) {
+      console.error('Erro ao buscar ferramentas:', toolsError);
+      return { data: [], error: null };
+    }
+
+    if (!tools || tools.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Mapear para formato esperado
+    const mostUsed = sorted
+      .map(item => {
+        const tool = tools.find(t => t.id === item.tool_id);
+        if (!tool) return null;
+        
+        return {
+          tool_name: tool.slug,
+          title: tool.name,
+          description: tool.description,
+          usage_count: item.usage_count,
+          route: `/dashboard/ferramentas?tool=${tool.slug}`
+        };
       })
-    }));
+      .filter(Boolean);
 
-    return { data: enrichedTools, error: null };
+    return { data: mostUsed, error: null };
   } catch (error) {
     console.error('Erro inesperado ao buscar ferramentas:', error);
-    return { data: null, error: error.message };
+    return { data: [], error: null }; // Retorna vazio em caso de erro
   }
 }
 
@@ -133,29 +143,73 @@ export async function getMostUsedTools(limit = 4) {
  */
 export async function getUserToolStats(userId) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('tool_usage_stats')
-      .select('*')
+    // V7: Buscar execuções do usuário
+    const { data: executions, error } = await supabaseAdmin
+      .from('tools_executions')
+      .select('tool_id, success, executed_at, result')
       .eq('user_id', userId)
-      .order('used_at', { ascending: false });
+      .order('executed_at', { ascending: false });
 
     if (error) {
       console.error('Erro ao buscar estatísticas do usuário:', error);
       return { data: null, error };
     }
 
+    if (!executions || executions.length === 0) {
+      return {
+        data: {
+          totalUses: 0,
+          successfulUses: 0,
+          successRate: 0,
+          mostUsedTools: [],
+          recentActivity: []
+        },
+        error: null
+      };
+    }
+
+    // Buscar informações das ferramentas
+    const toolIds = [...new Set(executions.map(e => e.tool_id))];
+    const { data: tools } = await supabaseAdmin
+      .from('tools_catalog')
+      .select('id, name, slug')
+      .in('id', toolIds);
+
+    const toolMap = {};
+    tools?.forEach(tool => {
+      toolMap[tool.id] = tool;
+    });
+
     // Agregar estatísticas
-    const totalUses = data.length;
-    const successfulUses = data.filter(u => u.success).length;
+    const totalUses = executions.length;
+    const successfulUses = executions.filter(e => e.success).length;
     const toolCounts = {};
     
-    data.forEach(item => {
-      toolCounts[item.tool_name] = (toolCounts[item.tool_name] || 0) + 1;
+    executions.forEach(item => {
+      const toolId = item.tool_id;
+      toolCounts[toolId] = (toolCounts[toolId] || 0) + 1;
     });
 
     const mostUsed = Object.entries(toolCounts)
-      .map(([tool_name, count]) => ({ tool_name, count }))
+      .map(([tool_id, count]) => {
+        const tool = toolMap[tool_id];
+        return {
+          tool_name: tool?.slug || tool?.name || tool_id,
+          display_name: tool?.name || tool_id,
+          count
+        };
+      })
       .sort((a, b) => b.count - a.count);
+
+    // Mapear atividade recente
+    const recentActivity = executions.slice(0, 10).map(exec => ({
+      tool_id: exec.tool_id,
+      tool_name: toolMap[exec.tool_id]?.slug || exec.tool_id,
+      display_name: toolMap[exec.tool_id]?.name || exec.tool_id,
+      success: exec.success,
+      used_at: exec.executed_at,
+      result: exec.result
+    }));
 
     return {
       data: {
@@ -163,7 +217,7 @@ export async function getUserToolStats(userId) {
         successfulUses,
         successRate: totalUses > 0 ? (successfulUses / totalUses * 100).toFixed(1) : 0,
         mostUsedTools: mostUsed,
-        recentActivity: data.slice(0, 10)
+        recentActivity
       },
       error: null
     };
@@ -181,11 +235,25 @@ export async function getUserToolStats(userId) {
  */
 export async function getUserToolHistory(userId, limit = 50) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('tool_usage_stats')
-      .select('*')
+    // V7: Buscar execuções com join nas ferramentas
+    const { data: executions, error } = await supabaseAdmin
+      .from('tools_executions')
+      .select(`
+        id,
+        tool_id,
+        success,
+        executed_at,
+        cost_in_points,
+        result,
+        error_message,
+        tools:tool_id (
+          name,
+          slug,
+          category
+        )
+      `)
       .eq('user_id', userId)
-      .order('used_at', { ascending: false })
+      .order('executed_at', { ascending: false })
       .limit(limit);
 
     if (error) {
@@ -193,7 +261,21 @@ export async function getUserToolHistory(userId, limit = 50) {
       return { data: null, error };
     }
 
-    return { data, error: null };
+    // Mapear para formato esperado pelo frontend
+    const history = executions?.map(exec => ({
+      id: exec.id,
+      tool_id: exec.tool_id,
+      tool_name: exec.tools?.slug || exec.tool_id,
+      display_name: exec.tools?.name || exec.tool_id,
+      category: exec.tools?.category,
+      success: exec.success,
+      used_at: exec.executed_at,
+      points_cost: exec.cost_in_points,
+      result: exec.result,
+      error_message: exec.error_message
+    })) || [];
+
+    return { data: history, error: null };
   } catch (error) {
     console.error('Erro inesperado ao buscar histórico:', error);
     return { data: null, error: error.message };

@@ -15,7 +15,7 @@ import { supabase, supabaseAdmin } from '../config/supabase.js';
 export async function getAllAchievements(userId = null) {
     try {
         let query = supabase
-            .from('achievements')
+            .from('gamification_achievements')
             .select('*')
             .eq('is_active', true)
             .order('display_order');
@@ -33,7 +33,7 @@ export async function getAllAchievements(userId = null) {
 
         // Buscar progresso do usuário
         const { data: userProgress } = await supabase
-            .from('user_achievements')
+            .from('gamification_user_achievements')
             .select('*')
             .eq('user_id', userId);
 
@@ -62,14 +62,14 @@ export async function getUserAchievements(userId) {
     try {
         // Buscar todas conquistas
         const { data: allAchievements } = await supabase
-            .from('achievements')
+            .from('gamification_achievements')
             .select('*')
             .eq('is_active', true)
             .order('display_order');
 
         // Buscar progresso do usuário
         const { data: userProgress } = await supabase
-            .from('user_achievements')
+            .from('gamification_user_achievements')
             .select('*')
             .eq('user_id', userId);
 
@@ -125,7 +125,7 @@ export async function getUserAchievements(userId) {
 export async function getShowcase(userId) {
     try {
         const { data, error } = await supabase
-            .from('achievement_showcase')
+            .from('gamification_achievement_showcase')
             .select(`
                 display_order,
                 achievements (
@@ -168,7 +168,7 @@ export async function updateShowcase(userId, achievementIds) {
         // Verificar se usuário possui todas as conquistas
         if (achievementIds.length > 0) {
             const { data: unlocked } = await supabase
-                .from('user_achievements')
+                .from('gamification_user_achievements')
                 .select('achievement_id')
                 .eq('user_id', userId)
                 .eq('is_completed', true)
@@ -181,7 +181,7 @@ export async function updateShowcase(userId, achievementIds) {
 
         // Limpar vitrine atual
         await supabaseAdmin
-            .from('achievement_showcase')
+            .from('gamification_achievement_showcase')
             .delete()
             .eq('user_id', userId);
 
@@ -194,7 +194,7 @@ export async function updateShowcase(userId, achievementIds) {
             }));
 
             const { data, error } = await supabaseAdmin
-                .from('achievement_showcase')
+                .from('gamification_achievement_showcase')
                 .insert(showcaseItems)
                 .select();
 
@@ -217,7 +217,7 @@ export async function updateShowcase(userId, achievementIds) {
 export async function getRecentUnlocks(userId, limit = 10) {
     try {
         const { data, error } = await supabase
-            .from('user_achievements')
+            .from('gamification_user_achievements')
             .select(`
                 completed_at,
                 achievements (
@@ -257,7 +257,7 @@ export async function getLeaderboard(limit = 10) {
     try {
         // Contar conquistas por usuário
         const { data, error } = await supabase
-            .from('user_achievements')
+            .from('gamification_user_achievements')
             .select('user_id, achievements(reward_bonus_credits)')
             .eq('is_completed', true);
 
@@ -281,14 +281,14 @@ export async function getLeaderboard(limit = 10) {
         // Buscar informações dos usuários
         const userIds = Object.keys(userStats);
         const { data: users } = await supabase
-            .from('users')
-            .select('id, name, avatar_url')
+            .from('profiles')
+            .select('id, full_name, avatar_url')
             .in('id', userIds);
 
         // Combinar e ordenar
         const leaderboard = users?.map(user => ({
             id: user.id,
-            name: user.name,
+            name: user.full_name,
             avatar: user.avatar_url,
             achievementCount: userStats[user.id].achievementCount,
             totalPoints: userStats[user.id].totalPoints
@@ -309,7 +309,7 @@ export async function unlockAchievement(userId, achievementId) {
     try {
         // Registrar desbloqueio na tabela user_achievements
         const { data, error } = await supabaseAdmin
-            .from('user_achievements')
+            .from('gamification_user_achievements')
             .update({
                 is_completed: true,
                 completed_at: new Date().toISOString()
@@ -325,7 +325,7 @@ export async function unlockAchievement(userId, achievementId) {
 
         // Buscar info da conquista para dar recompensa
         const { data: achievement } = await supabase
-            .from('achievements')
+            .from('gamification_achievements')
             .select('reward_bonus_credits')
             .eq('id', achievementId)
             .single();

@@ -14,7 +14,7 @@ export async function generateReferralCode(userId) {
   try {
     // Verificar se usuário já tem código
     const { data: existingUser, error: userError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .select('referral_code')
       .eq('id', userId)
       .single();
@@ -38,7 +38,7 @@ export async function generateReferralCode(userId) {
 
     // Atualizar usuário com o código
     const { error: updateError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .update({ referral_code: data })
       .eq('id', userId);
 
@@ -61,7 +61,7 @@ export async function generateReferralCode(userId) {
 export async function getReferralCode(userId) {
   try {
     const { data, error } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .select('referral_code')
       .eq('id', userId)
       .single();
@@ -92,8 +92,8 @@ export async function applyReferralCode(newUserId, referralCode) {
   try {
     // Verificar se usuário já foi indicado
     const { data: currentUser, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('referred_by_user_id')
+      .from('profiles')
+      .select('referred_by')
       .eq('id', newUserId)
       .single();
 
@@ -101,14 +101,14 @@ export async function applyReferralCode(newUserId, referralCode) {
       return { data: null, error: 'Usuário não encontrado' };
     }
 
-    if (currentUser.referred_by_user_id) {
+    if (currentUser.referred_by) {
       return { data: null, error: 'Você já foi indicado por outro usuário' };
     }
 
     // Buscar usuário que possui este código de referral
     const { data: referrer, error: referrerError } = await supabaseAdmin
-      .from('users')
-      .select('id, email, name')
+      .from('profiles')
+      .select('id, email, full_name')
       .eq('referral_code', referralCode.toUpperCase())
       .single();
 
@@ -123,10 +123,9 @@ export async function applyReferralCode(newUserId, referralCode) {
 
     // Atualizar usuário novo com a indicação
     const { error: updateError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .update({
-        referred_by_user_id: referrer.id,
-        referral_completed_at: new Date().toISOString()
+        referred_by: referrer.id
       })
       .eq('id', newUserId);
 
@@ -134,43 +133,60 @@ export async function applyReferralCode(newUserId, referralCode) {
       return { data: null, error: 'Erro ao aplicar código' };
     }
 
-    // Criar registro no histórico de referrals
+    // V7: Criar registro no histórico de referrals
     const { error: historyError } = await supabaseAdmin
-      .from('referral_history')
+      .from('social_referrals')
       .insert({
-        referrer_user_id: referrer.id,
-        referred_user_id: newUserId,
-        status: 'pending' // Mudará para 'completed' quando usuário fizer primeira ação
+        referrer_id: referrer.id,
+        referred_id: newUserId,
+        referred_at: new Date().toISOString(),
+        reward_granted: false // Mudará para true quando dar recompensa
       });
 
     if (historyError) {
       console.error('Erro ao criar histórico:', historyError);
     }
 
-    // Dar bônus de boas-vindas para o novo usuário
+    // V7: Dar bônus de boas-vindas para o novo usuário
     const welcomeBonus = 25; // 25 créditos de bônus
-    await supabaseAdmin
-      .from('users')
-      .update({
-        bonus_credits: (currentUser.bonus_credits || 0) + welcomeBonus
-      })
-      .eq('id', newUserId);
+    
+    const { data: userWallet } = await supabaseAdmin
+      .from('economy_user_wallets')
+      .select('bonus_credits, total_earned_bonus')
+      .eq('user_id', newUserId)
+      .single();
+
+    const newBonusCredits = (userWallet?.bonus_credits || 0) + welcomeBonus;
+    const newTotalEarnedBonus = (userWallet?.total_earned_bonus || 0) + welcomeBonus;
 
     await supabaseAdmin
-      .from('point_transactions')
+      .from('economy_user_wallets')
+      .update({
+        bonus_credits: newBonusCredits,
+        total_earned_bonus: newTotalEarnedBonus
+      })
+      .eq('user_id', newUserId);
+
+    await supabaseAdmin
+      .from('economy_transactions')
       .insert({
         user_id: newUserId,
         amount: welcomeBonus,
-        type: 'bonus',
-        source: 'referral_welcome',
-        description: `Bônus por ser indicado por ${referrer.name || referrer.email}`
+        type: 'referral_bonus',
+        point_type: 'bonus',
+        balance_before: userWallet?.bonus_credits || 0,
+        balance_after: newBonusCredits,
+        description: `Bônus por ser indicado por ${referrer.full_name || referrer.email}`,
+        metadata: {
+          referrer_id: referrer.id
+        }
       });
 
     return {
       data: {
         success: true,
         referrer: {
-          name: referrer.name || referrer.email,
+          name: referrer.full_name || referrer.email,
           email: referrer.email
         },
         bonusReceived: welcomeBonus
@@ -190,24 +206,23 @@ export async function applyReferralCode(newUserId, referralCode) {
  */
 export async function completeReferral(referredUserId) {
   try {
-    // Buscar referral pendente
+    // V7: Buscar referral não recompensado
     const { data: referral, error: referralError } = await supabaseAdmin
-      .from('referral_history')
+      .from('social_referrals')
       .select('*')
-      .eq('referred_user_id', referredUserId)
-      .eq('status', 'pending')
+      .eq('referred_id', referredUserId)
+      .eq('reward_granted', false)
       .single();
 
     if (referralError || !referral) {
       return { data: null, error: 'Referral não encontrado' };
     }
 
-    // Marcar como completo
+    // V7: Marcar como recompensado (não há campo status, só reward_granted)
     const { error: updateError } = await supabaseAdmin
-      .from('referral_history')
+      .from('social_referrals')
       .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
+        reward_granted: true
       })
       .eq('id', referral.id);
 
@@ -230,59 +245,66 @@ export async function completeReferral(referredUserId) {
  */
 export async function rewardReferrer(referredUserId, bonusAmount = 50) {
   try {
-    // Buscar referral completo mas não recompensado
+    // V7: Buscar referral não recompensado
     const { data: referral, error: referralError } = await supabaseAdmin
-      .from('referral_history')
+      .from('social_referrals')
       .select('*')
-      .eq('referred_user_id', referredUserId)
-      .eq('status', 'completed')
+      .eq('referred_id', referredUserId)
+      .eq('reward_granted', false)
       .single();
 
     if (referralError || !referral) {
       return { data: null, error: 'Referral não encontrado ou não elegível' };
     }
 
-    // Buscar dados do referrer
-    const { data: referrer, error: referrerError } = await supabaseAdmin
-      .from('users')
-      .select('bonus_credits')
-      .eq('id', referral.referrer_user_id)
+    // V7: Buscar carteira do referrer
+    const { data: referrerWallet, error: referrerError } = await supabaseAdmin
+      .from('economy_user_wallets')
+      .select('bonus_credits, total_earned_bonus')
+      .eq('user_id', referral.referrer_id)
       .single();
 
     if (referrerError) {
       return { data: null, error: 'Referrer não encontrado' };
     }
 
-    // Adicionar bônus ao referrer
+    // V7: Adicionar bônus ao referrer
+    const newBonusCredits = (referrerWallet.bonus_credits || 0) + bonusAmount;
+    const newTotalEarnedBonus = (referrerWallet.total_earned_bonus || 0) + bonusAmount;
+
     const { error: updateError } = await supabaseAdmin
-      .from('users')
+      .from('economy_user_wallets')
       .update({
-        bonus_credits: (referrer.bonus_credits || 0) + bonusAmount
+        bonus_credits: newBonusCredits,
+        total_earned_bonus: newTotalEarnedBonus
       })
-      .eq('id', referral.referrer_user_id);
+      .eq('user_id', referral.referrer_id);
 
     if (updateError) {
       return { data: null, error: 'Erro ao adicionar bônus' };
     }
 
-    // Registrar transação
+    // V7: Registrar transação
     await supabaseAdmin
-      .from('point_transactions')
+      .from('economy_transactions')
       .insert({
-        user_id: referral.referrer_user_id,
+        user_id: referral.referrer_id,
         amount: bonusAmount,
-        type: 'bonus',
-        source: 'referral_reward',
-        description: `Bônus por indicar amigo que completou primeira ação`
+        type: 'referral_reward',
+        point_type: 'bonus',
+        balance_before: referrerWallet.bonus_credits,
+        balance_after: newBonusCredits,
+        description: `Bônus por indicar amigo que completou primeira ação`,
+        metadata: {
+          referred_user_id: referredUserId
+        }
       });
 
-    // Atualizar referral para 'rewarded'
+    // V7: Marcar referral como recompensado (já feito no início, mas garantir)
     await supabaseAdmin
-      .from('referral_history')
+      .from('social_referrals')
       .update({
-        status: 'rewarded',
-        rewarded_at: new Date().toISOString(),
-        bonus_credits_awarded: bonusAmount
+        reward_granted: true
       })
       .eq('id', referral.id);
 
@@ -300,53 +322,36 @@ export async function rewardReferrer(referredUserId, bonusAmount = 50) {
  */
 export async function getReferralStats(userId) {
   try {
-    // Buscar stats agregadas
-    const { data: stats, error: statsError } = await supabaseAdmin
-      .from('referral_stats')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    // Se não existir, criar
-    if (statsError && statsError.code === 'PGRST116') {
-      const { data: newStats, error: createError } = await supabaseAdmin
-        .from('referral_stats')
-        .insert({ user_id: userId })
-        .select()
-        .single();
-
-      if (createError) {
-        return { data: null, error: createError.message };
-      }
-
-      return { data: newStats, error: null };
-    }
-
-    if (statsError) {
-      return { data: null, error: statsError.message };
-    }
-
-    // Buscar lista de pessoas indicadas
+    // V7: Buscar referrals diretamente da tabela social.referrals
     const { data: referrals, error: referralsError } = await supabaseAdmin
-      .from('referral_history')
+      .from('social_referrals')
       .select(`
         *,
-        referred_user:users!referred_user_id (
+        referred_user:profiles!referred_id (
           email,
-          name,
+          full_name,
           created_at
         )
       `)
-      .eq('referrer_user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq('referrer_id', userId)
+      .order('referred_at', { ascending: false });
 
     if (referralsError) {
       console.error('Erro ao buscar referrals:', referralsError);
+      return { data: null, error: referralsError.message };
     }
+
+    // V7: Calcular estatísticas dinamicamente
+    const totalReferrals = referrals?.length || 0;
+    const rewardedReferrals = referrals?.filter(r => r.reward_granted).length || 0;
+    const pendingReferrals = totalReferrals - rewardedReferrals;
 
     return {
       data: {
-        ...stats,
+        user_id: userId,
+        total_referrals: totalReferrals,
+        rewarded_referrals: rewardedReferrals,
+        pending_referrals: pendingReferrals,
         referrals: referrals || []
       },
       error: null

@@ -274,8 +274,8 @@ BEGIN
         -- Gerar código aleatório de 8 caracteres
         code := upper(substring(md5(random()::text) from 1 for 8));
         
-        -- Verificar se já existe
-        SELECT COUNT(*) > 0 INTO exists FROM profiles WHERE referral_code = code;
+        -- Verificar se já existe (buscar em public.profiles, não auth.users)
+        SELECT COUNT(*) > 0 INTO exists FROM public.profiles WHERE referral_code = code;
         
         EXIT WHEN NOT exists;
     END LOOP;

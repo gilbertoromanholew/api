@@ -13,52 +13,52 @@ export async function consumePoints(userId, amount, metadata = {}) {
         throw new Error('Quantidade de pontos deve ser maior que zero');
     }
     
-    // Buscar pontos atuais
-    const { data: points, error: pointsError } = await supabase
-        .from('user_points')
+    // V7: Buscar carteira do usuário
+    const { data: wallet, error: walletError} = await supabase
+        .from('economy_user_wallets')
         .select('*')
         .eq('user_id', userId)
         .single();
     
-    if (pointsError) {
-        throw new Error('Erro ao buscar pontos do usuário');
+    if (walletError) {
+        throw new Error('Erro ao buscar carteira do usuário');
     }
     
-    const totalAvailable = points.free_points + points.paid_points;
+    const totalAvailable = wallet.bonus_credits + wallet.purchased_points;
     
     if (totalAvailable < amount) {
         throw new Error(`Pontos insuficientes. Você tem ${totalAvailable}, mas precisa de ${amount}`);
     }
     
-    // Calcular consumo (prioriza gratuitos)
+    // Calcular consumo (prioriza gratuitos/bonus)
     let remainingToConsume = amount;
     let freeConsumed = 0;
     let paidConsumed = 0;
     
-    // Consumir gratuitos primeiro
-    if (points.free_points > 0) {
-        freeConsumed = Math.min(points.free_points, remainingToConsume);
+    // Consumir bonus primeiro
+    if (wallet.bonus_credits > 0) {
+        freeConsumed = Math.min(wallet.bonus_credits, remainingToConsume);
         remainingToConsume -= freeConsumed;
     }
     
-    // Se ainda falta, consumir pagos
+    // Se ainda falta, consumir purchased
     if (remainingToConsume > 0) {
         paidConsumed = remainingToConsume;
     }
     
     // Novos saldos
-    const newFreePoints = points.free_points - freeConsumed;
-    const newPaidPoints = points.paid_points - paidConsumed;
+    const newBonusCredits = wallet.bonus_credits - freeConsumed;
+    const newPurchasedPoints = wallet.purchased_points - paidConsumed;
     const previousBalance = totalAvailable;
-    const newBalance = newFreePoints + newPaidPoints;
+    const newBalance = newBonusCredits + newPurchasedPoints;
     
-    // Atualizar pontos
+    // Atualizar carteira
     const { error: updateError } = await supabaseAdmin
-        .from('user_points')
+        .from('economy_user_wallets')
         .update({
-            free_points: newFreePoints,
-            paid_points: newPaidPoints,
-            total_spent: points.total_spent + amount
+            bonus_credits: newBonusCredits,
+            purchased_points: newPurchasedPoints,
+            total_spent: (wallet.total_spent || 0) + amount
         })
         .eq('user_id', userId);
     
@@ -66,22 +66,24 @@ export async function consumePoints(userId, amount, metadata = {}) {
         throw new Error('Erro ao atualizar pontos');
     }
     
-    // Registrar transação(ões)
+    // Registrar transações
     const transactions = [];
     
-    // Transação de consumo de pontos gratuitos
+    // Transação de consumo de bonus
     if (freeConsumed > 0) {
         const { data: freeTx } = await supabaseAdmin
-            .from('point_transactions')
+            .from('economy_transactions')
             .insert({
                 user_id: userId,
                 type: metadata.type || 'tool_usage',
-                point_type: 'free',
+                point_type: 'bonus',
                 amount: -freeConsumed,
-                balance_before: points.free_points,
-                balance_after: newFreePoints,
+                balance_before: wallet.bonus_credits,
+                balance_after: newBonusCredits,
                 description: metadata.description || 'Consumo de pontos',
-                tool_name: metadata.tool_name || null
+                metadata: {
+                    tool_name: metadata.tool_name
+                }
             })
             .select()
             .single();
@@ -89,19 +91,21 @@ export async function consumePoints(userId, amount, metadata = {}) {
         if (freeTx) transactions.push(freeTx);
     }
     
-    // Transação de consumo de pontos pagos
+    // Transação de consumo de purchased
     if (paidConsumed > 0) {
         const { data: paidTx } = await supabaseAdmin
-            .from('point_transactions')
+            .from('economy_transactions')
             .insert({
                 user_id: userId,
                 type: metadata.type || 'tool_usage',
-                point_type: 'paid',
+                point_type: 'purchased',
                 amount: -paidConsumed,
-                balance_before: points.paid_points,
-                balance_after: newPaidPoints,
+                balance_before: wallet.purchased_points,
+                balance_after: newPurchasedPoints,
                 description: metadata.description || 'Consumo de pontos',
-                tool_name: metadata.tool_name || null
+                metadata: {
+                    tool_name: metadata.tool_name
+                }
             })
             .select()
             .single();
@@ -127,32 +131,27 @@ export async function addFreePoints(userId, amount, metadata = {}) {
         throw new Error('Quantidade de pontos deve ser maior que zero');
     }
     
-    const { data: points, error } = await supabase
-        .from('user_points')
+    // V7: Buscar carteira do usuário
+    const { data: wallet, error } = await supabase
+        .from('economy_user_wallets')
         .select('*')
         .eq('user_id', userId)
         .single();
     
     if (error) {
-        throw new Error('Erro ao buscar pontos do usuário');
+        throw new Error('Erro ao buscar carteira do usuário');
     }
     
-    // Calcular quanto pode adicionar (respeitando limite)
-    const spaceAvailable = points.free_points_limit - points.free_points;
-    const actualAmount = Math.min(amount, spaceAvailable);
+    // Calcular quanto pode adicionar (respeitando limite - se houver)
+    // Nota: wallet não tem bonus_credits_limit na estrutura real, remover verificação
+    const newBonusCredits = wallet.bonus_credits + amount;
     
-    if (actualAmount <= 0) {
-        throw new Error(`Limite de pontos gratuitos atingido (${points.free_points_limit})`);
-    }
-    
-    const newFreePoints = points.free_points + actualAmount;
-    
-    // Atualizar pontos
+    // Atualizar carteira
     const { error: updateError } = await supabaseAdmin
-        .from('user_points')
+        .from('economy_user_wallets')
         .update({
-            free_points: newFreePoints,
-            total_earned: points.total_earned + actualAmount
+            bonus_credits: newBonusCredits,
+            total_earned_bonus: (wallet.total_earned_bonus || 0) + amount
         })
         .eq('user_id', userId);
     
@@ -162,25 +161,27 @@ export async function addFreePoints(userId, amount, metadata = {}) {
     
     // Registrar transação
     const { data: transaction } = await supabaseAdmin
-        .from('point_transactions')
+        .from('economy_transactions')
         .insert({
             user_id: userId,
             type: metadata.type || 'admin_adjustment',
-            point_type: 'free',
-            amount: actualAmount,
-            balance_before: points.free_points,
-            balance_after: newFreePoints,
+            point_type: 'bonus',
+            amount: amount,
+            balance_before: wallet.bonus_credits,
+            balance_after: newBonusCredits,
             description: metadata.description || 'Adição de pontos gratuitos',
-            referred_user_id: metadata.referred_user_id || null
+            metadata: {
+                referred_user_id: metadata.referred_user_id
+            }
         })
         .select()
         .single();
     
     return {
-        added: actualAmount,
+        added: amount,
         requested: amount,
-        limited: actualAmount < amount,
-        new_balance: newFreePoints,
+        limited: false,
+        new_balance: newBonusCredits,
         transaction
     };
 }
@@ -193,24 +194,25 @@ export async function addPaidPoints(userId, amount, metadata = {}) {
         throw new Error('Quantidade de pontos deve ser maior que zero');
     }
     
-    const { data: points, error } = await supabase
-        .from('user_points')
+    // V7: Buscar carteira do usuário
+    const { data: wallet, error } = await supabase
+        .from('economy_user_wallets')
         .select('*')
         .eq('user_id', userId)
         .single();
     
     if (error) {
-        throw new Error('Erro ao buscar pontos do usuário');
+        throw new Error('Erro ao buscar carteira do usuário');
     }
     
-    const newPaidPoints = points.paid_points + amount;
+    const newPurchasedPoints = wallet.purchased_points + amount;
     
-    // Atualizar pontos
+    // Atualizar carteira
     const { error: updateError } = await supabaseAdmin
-        .from('user_points')
+        .from('economy_user_wallets')
         .update({
-            paid_points: newPaidPoints,
-            total_purchased: points.total_purchased + amount
+            purchased_points: newPurchasedPoints,
+            total_purchased: (wallet.total_purchased || 0) + amount
         })
         .eq('user_id', userId);
     
@@ -220,23 +222,25 @@ export async function addPaidPoints(userId, amount, metadata = {}) {
     
     // Registrar transação
     const { data: transaction } = await supabaseAdmin
-        .from('point_transactions')
+        .from('economy_transactions')
         .insert({
             user_id: userId,
             type: metadata.type || 'purchase',
-            point_type: 'paid',
+            point_type: 'purchased',
             amount: amount,
-            balance_before: points.paid_points,
-            balance_after: newPaidPoints,
+            balance_before: wallet.purchased_points,
+            balance_after: newPurchasedPoints,
             description: metadata.description || 'Compra de pontos',
-            stripe_payment_id: metadata.stripe_payment_id || null
+            metadata: {
+                stripe_payment_id: metadata.stripe_payment_id
+            }
         })
         .select()
         .single();
     
     return {
         added: amount,
-        new_balance: newPaidPoints,
+        new_balance: newPurchasedPoints,
         transaction
     };
 }
@@ -245,10 +249,11 @@ export async function addPaidPoints(userId, amount, metadata = {}) {
  * Obter custo de uma ferramenta
  */
 export async function getToolCost(toolName) {
+    // V7: Buscar de tools.catalog
     const { data, error } = await supabase
-        .from('tool_costs')
+        .from('tools_catalog')
         .select('*')
-        .eq('tool_name', toolName)
+        .eq('slug', toolName)
         .eq('is_active', true)
         .single();
     
@@ -256,7 +261,13 @@ export async function getToolCost(toolName) {
         throw new Error(`Ferramenta "${toolName}" não encontrada ou inativa`);
     }
     
-    return data;
+    // Manter compatibilidade com código existente
+    return {
+        tool_name: data.slug,
+        display_name: data.name,
+        points_cost: data.cost_in_points,
+        ...data
+    };
 }
 
 /**
@@ -265,17 +276,18 @@ export async function getToolCost(toolName) {
 export async function canUseTool(userId, toolName) {
     const tool = await getToolCost(toolName);
     
-    const { data: points, error } = await supabase
-        .from('user_points')
-        .select('free_points, paid_points')
+    // V7: Buscar carteira
+    const { data: wallet, error } = await supabase
+        .from('economy_user_wallets')
+        .select('bonus_credits, purchased_points')
         .eq('user_id', userId)
         .single();
     
     if (error) {
-        throw new Error('Erro ao buscar pontos do usuário');
+        throw new Error('Erro ao buscar carteira do usuário');
     }
     
-    const totalPoints = points.free_points + points.paid_points;
+    const totalPoints = wallet.bonus_credits + wallet.purchased_points;
     const canUse = totalPoints >= tool.points_cost;
     const missing = canUse ? 0 : tool.points_cost - totalPoints;
     

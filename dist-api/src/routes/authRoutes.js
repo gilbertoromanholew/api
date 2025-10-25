@@ -306,7 +306,7 @@ router.post('/register', registerLimiter, async (req, res) => {
             });
         }
 
-        // Gerar referral code
+        // Gerar referral code (max 20 caracteres)
         const { data: refCodeData, error: refCodeError } = await supabaseAdmin
             .rpc('generate_referral_code');
 
@@ -314,8 +314,10 @@ router.post('/register', registerLimiter, async (req, res) => {
             secureErrorLog('[Auth] Erro ao gerar código de referência', refCodeError);
         }
 
-        // Fallback: gerar código único se a função do banco falhar
-        const referralCode = refCodeData || `USER-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        // Fallback: gerar código único curto (max 20 chars)
+        // Formato: USER-TIMESTAMP (14 chars) = "USER-1729900000" (15 chars total)
+        const referralCode = refCodeData || `U${Date.now().toString().slice(-8)}${Math.random().toString(36).substr(2, 7).toUpperCase()}`;
+
 
         // ✅ PASSO 1: Criar usuário no Supabase Auth
         secureLog('[Auth] Criando usuário em auth.users', { email });
@@ -379,31 +381,34 @@ router.post('/register', registerLimiter, async (req, res) => {
         
         secureLog('[Auth] Perfil criado com sucesso', { userId: authResponse.user.id });
 
-        // ✅ PASSO 3: Criar registro de pontos inicial
-        const { error: pointsError } = await supabaseAdmin
-            .from('user_points')
+        // ✅ PASSO 3: V7 - Criar carteira do usuário
+        const { error: walletError } = await supabaseAdmin
+            .from('economy_user_wallets')
             .insert([
                 {
                     user_id: authResponse.user.id,
-                    free_points: 100, // Bônus de cadastro
-                    paid_points: 0,
-                    total_earned: 100,
+                    bonus_credits: 100, // Bônus de cadastro
+                    purchased_points: 0,
+                    total_earned_bonus: 100,
+                    total_purchased: 0,
+                    total_spent: 0,
+                    pro_weekly_allowance: 20,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 }
             ]);
 
-        if (pointsError) {
-            secureErrorLog('[Auth] Erro ao criar pontos iniciais', pointsError);
+        if (walletError) {
+            secureErrorLog('[Auth] Erro ao criar carteira inicial', walletError);
         } else {
-            // Criar transação de bônus de cadastro
+            // V7: Criar transação de bônus de cadastro
             await supabaseAdmin
-                .from('point_transactions')
+                .from('economy_transactions')
                 .insert([
                     {
                         user_id: authResponse.user.id,
                         type: 'signup_bonus',
-                        point_type: 'free',
+                        point_type: 'bonus',
                         amount: 100,
                         balance_before: 0,
                         balance_after: 100,

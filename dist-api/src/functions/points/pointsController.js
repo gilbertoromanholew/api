@@ -1,4 +1,4 @@
-import { supabase } from '../../config/supabase.js';
+import { supabaseAdmin } from '../../config/supabase.js';
 import { consumePoints, addFreePoints, addPaidPoints, canUseTool } from './pointsService.js';
 
 /**
@@ -9,29 +9,55 @@ export async function getBalance(req, res) {
     try {
         const userId = req.user.id;
         
-        const { data, error } = await supabase
-            .from('user_points')
+        console.log('💰 [Points] Buscando saldo para:', userId)
+        
+        // V7: Buscar da carteira
+        const { data, error } = await supabaseAdmin
+            .from('economy_user_wallets')
             .select('*')
             .eq('user_id', userId)
             .single();
         
         if (error) {
-            throw new Error('Erro ao buscar saldo de pontos');
+            console.error('❌ [Points] Erro ao buscar carteira:', error)
+            throw new Error('Erro ao buscar saldo de pontos: ' + error.message);
         }
+        
+        if (!data) {
+            console.warn('⚠️ [Points] Carteira não encontrada para:', userId)
+            return res.status(404).json({
+                success: false,
+                error: 'Carteira não encontrada'
+            });
+        }
+        
+        console.log('✅ [Points] Carteira encontrada:', {
+            bonus: data.bonus_credits,
+            purchased: data.purchased_points,
+            total: data.bonus_credits + data.purchased_points
+        })
         
         return res.json({
             success: true,
             data: {
-                free_points: data.free_points,
-                paid_points: data.paid_points,
-                total_points: data.free_points + data.paid_points,
-                free_points_limit: data.free_points_limit,
-                total_earned: data.total_earned,
+                // V7: Nomes corretos do banco
+                bonus_credits: data.bonus_credits,
+                purchased_points: data.purchased_points,
+                total_credits: data.bonus_credits + data.purchased_points, // Calculado
+                total_earned_bonus: data.total_earned_bonus,
                 total_purchased: data.total_purchased,
-                total_spent: data.total_spent
+                total_spent: data.total_spent,
+                pro_weekly_allowance: data.pro_weekly_allowance,
+                last_allowance_date: data.last_allowance_date,
+                // V6: Compatibilidade com frontend (deprecated)
+                purchased_credits: data.purchased_points, // Alias para purchased_points
+                free_points: data.bonus_credits,
+                paid_points: data.purchased_points,
+                total_points: data.bonus_credits + data.purchased_points
             }
         });
     } catch (error) {
+        console.error('❌ [Points] Exceção:', error)
         return res.status(500).json({
             success: false,
             error: error.message
@@ -52,9 +78,9 @@ export async function getHistory(req, res) {
         
         const offset = (page - 1) * limit;
         
-        // Montar query
-        let query = supabase
-            .from('point_transactions')
+        // V7: Montar query
+        let query = supabaseAdmin
+            .from('economy_transactions')
             .select('*', { count: 'exact' })
             .eq('user_id', userId)
             .order('created_at', { ascending: false })

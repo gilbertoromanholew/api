@@ -10,15 +10,28 @@ import { logToolExecution } from '../../services/auditService.js';
  */
 export async function listTools(req, res) {
     try {
-        // Usar API REST direta (mais confiável)
-        const { data, error } = await supabaseQuery('tool_costs', {
-            eq: { is_active: true },
-            order: { category: true, tool_name: true },
-            useServiceRole: true
-        });
+        console.log('🔍 [Tools] Buscando ferramentas do banco...')
+        
+        // ✅ USAR supabaseAdmin para ignorar RLS (tabela é pública)
+        const { data, error } = await supabaseAdmin
+            .from('tools_catalog')
+            .select('*')
+            .eq('is_active', true)
+            .order('category, name');
         
         if (error) {
+            console.error('❌ [Tools] Erro ao buscar ferramentas:', error);
             throw new Error('Erro ao buscar ferramentas');
+        }
+        
+        console.log(`📊 [Tools] Total de ferramentas encontradas: ${data?.length || 0}`)
+        
+        if (!data || data.length === 0) {
+            console.warn('⚠️ [Tools] NENHUMA ferramenta encontrada no banco!')
+            console.warn('   Verificar:')
+            console.warn('   1. Tabela tools_catalog tem dados?')
+            console.warn('   2. Todas estão com is_active = false?')
+            console.warn('   3. Permissões RLS bloqueando leitura?')
         }
         
         // Agrupar por categoria
@@ -29,13 +42,20 @@ export async function listTools(req, res) {
                 categories[category] = [];
             }
             categories[category].push({
-                name: tool.tool_name,
-                display_name: tool.display_name,
+                slug: tool.slug,
+                name: tool.name,
+                display_name: tool.name,
                 description: tool.description,
-                points_cost: tool.points_cost,
-                icon: tool.icon
+                points_cost: tool.cost_in_points,
+                base_cost: tool.cost_in_points,
+                icon: tool.icon_url || '🛠️'
             });
         });
+        
+        console.log('📂 [Tools] Categorias:', Object.keys(categories))
+        Object.keys(categories).forEach(cat => {
+            console.log(`   - ${cat}: ${categories[cat].length} ferramentas`)
+        })
         
         return res.json({
             success: true,
@@ -45,6 +65,7 @@ export async function listTools(req, res) {
             }
         });
     } catch (error) {
+        console.error('❌ [Tools] Exceção:', error)
         return res.status(500).json({
             success: false,
             error: error.message
@@ -60,10 +81,11 @@ export async function getToolDetails(req, res) {
     try {
         const { tool_name } = req.params;
         
+        // V7: Buscar da tools.catalog por slug
         const { data, error } = await supabase
-            .from('tool_costs')
+            .from('tools_catalog')
             .select('*')
-            .eq('tool_name', tool_name)
+            .eq('slug', tool_name)
             .eq('is_active', true)
             .single();
         
@@ -87,7 +109,13 @@ export async function getToolDetails(req, res) {
         return res.json({
             success: true,
             data: {
-                ...data,
+                tool_name: data.slug,
+                display_name: data.name,
+                description: data.description,
+                category: data.category,
+                points_cost: data.cost_in_points,
+                is_active: data.is_active,
+                icon: data.icon,
                 can_use: canUse
             }
         });
@@ -112,11 +140,11 @@ export async function executeTool(req, res) {
         const { tool_name } = req.params;
         const { params } = req.body; // Parâmetros específicos da ferramenta
         
-        // Verificar se ferramenta existe e está ativa
+        // V7: Verificar se ferramenta existe e está ativa
         const { data: tool, error: toolError } = await supabase
-            .from('tool_costs')
+            .from('tools_catalog')
             .select('*')
-            .eq('tool_name', tool_name)
+            .eq('slug', tool_name)
             .eq('is_active', true)
             .single();
         
@@ -142,9 +170,9 @@ export async function executeTool(req, res) {
         
         // Consumir pontos
         try {
-            const consumption = await consumePoints(userId, tool.points_cost, {
+            const consumption = await consumePoints(userId, tool.cost_in_points, {
                 type: 'tool_usage',
-                description: `Uso da ferramenta: ${tool.display_name}`,
+                description: `Uso da ferramenta: ${tool.name}`,
                 tool_name: tool_name
             });
             
@@ -167,12 +195,12 @@ export async function executeTool(req, res) {
             
             return res.json({
                 success: true,
-                message: `Ferramenta "${tool.display_name}" executada com sucesso`,
+                message: `Ferramenta "${tool.name}" executada com sucesso`,
                 data: {
                     tool: {
                         name: tool_name,
-                        display_name: tool.display_name,
-                        cost: tool.points_cost
+                        display_name: tool.name,
+                        cost: tool.cost_in_points
                     },
                     consumption,
                     result: {
@@ -233,13 +261,20 @@ export async function getUsageHistory(req, res) {
         const limit = parseInt(req.query.limit) || 20;
         const offset = (page - 1) * limit;
         
+        // V7: Buscar de tools.executions com join
         const { data, error, count } = await supabase
-            .from('point_transactions')
-            .select('*', { count: 'exact' })
+            .from('tools_executions')
+            .select(`
+                *,
+                tool:tool_id (
+                    name,
+                    slug,
+                    category,
+                    icon
+                )
+            `, { count: 'exact' })
             .eq('user_id', userId)
-            .eq('type', 'tool_usage')
-            .not('tool_name', 'is', null)
-            .order('created_at', { ascending: false })
+            .order('executed_at', { ascending: false })
             .range(offset, offset + limit - 1);
         
         if (error) {
@@ -248,21 +283,20 @@ export async function getUsageHistory(req, res) {
         
         const totalPages = Math.ceil(count / limit);
         
-        // Enriquecer com informações da ferramenta
-        const enriched = await Promise.all(
-            data.map(async (tx) => {
-                const { data: tool } = await supabase
-                    .from('tool_costs')
-                    .select('display_name, category, icon')
-                    .eq('tool_name', tx.tool_name)
-                    .single();
-                
-                return {
-                    ...tx,
-                    tool_info: tool || null
-                };
-            })
-        );
+        // Mapear para formato esperado
+        const enriched = data.map(exec => ({
+            id: exec.id,
+            tool_name: exec.tool?.slug || exec.tool_id,
+            display_name: exec.tool?.name || exec.tool_id,
+            category: exec.tool?.category,
+            icon: exec.tool?.icon,
+            points_cost: exec.cost_in_points,
+            success: exec.success,
+            created_at: exec.executed_at,
+            result: exec.result,
+            error_message: exec.error_message,
+            tool_info: exec.tool
+        }));
         
         return res.json({
             success: true,

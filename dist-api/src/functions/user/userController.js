@@ -19,15 +19,15 @@ export async function getProfile(req, res) {
             throw new Error('Erro ao buscar perfil');
         }
         
-        // Buscar pontos
-        const { data: points, error: pointsError } = await supabase
-            .from('user_points')
+        // V7: Buscar carteira
+        const { data: wallet, error: walletError } = await supabase
+            .from('economy_user_wallets')
             .select('*')
             .eq('user_id', userId)
             .single();
         
-        if (pointsError) {
-            throw new Error('Erro ao buscar pontos');
+        if (walletError) {
+            throw new Error('Erro ao buscar carteira');
         }
         
         // Buscar dados de autenticação (email)
@@ -52,13 +52,13 @@ export async function getProfile(req, res) {
                     created_at: profile.created_at
                 },
                 points: {
-                    free_points: points.free_points,
-                    paid_points: points.paid_points,
-                    total: points.free_points + points.paid_points,
-                    free_points_limit: points.free_points_limit,
-                    total_earned: points.total_earned,
-                    total_purchased: points.total_purchased,
-                    total_spent: points.total_spent
+                    free_points: wallet.bonus_credits,
+                    paid_points: wallet.purchased_points,
+                    total: wallet.bonus_credits + wallet.purchased_points,
+                    total_earned: wallet.total_earned_bonus,
+                    total_purchased: wallet.total_purchased,
+                    total_spent: wallet.total_spent,
+                    pro_weekly_allowance: wallet.pro_weekly_allowance
                 }
             }
         });
@@ -120,39 +120,40 @@ export async function getStats(req, res) {
     try {
         const userId = req.user.id;
         
-        // Contar total de transações
+        // V7: Contar total de transações
         const { count: totalTransactions } = await supabase
-            .from('point_transactions')
+            .from('economy_transactions')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', userId);
         
-        // Contar uso de ferramentas
+        // V7: Contar uso de ferramentas via tools.executions
         const { count: toolUsageCount } = await supabase
-            .from('point_transactions')
+            .from('tools_executions')
             .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('type', 'tool_usage');
+            .eq('user_id', userId);
         
-        // Buscar ferramenta mais usada
+        // V7: Buscar ferramenta mais usada
         const { data: toolUsages } = await supabase
-            .from('point_transactions')
-            .select('tool_name')
-            .eq('user_id', userId)
-            .eq('type', 'tool_usage')
-            .not('tool_name', 'is', null);
+            .from('tools_executions')
+            .select(`
+                tool_id,
+                tool:tool_id (slug, name)
+            `)
+            .eq('user_id', userId);
         
         // Contar frequência de cada ferramenta
         const toolFrequency = {};
-        toolUsages?.forEach(tx => {
-            toolFrequency[tx.tool_name] = (toolFrequency[tx.tool_name] || 0) + 1;
+        toolUsages?.forEach(exec => {
+            const toolSlug = exec.tool?.slug || exec.tool_id;
+            toolFrequency[toolSlug] = (toolFrequency[toolSlug] || 0) + 1;
         });
         
         const mostUsedTool = Object.entries(toolFrequency)
             .sort(([, a], [, b]) => b - a)[0];
         
-        // Buscar pontos
-        const { data: points } = await supabase
-            .from('user_points')
+        // V7: Buscar carteira
+        const { data: wallet } = await supabase
+            .from('economy_user_wallets')
             .select('*')
             .eq('user_id', userId)
             .single();
@@ -164,22 +165,23 @@ export async function getStats(req, res) {
             .eq('referred_by', userId);
         
         // Buscar compras (quando Stripe estiver implementado)
+        // V7: Buscar compras
         const { count: purchaseCount, data: purchases } = await supabase
-            .from('purchases')
-            .select('amount', { count: 'exact' })
+            .from('economy_purchases')
+            .select('amount_brl', { count: 'exact' })
             .eq('user_id', userId)
             .eq('status', 'completed');
         
-        const totalSpent = purchases?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+        const totalSpent = purchases?.reduce((sum, p) => sum + (p.amount_brl || 0), 0) || 0;
         
         return res.json({
             success: true,
             data: {
                 points: {
-                    total_earned: points?.total_earned || 0,
-                    total_purchased: points?.total_purchased || 0,
-                    total_spent: points?.total_spent || 0,
-                    current_balance: (points?.free_points || 0) + (points?.paid_points || 0)
+                    total_earned: wallet?.total_earned_bonus || 0,
+                    total_purchased: wallet?.total_purchased || 0,
+                    total_spent: wallet?.total_spent || 0,
+                    current_balance: (wallet?.bonus_credits || 0) + (wallet?.purchased_points || 0)
                 },
                 usage: {
                     total_transactions: totalTransactions || 0,
@@ -242,3 +244,42 @@ export async function getReferrals(req, res) {
         });
     }
 }
+
+/**
+ * POST /api/user/mark-welcome-seen
+ * Marca modal de boas-vindas como visualizado
+ */
+export async function markWelcomeSeen(req, res) {
+    try {
+        const userId = req.user.id;
+        
+        console.log('🎉 [User] Marcando welcome popup como visto para:', userId)
+        
+        // Atualizar flag no perfil (profiles.id = auth.users.id)
+        const { error } = await supabaseAdmin
+            .from('profiles')
+            .update({ 
+                welcome_popup_shown: true,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', userId); // ✅ CORRETO: usar 'id', não 'user_id'
+        
+        if (error) {
+            console.error('❌ [User] Erro ao marcar welcome:', error)
+            throw new Error('Erro ao atualizar perfil: ' + error.message);
+        }
+        
+        console.log('✅ [User] Welcome popup marcado com sucesso')
+        
+        return res.json({
+            success: true,
+            message: 'Modal marcado como visto'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+}
+
