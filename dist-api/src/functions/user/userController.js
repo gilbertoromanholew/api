@@ -245,41 +245,5 @@ export async function getReferrals(req, res) {
     }
 }
 
-/**
- * POST /api/user/mark-welcome-seen
- * Marca modal de boas-vindas como visualizado
- */
-export async function markWelcomeSeen(req, res) {
-    try {
-        const userId = req.user.id;
-        
-        console.log('🎉 [User] Marcando welcome popup como visto para:', userId)
-        
-        // Atualizar flag no perfil (profiles.id = auth.users.id)
-        const { error } = await supabaseAdmin
-            .from('profiles')
-            .update({ 
-                welcome_popup_shown: true,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', userId); // ✅ CORRETO: usar 'id', não 'user_id'
-        
-        if (error) {
-            console.error('❌ [User] Erro ao marcar welcome:', error)
-            throw new Error('Erro ao atualizar perfil: ' + error.message);
-        }
-        
-        console.log('✅ [User] Welcome popup marcado com sucesso')
-        
-        return res.json({
-            success: true,
-            message: 'Modal marcado como visto'
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-}
+
 

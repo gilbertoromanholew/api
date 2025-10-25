@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProfile, updateProfile, getStats, getReferrals, markWelcomeSeen } from './userController.js';
+import { getProfile, updateProfile, getStats, getReferrals } from './userController.js';
 import { requireAuth } from '../../middlewares/adminAuth.js';
 // Fase 2: Usar schemas Joi em vez de validação manual
 import { validate, updateProfileSchema } from '../../validators/schemas.js';
@@ -26,8 +26,5 @@ router.get('/stats', requireAuth, getStats);
 
 // GET /api/user/referrals - Lista de indicações
 router.get('/referrals', requireAuth, getReferrals);
-
-// POST /api/user/mark-welcome-seen - Marcar modal de boas-vindas como visto
-router.post('/mark-welcome-seen', requireAuth, markWelcomeSeen);
 
 export default router;

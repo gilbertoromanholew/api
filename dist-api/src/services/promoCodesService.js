@@ -134,7 +134,7 @@ export async function redeemPromoCode(userId, code) {
 
         // Verificar se usuário já tem PRO ativo
         const { data: activeSub } = await supabaseAdmin
-          .from('subscriptions')
+          .from('economy_subscriptions')
           .select('*')
           .eq('user_id', userId)
           .eq('status', 'active')
@@ -147,13 +147,13 @@ export async function redeemPromoCode(userId, code) {
           currentEndDate.setDate(currentEndDate.getDate() + proDaysAwarded);
           
           await supabaseAdmin
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .update({ end_date: currentEndDate.toISOString() })
             .eq('id', activeSub.id);
         } else {
           // Criar nova assinatura trial
           await supabaseAdmin
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .insert({
               user_id: userId,
               plan_slug: 'pro',

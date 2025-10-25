@@ -14,7 +14,7 @@ import { supabase, supabaseAdmin } from '../config/supabase.js';
 export async function getPlans() {
     try {
         const { data, error } = await supabase
-            .from('subscription_plans')
+            .from('economy_subscription_plans')
             .select('*')
             .eq('is_active', true)
             .order('price_brl', { ascending: true });
@@ -35,7 +35,7 @@ export async function getPlans() {
 export async function isPro(userId) {
     try {
         const { data } = await supabase
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .select('id')
             .eq('user_id', userId)
             .eq('status', 'active')
@@ -54,10 +54,10 @@ export async function isPro(userId) {
 export async function getActiveSubscription(userId) {
     try {
         const { data, error } = await supabase
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .select(`
                 *,
-                subscription_plans (
+                economy_subscription_plans (
                     name,
                     slug,
                     price_brl,
@@ -92,7 +92,7 @@ export async function createSubscription(userId, planSlug, paymentData = {}) {
     try {
         // Buscar plano
         const { data: plan } = await supabase
-            .from('subscription_plans')
+            .from('economy_subscription_plans')
             .select('*')
             .eq('slug', planSlug)
             .eq('is_active', true)
@@ -114,7 +114,7 @@ export async function createSubscription(userId, planSlug, paymentData = {}) {
 
         // Criar assinatura
         const { data, error } = await supabaseAdmin
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .insert({
                 user_id: userId,
                 plan_id: plan.id,
@@ -146,7 +146,7 @@ export async function createSubscription(userId, planSlug, paymentData = {}) {
 export async function cancelSubscription(userId) {
     try {
         const { data, error } = await supabaseAdmin
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .update({
                 status: 'canceled',
                 canceled_at: new Date().toISOString()
@@ -176,7 +176,7 @@ export async function processWeeklyAllowance() {
     try {
         // Buscar todas assinaturas ativas
         const { data: activeSubscriptions } = await supabase
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .select('user_id, plan_id')
             .eq('status', 'active')
             .gte('end_date', new Date().toISOString());
@@ -212,7 +212,7 @@ export async function processWeeklyAllowance() {
 export async function expireSubscriptions() {
     try {
         const { data, error } = await supabaseAdmin
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .update({ status: 'expired' })
             .eq('status', 'active')
             .lt('end_date', new Date().toISOString())
@@ -234,10 +234,10 @@ export async function expireSubscriptions() {
 export async function getSubscriptionHistory(userId) {
     try {
         const { data, error } = await supabase
-            .from('subscriptions')
+            .from('economy_subscriptions')
             .select(`
                 *,
-                subscription_plans (
+                economy_subscription_plans (
                     name,
                     price_brl,
                     billing_period
