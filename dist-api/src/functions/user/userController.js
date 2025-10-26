@@ -86,7 +86,8 @@ export async function updateProfile(req, res) {
             });
         }
         
-        const { data, error } = await supabaseAdmin
+        // ✅ RLS ATIVO: Usar supabase (anon key) - profiles tem RLS
+        const { data, error } = await supabase
             .from('profiles')
             .update({ full_name: full_name.trim() })
             .eq('user_id', userId)

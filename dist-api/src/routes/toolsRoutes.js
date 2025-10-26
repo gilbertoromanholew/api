@@ -43,6 +43,7 @@ router.get('/list', requireAuth, async (req, res) => {
         display_name: tool.name,
         description: tool.description,
         category: category,
+        tool_type: tool.tool_type || 'complementar', // ✅ NOVO: Tipo explícito
         base_cost: tool.cost_in_points || 0,
         final_cost: tool.cost_in_points || 0,
         points_cost: tool.cost_in_points || 0,
@@ -78,7 +79,7 @@ router.get('/list', requireAuth, async (req, res) => {
 /**
  * GET /api/tools/most-used
  * Obter ferramentas mais usadas da plataforma
- * ✅ SEGURANÇA: Requer autenticação para evitar análise de concorrência
+ * ✅ SEGURO: Apenas agregações, não expõe user_id
  */
 router.get('/most-used', requireAuth, async (req, res) => {
   try {
@@ -102,6 +103,73 @@ router.get('/most-used', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao buscar ferramentas mais usadas:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/tools/my-most-used
+ * Obter ferramentas mais usadas PELO USUÁRIO (pessoal)
+ * ✅ SEGURO: RLS valida auth.uid() = user_id
+ */
+router.get('/my-most-used', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 4;
+
+    const { data, error } = await toolsService.getMyMostUsedTools(userId, limit);
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        tools: data,
+        total: data.length
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar minhas ferramentas:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/tools/platform-favorites
+ * Obter top 1 ferramenta por categoria (geral da plataforma)
+ * ✅ SEGURO: Apenas agregações, não expõe dados pessoais
+ */
+router.get('/platform-favorites', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await toolsService.getPlatformFavorites();
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        favorites: data,
+        total: data.length
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar favoritos da plataforma:', error);
     return res.status(500).json({
       success: false,
       error: error.message

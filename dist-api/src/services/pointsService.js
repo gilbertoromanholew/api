@@ -17,9 +17,26 @@ import { supabase, supabaseAdmin } from '../config/supabase.js';
 
 /**
  * Obter saldo completo do usuário
+ * ✅ MÁXIMA SEGURANÇA: Usa JWT do usuário + RLS
+ * @param {string} userId - ID do usuário
+ * @param {string} userToken - JWT token do usuário (de req.user.token)
  */
-export async function getBalance(userId) {
-    const { data, error } = await supabaseAdmin
+export async function getBalance(userId, userToken) {
+    // Criar cliente Supabase com JWT do usuário
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseWithAuth = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY,
+        {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${userToken}`
+                }
+            }
+        }
+    );
+    
+    const { data, error } = await supabaseWithAuth
         .from('economy_user_wallets')
         .select('*')
         .eq('user_id', userId)
@@ -53,15 +70,33 @@ export async function getBalance(userId) {
 
 /**
  * Obter histórico de transações (paginado)
+ * ✅ MÁXIMA SEGURANÇA: Usa JWT do usuário + RLS
+ * @param {string} userId - ID do usuário
+ * @param {string} userToken - JWT token do usuário
+ * @param {object} options - Opções de paginação
  */
-export async function getHistory(userId, options = {}) {
+export async function getHistory(userId, userToken, options = {}) {
     const page = parseInt(options.page) || 1;
     const limit = parseInt(options.limit) || 20;
     const type = options.type; // opcional: filtrar por tipo
     
     const offset = (page - 1) * limit;
     
-    let query = supabaseAdmin
+    // Criar cliente Supabase com JWT do usuário
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseWithAuth = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY,
+        {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${userToken}`
+                }
+            }
+        }
+    );
+    
+    let query = supabaseWithAuth
         .from('economy_transactions')
         .select('*', { count: 'exact' })
         .eq('user_id', userId)
@@ -142,242 +177,128 @@ export async function canUseTool(userId, toolName) {
 
 /**
  * Consumir pontos (prioriza gratuitos, depois pagos)
+ * ✅ MÁXIMA SEGURANÇA: Usa JWT do usuário + function RLS
+ * @param {string} userId - ID do usuário
+ * @param {string} userToken - JWT token do usuário
+ * @param {number} amount - Quantidade a debitar
+ * @param {object} metadata - Metadados da operação
  */
-export async function consumePoints(userId, amount, metadata = {}) {
+export async function consumePoints(userId, userToken, amount, metadata = {}) {
     if (amount <= 0) {
         throw new Error('Quantidade de pontos deve ser maior que zero');
     }
     
-    // Buscar carteira
-    const { data: wallet, error: walletError} = await supabase
-        .from('economy_user_wallets')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-    
-    if (walletError) {
-        throw new Error('Erro ao buscar carteira do usuário: ' + walletError.message);
-    }
-    
-    const totalAvailable = wallet.bonus_credits + wallet.purchased_points;
-    
-    if (totalAvailable < amount) {
-        throw new Error(`Pontos insuficientes. Você tem ${totalAvailable}, mas precisa de ${amount}`);
-    }
-    
-    // Calcular consumo (prioriza gratuitos/bonus)
-    let remainingToConsume = amount;
-    let freeConsumed = 0;
-    let paidConsumed = 0;
-    
-    if (wallet.bonus_credits > 0) {
-        freeConsumed = Math.min(wallet.bonus_credits, remainingToConsume);
-        remainingToConsume -= freeConsumed;
-    }
-    
-    if (remainingToConsume > 0) {
-        paidConsumed = remainingToConsume;
-    }
-    
-    // Novos saldos
-    const newBonusCredits = wallet.bonus_credits - freeConsumed;
-    const newPurchasedPoints = wallet.purchased_points - paidConsumed;
-    const previousBalance = totalAvailable;
-    const newBalance = newBonusCredits + newPurchasedPoints;
-    
-    // Atualizar carteira
-    const { error: updateError } = await supabaseAdmin
-        .from('economy_user_wallets')
-        .update({
-            bonus_credits: newBonusCredits,
-            purchased_points: newPurchasedPoints,
-            total_spent: (wallet.total_spent || 0) + amount
-        })
-        .eq('user_id', userId);
-    
-    if (updateError) {
-        throw new Error('Erro ao atualizar pontos: ' + updateError.message);
-    }
-    
-    // Registrar transações
-    const transactions = [];
-    
-    if (freeConsumed > 0) {
-        const { data: freeTx } = await supabaseAdmin
-            .from('economy_transactions')
-            .insert({
-                user_id: userId,
-                type: metadata.type || 'tool_usage',
-                point_type: 'bonus',
-                amount: -freeConsumed,
-                balance_before: wallet.bonus_credits,
-                balance_after: newBonusCredits,
-                description: metadata.description || 'Consumo de pontos',
-                metadata: {
-                    tool_name: metadata.tool_name
+    // Criar cliente Supabase com JWT do usuário
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseWithAuth = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY,
+        {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${userToken}`
                 }
-            })
-            .select()
-            .single();
-        
-        if (freeTx) transactions.push(freeTx);
+            }
+        }
+    );
+    
+    // Usar function do Postgres (valida auth.uid() = user_id internamente)
+    const { data, error } = await supabaseWithAuth
+        .rpc('debit_credits', {
+            p_user_id: userId,
+            p_amount: amount,
+            p_reason: metadata.description || `Uso de ferramenta: ${metadata.tool_name || 'desconhecida'}`
+        });
+    
+    if (error) {
+        // Tratar erros específicos
+        if (error.message.includes('Saldo insuficiente')) {
+            const match = error.message.match(/Disponível: (\d+), necessário: (\d+)/);
+            const available = match ? match[1] : '?';
+            const needed = match ? match[2] : amount;
+            throw new Error(`Pontos insuficientes. Você tem ${available}, mas precisa de ${needed}`);
+        }
+        if (error.message.includes('Acesso negado')) {
+            throw new Error('Você não tem permissão para debitar créditos de outro usuário');
+        }
+        throw new Error('Erro ao consumir pontos: ' + error.message);
     }
     
-    if (paidConsumed > 0) {
-        const { data: paidTx } = await supabaseAdmin
-            .from('economy_transactions')
-            .insert({
-                user_id: userId,
-                type: metadata.type || 'tool_usage',
-                point_type: 'purchased',
-                amount: -paidConsumed,
-                balance_before: wallet.purchased_points,
-                balance_after: newPurchasedPoints,
-                description: metadata.description || 'Consumo de pontos',
-                metadata: {
-                    tool_name: metadata.tool_name
-                }
-            })
-            .select()
-            .single();
-        
-        if (paidTx) transactions.push(paidTx);
-    }
-    
+    // Retornar no formato esperado
     return {
         consumed: amount,
-        free_consumed: freeConsumed,
-        paid_consumed: paidConsumed,
-        previous_balance: previousBalance,
-        new_balance: newBalance,
-        transactions
+        free_consumed: data.bonus_used,
+        paid_consumed: data.purchased_used,
+        previous_balance: data.new_balance + amount,
+        new_balance: data.new_balance,
+        transaction_id: data.transaction_id,
+        success: data.success
     };
 }
 
 /**
  * Adicionar pontos bônus/gratuitos
  * Usado por: promo codes, referrals, admin, etc.
+ * ✅ RLS ATIVO: Usa function admin_add_credits() - SECURITY DEFINER
+ * ⚠️ Backend DEVE validar permissões antes de chamar
  */
 export async function addBonusPoints(userId, amount, metadata = {}) {
     if (amount <= 0) {
         throw new Error('Quantidade de pontos deve ser maior que zero');
     }
     
-    // Buscar carteira
-    const { data: wallet, error } = await supabase
-        .from('economy_user_wallets')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+    // Usar function do Postgres (bypassa RLS com segurança)
+    const { data, error } = await supabaseAdmin
+        .rpc('admin_add_credits', {
+            p_user_id: userId,
+            p_amount: amount,
+            p_type: 'bonus',
+            p_reason: metadata.description || 'Adição de pontos bônus'
+        });
     
     if (error) {
-        throw new Error('Erro ao buscar carteira do usuário: ' + error.message);
+        throw new Error('Erro ao adicionar pontos bônus: ' + error.message);
     }
-    
-    const newBonusCredits = wallet.bonus_credits + amount;
-    
-    // Atualizar carteira
-    const { error: updateError } = await supabaseAdmin
-        .from('economy_user_wallets')
-        .update({
-            bonus_credits: newBonusCredits,
-            total_earned_bonus: (wallet.total_earned_bonus || 0) + amount
-        })
-        .eq('user_id', userId);
-    
-    if (updateError) {
-        throw new Error('Erro ao atualizar pontos: ' + updateError.message);
-    }
-    
-    // Registrar transação
-    const { data: transaction } = await supabaseAdmin
-        .from('economy_transactions')
-        .insert({
-            user_id: userId,
-            type: metadata.type || 'bonus',
-            point_type: 'bonus',
-            amount: amount,
-            balance_before: wallet.bonus_credits,
-            balance_after: newBonusCredits,
-            description: metadata.description || 'Adição de pontos bônus',
-            metadata: {
-                promo_code: metadata.promo_code,
-                referred_user_id: metadata.referred_user_id,
-                admin_user_id: metadata.admin_user_id,
-                ...metadata.extra
-            }
-        })
-        .select()
-        .single();
     
     return {
         added: amount,
-        new_balance: newBonusCredits,
-        total_credits: newBonusCredits + wallet.purchased_points,
-        transaction
+        new_balance: data.new_balance,
+        total_credits: data.new_balance,
+        transaction_id: data.transaction_id,
+        success: data.success
     };
 }
 
 /**
  * Adicionar pontos comprados
  * Usado por: Stripe payments, manual admin purchases, etc.
+ * ✅ RLS ATIVO: Usa function admin_add_credits() - SECURITY DEFINER
+ * ⚠️ Backend DEVE validar permissões antes de chamar
  */
 export async function addPurchasedPoints(userId, amount, metadata = {}) {
     if (amount <= 0) {
         throw new Error('Quantidade de pontos deve ser maior que zero');
     }
     
-    // Buscar carteira
-    const { data: wallet, error } = await supabase
-        .from('economy_user_wallets')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+    // Usar function do Postgres (bypassa RLS com segurança)
+    const { data, error } = await supabaseAdmin
+        .rpc('admin_add_credits', {
+            p_user_id: userId,
+            p_amount: amount,
+            p_type: 'purchase', // Tipo 'purchase' (não 'bonus')
+            p_reason: metadata.description || 'Compra de pontos'
+        });
     
     if (error) {
-        throw new Error('Erro ao buscar carteira do usuário: ' + error.message);
+        throw new Error('Erro ao adicionar pontos comprados: ' + error.message);
     }
-    
-    const newPurchasedPoints = wallet.purchased_points + amount;
-    
-    // Atualizar carteira
-    const { error: updateError } = await supabaseAdmin
-        .from('economy_user_wallets')
-        .update({
-            purchased_points: newPurchasedPoints,
-            total_purchased: (wallet.total_purchased || 0) + amount
-        })
-        .eq('user_id', userId);
-    
-    if (updateError) {
-        throw new Error('Erro ao atualizar pontos: ' + updateError.message);
-    }
-    
-    // Registrar transação
-    const { data: transaction } = await supabaseAdmin
-        .from('economy_transactions')
-        .insert({
-            user_id: userId,
-            type: metadata.type || 'purchase',
-            point_type: 'purchased',
-            amount: amount,
-            balance_before: wallet.purchased_points,
-            balance_after: newPurchasedPoints,
-            description: metadata.description || 'Compra de pontos',
-            metadata: {
-                stripe_payment_id: metadata.stripe_payment_id,
-                payment_method: metadata.payment_method,
-                ...metadata.extra
-            }
-        })
-        .select()
-        .single();
     
     return {
         added: amount,
-        new_balance: newPurchasedPoints,
-        total_credits: wallet.bonus_credits + newPurchasedPoints,
-        transaction
+        new_balance: data.new_balance,
+        total_credits: data.new_balance,
+        transaction_id: data.transaction_id,
+        success: data.success
     };
 }
 

@@ -45,8 +45,12 @@ export async function requireAuth(req, res, next) {
             });
         }
 
-        // Adicionar usuário ao request
-        req.user = user;
+        // ✅ SEGURANÇA: Adicionar usuário E token ao request
+        req.user = {
+            ...user,
+            id: user.id,
+            token: sessionCookie // JWT para usar com RLS
+        };
         next();
     } catch (error) {
         console.error('[Auth Middleware] Erro ao verificar autenticação:', error);

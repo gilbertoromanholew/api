@@ -55,7 +55,8 @@ export async function trackToolUsage(userId, toolName, options = {}) {
 }
 
 /**
- * Obter ferramentas mais usadas da plataforma
+ * Obter ferramentas mais usadas da plataforma (GERAL - todas as execuções)
+ * ✅ SEGURO: Apenas agregações, não expõe user_id
  * @param {number} limit - Número de ferramentas a retornar
  * @returns {Promise<{data, error}>}
  */
@@ -133,6 +134,192 @@ export async function getMostUsedTools(limit = 4) {
   } catch (error) {
     console.error('Erro inesperado ao buscar ferramentas:', error);
     return { data: [], error: null }; // Retorna vazio em caso de erro
+  }
+}
+
+/**
+ * Obter ferramentas mais usadas PELO USUÁRIO (pessoal)
+ * ✅ SEGURO: RLS garante que user_id = auth.uid()
+ * @param {string} userId - ID do usuário
+ * @param {number} limit - Número de ferramentas a retornar
+ * @returns {Promise<{data, error}>}
+ */
+export async function getMyMostUsedTools(userId, limit = 4) {
+  try {
+    console.log(`📊 [MyTools] Buscando top ${limit} ferramentas do usuário ${userId}`);
+    
+    // ✅ RLS policy valida automaticamente: user_id = auth.uid()
+    const { data: executions, error } = await supabase
+      .from('tools_executions')
+      .select('tool_id')
+      .eq('user_id', userId)  // ✅ RLS valida
+      .eq('success', true)
+      .order('created_at', { ascending: false })
+      .limit(500);  // Últimas 500 execuções
+
+    if (error) {
+      console.error('Erro ao buscar execuções do usuário:', error);
+      return { data: [], error: null };
+    }
+
+    if (!executions || executions.length === 0) {
+      console.log('ℹ️ [MyTools] Usuário ainda não tem execuções');
+      return { data: [], error: null };
+    }
+
+    // Contar ocorrências por tool_id
+    const counts = {};
+    executions.forEach(item => {
+      if (item.tool_id) {
+        counts[item.tool_id] = (counts[item.tool_id] || 0) + 1;
+      }
+    });
+
+    // Ordenar e pegar top N
+    const sorted = Object.entries(counts)
+      .map(([tool_id, usage_count]) => ({ tool_id, usage_count }))
+      .sort((a, b) => b.usage_count - a.usage_count)
+      .slice(0, limit);
+
+    if (sorted.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Buscar detalhes das ferramentas
+    const toolIds = sorted.map(t => t.tool_id);
+    const { data: tools } = await supabase
+      .from('tools_catalog')
+      .select('id, slug, name, description, tool_type')
+      .in('id', toolIds)
+      .eq('is_active', true);
+
+    if (!tools || tools.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Mapear para formato esperado
+    const myMostUsed = sorted
+      .map(item => {
+        const tool = tools.find(t => t.id === item.tool_id);
+        if (!tool) return null;
+        
+        return {
+          slug: tool.slug,
+          title: tool.name,
+          description: tool.description,
+          tool_type: tool.tool_type,
+          usage_count: item.usage_count,
+          route: `/dashboard/ferramentas?tool=${tool.slug}`
+        };
+      })
+      .filter(Boolean);
+
+    console.log(`✅ [MyTools] Encontradas ${myMostUsed.length} ferramentas do usuário`);
+    return { data: myMostUsed, error: null };
+  } catch (error) {
+    console.error('Erro inesperado ao buscar ferramentas do usuário:', error);
+    return { data: [], error: null };
+  }
+}
+
+/**
+ * Obter top 1 ferramenta por categoria (toda a plataforma)
+ * ✅ SEGURO: Apenas agregações, não expõe user_id
+ * @returns {Promise<{data, error}>}
+ */
+export async function getPlatformFavorites() {
+  try {
+    console.log('⭐ [Favorites] Buscando favoritos da plataforma...');
+    
+    // ✅ Query agregada - não expõe dados pessoais
+    const { data: executions, error } = await supabaseAdmin
+      .from('tools_executions')
+      .select(`
+        tool_id,
+        tools_catalog!inner (
+          id,
+          slug,
+          name,
+          description,
+          tool_type,
+          is_active
+        )
+      `)
+      .eq('success', true)
+      .eq('tools_catalog.is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(2000);  // Últimas 2000 execuções
+
+    if (error) {
+      console.error('Erro ao buscar execuções:', error);
+      return { data: [], error: null };
+    }
+
+    if (!executions || executions.length === 0) {
+      console.log('ℹ️ [Favorites] Ainda não há execuções na plataforma');
+      return { data: [], error: null };
+    }
+
+    // Agrupar por ferramenta
+    const toolStats = {};
+    executions.forEach(exec => {
+      const tool = exec.tools_catalog;
+      if (!tool) return;
+
+      if (!toolStats[tool.id]) {
+        toolStats[tool.id] = {
+          ...tool,
+          count: 0
+        };
+      }
+      toolStats[tool.id].count++;
+    });
+
+    // Categorizar usando tool_type (muito mais simples!)
+    const categories = {
+      planejamento: [],
+      ia: [],
+      complementar: []
+    };
+
+    Object.values(toolStats).forEach(tool => {
+      const type = tool.tool_type || 'complementar'; // Fallback seguro
+      if (categories[type]) {
+        categories[type].push(tool);
+      }
+    });
+
+    // Top 1 de cada categoria
+    const favorites = {
+      planejamento: categories.planejamento
+        .sort((a, b) => b.count - a.count)[0] || null,
+      ia: categories.ia
+        .sort((a, b) => b.count - a.count)[0] || null,
+      complementar: categories.complementar
+        .sort((a, b) => b.count - a.count)[0] || null
+    };
+
+    // Formatar resultado
+    const result = [];
+    Object.entries(favorites).forEach(([category, tool]) => {
+      if (tool) {
+        result.push({
+          category_label: category.charAt(0).toUpperCase() + category.slice(1),
+          slug: tool.slug,
+          title: tool.name,
+          description: tool.description,
+          tool_type: tool.tool_type,
+          usage_count: tool.count,
+          route: `/dashboard/ferramentas?tool=${tool.slug}`
+        });
+      }
+    });
+
+    console.log(`✅ [Favorites] Encontrados ${result.length} favoritos da plataforma`);
+    return { data: result, error: null };
+  } catch (error) {
+    console.error('Erro inesperado ao buscar favoritos:', error);
+    return { data: [], error: null };
   }
 }
 

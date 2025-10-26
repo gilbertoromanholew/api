@@ -382,6 +382,8 @@ router.post('/register', registerLimiter, async (req, res) => {
         secureLog('[Auth] Perfil criado com sucesso', { userId: authResponse.user.id });
 
         // ✅ PASSO 3: V7 - Criar carteira do usuário
+        // OK usar supabaseAdmin aqui: operação de sistema durante registro
+        // Usuário ainda não tem token JWT válido neste momento
         const { error: walletError } = await supabaseAdmin
             .from('economy_user_wallets')
             .insert([
@@ -401,7 +403,7 @@ router.post('/register', registerLimiter, async (req, res) => {
         if (walletError) {
             secureErrorLog('[Auth] Erro ao criar carteira inicial', walletError);
         } else {
-            // V7: Criar transação de bônus de cadastro
+            // V7: Criar transação de bônus de cadastro (também OK usar Admin aqui)
             await supabaseAdmin
                 .from('economy_transactions')
                 .insert([

@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import * as toolsService from './toolsService.js';
 
 /**
  * ========================================
@@ -123,20 +124,33 @@ export async function incrementMonthlyUsage(userId, toolId) {
 
 /**
  * Calcular precificação completa de ferramenta de PLANEJAMENTO
+ * ✅ NOVO: Agora aplica multiplicador de plano (igual ferramentas normais)
  */
 export async function getPlanningToolPricing(tool, userId, planSlug) {
   const hasPro = hasProfessionalBenefits(planSlug);
+  const planType = categorizePlan(planSlug);
   const monthlyLimit = tool.planning_monthly_limit || 20;
   
   // Obter usos no mês atual
   const usedThisMonth = await getMonthlyUsage(userId, tool.id);
   const remainingFreeUses = hasPro ? Math.max(0, monthlyLimit - usedThisMonth) : 0;
 
-  // Custos
-  const liteCostFree = tool.planning_lite_cost_free || 1;
-  const premiumCostFree = tool.planning_premium_cost_free || 15;
-  const liteCostPro = tool.planning_lite_cost_pro || 1;
-  const premiumCostPro = tool.planning_premium_cost_pro || 6;
+  // ✅ CUSTOS BASE (valores padrão no banco)
+  const liteBaseCost = tool.planning_lite_cost_free || 5;  // Base: 5 créditos
+  const premiumBaseCost = tool.planning_premium_cost_free || 15; // Base: 15 créditos
+
+  // ✅ MULTIPLICADORES POR PLANO (igual ferramentas normais)
+  const multipliers = {
+    'free': 2,           // Gratuito paga 2x
+    'stage': 1.5,        // Estágio paga 1.5x
+    'professional': 1    // Profissional paga 1x (após limite)
+  };
+  
+  const multiplier = multipliers[planType] || 2;
+
+  // ✅ CALCULAR CUSTOS FINAIS (base × multiplicador)
+  const liteCostFinal = Math.ceil(liteBaseCost * multiplier);
+  const premiumCostFinal = Math.ceil(premiumBaseCost * multiplier);
 
   return {
     toolId: tool.id,
@@ -146,6 +160,7 @@ export async function getPlanningToolPricing(tool, userId, planSlug) {
     
     // Informações do plano do usuário
     userPlan: planSlug,
+    planType: planType,
     hasProfessionalBenefits: hasPro,
     
     // Usos gratuitos (apenas para profissionais)
@@ -154,22 +169,25 @@ export async function getPlanningToolPricing(tool, userId, planSlug) {
     freeUsesUsed: hasPro ? usedThisMonth : 0,
     canUseFree: remainingFreeUses > 0,
     
-    // Custos por experiência
+    // ✅ CUSTOS BASE (referência)
+    baseCosts: {
+      lite: liteBaseCost,
+      premium: premiumBaseCost
+    },
+    
+    // ✅ MULTIPLICADOR APLICADO
+    multiplier: multiplier,
+    
+    // ✅ CUSTOS FINAIS (já multiplicados)
     costs: {
-      lite: {
-        free: liteCostFree,
-        afterLimit: liteCostPro
-      },
-      premium: {
-        free: premiumCostFree,
-        afterLimit: premiumCostPro
-      }
+      lite: liteCostFinal,
+      premium: premiumCostFinal
     },
     
     // Custo que será cobrado na próxima execução
     nextUseCost: {
-      lite: hasPro && remainingFreeUses > 0 ? 0 : (hasPro ? liteCostPro : liteCostFree),
-      premium: hasPro && remainingFreeUses > 0 ? 0 : (hasPro ? premiumCostPro : premiumCostFree)
+      lite: hasPro && remainingFreeUses > 0 ? 0 : liteCostFinal,
+      premium: hasPro && remainingFreeUses > 0 ? 0 : premiumCostFinal
     }
   };
 }
@@ -233,6 +251,7 @@ export async function getToolPricing(toolSlug, userId) {
 
 /**
  * Calcular custo de execução e atualizar contadores
+ * ✅ ATUALIZADO: Agora registra TODA execução automaticamente
  */
 export async function calculateAndCharge(toolSlug, userId, experienceType = 'lite') {
   const pricing = await getToolPricing(toolSlug, userId);
@@ -255,6 +274,25 @@ export async function calculateAndCharge(toolSlug, userId, experienceType = 'lit
   } else {
     // Ferramenta normal: sempre cobra
     cost = pricing.cost;
+  }
+
+  // ✅ NOVO: Registrar execução automaticamente (Hall da Fama)
+  try {
+    await toolsService.trackToolUsage(userId, toolSlug, {
+      durationSeconds: 0,
+      success: true,
+      costInPoints: cost,
+      metadata: {
+        experience_type: experienceType,
+        plan_type: pricing.planType || pricing.userPlan,
+        was_free: cost === 0,
+        used_free_allowance: usedFreeAllowance
+      }
+    });
+    console.log(`✅ [Tracking] Execução registrada: ${toolSlug} (${cost} créditos)`);
+  } catch (trackError) {
+    // Não falha se tracking der erro (fail-safe)
+    console.error('⚠️ [Tracking] Erro ao registrar execução:', trackError.message);
   }
 
   return {

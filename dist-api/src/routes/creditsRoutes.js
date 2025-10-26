@@ -22,13 +22,15 @@ const router = express.Router();
 /**
  * GET /api/credits/balance
  * Retorna saldo atual de pontos/créditos do usuário
+ * ✅ SEGURANÇA MÁXIMA: JWT do usuário + RLS no Postgres
  */
 router.get('/balance', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userToken = req.user.token; // JWT do usuário
     console.log('💰 [Credits] Buscando saldo para:', userId);
     
-    const balance = await getBalance(userId);
+    const balance = await getBalance(userId, userToken);
     
     console.log('✅ [Credits] Saldo encontrado:', {
       bonus: balance.bonus_credits,
@@ -52,15 +54,17 @@ router.get('/balance', requireAuth, async (req, res) => {
 /**
  * GET /api/credits/history
  * Retorna histórico de transações de pontos (paginado)
+ * ✅ SEGURANÇA MÁXIMA: JWT do usuário + RLS no Postgres
  */
 router.get('/history', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userToken = req.user.token;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const type = req.query.type; // opcional: filtrar por tipo
     
-    const result = await getHistory(userId, { page, limit, type });
+    const result = await getHistory(userId, userToken, { page, limit, type });
     
     return res.json({
       success: true,
@@ -109,10 +113,12 @@ router.get('/can-use/:tool_name', requireAuth, async (req, res) => {
 /**
  * POST /api/credits/consume
  * Consome pontos manualmente (internal use)
+ * ✅ SEGURANÇA MÁXIMA: JWT do usuário + RLS no Postgres
  */
 router.post('/consume', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userToken = req.user.token;
     const { amount, description, tool_name, type } = req.body;
     
     if (!amount || amount <= 0) {
@@ -128,7 +134,7 @@ router.post('/consume', requireAuth, async (req, res) => {
       tool_name: tool_name || null
     };
     
-    const result = await consumePoints(userId, amount, metadata);
+    const result = await consumePoints(userId, userToken, amount, metadata);
     
     return res.json({
       success: true,
