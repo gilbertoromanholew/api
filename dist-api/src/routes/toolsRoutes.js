@@ -25,12 +25,14 @@ router.get('/list', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
-    // Agrupar ferramentas por categoria (como o frontend espera)
+    // ✅ CORRIGIDO: Agrupar por tool_type (planejamento, ia, complementar)
+    // Não usar mais category antiga (Trabalhista, Previdenciário, etc)
     const categories = {};
     let totalTools = 0;
 
     tools.forEach(tool => {
-      const category = tool.category || 'Outros';
+      const toolType = tool.tool_type || 'complementar'; // Usar tool_type como agrupador
+      const category = tool.category || 'Outros'; // Manter category para filtro interno
 
       if (!categories[category]) {
         categories[category] = [];
@@ -42,8 +44,8 @@ router.get('/list', requireAuth, async (req, res) => {
         name: tool.name,
         display_name: tool.name,
         description: tool.description,
-        category: category,
-        tool_type: tool.tool_type || 'complementar', // ✅ NOVO: Tipo explícito
+        category: category, // ✅ Categoria antiga (Trabalhista, etc) - usado para filtro
+        tool_type: toolType, // ✅ CRÍTICO: Tipo novo (planejamento, ia, complementar)
         base_cost: tool.cost_in_points || 0,
         final_cost: tool.cost_in_points || 0,
         points_cost: tool.cost_in_points || 0,
