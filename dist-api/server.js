@@ -9,6 +9,7 @@ import { getApiInfo } from './src/routes/index.js';
 import { getApiDocs } from './src/routes/docs.js';
 import { getLogsDashboard } from './src/routes/logsDashboard.js';
 import { autoLoadRoutes } from './src/core/routeLoader.js';
+import { autoLoadToolRoutes } from './src/utils/autoLoadTools.js';
 import logsRoutes from './src/routes/logsRoutes.js';
 import zerotierRoutes from './src/routes/zerotier.js';
 import securityRoutes from './src/routes/securityRoutes.js';
@@ -130,7 +131,14 @@ app.use('/credits', apiLimiter, creditsRoutes);
 app.use('/pricing', apiLimiter, pricingRoutes);
 
 // =========================================================================
-// 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
+// � V9: AUTO-DISCOVERY DE FERRAMENTAS
+// =========================================================================
+// Carrega automaticamente todas as ferramentas da pasta src/tools/
+// ZERO necessidade de editar server.js manualmente! ✨
+await autoLoadToolRoutes(app);
+
+// =========================================================================
+// �📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
 // =========================================================================
 
 // Rotas de sistema (documentação e logs)

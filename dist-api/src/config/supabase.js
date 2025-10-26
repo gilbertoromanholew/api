@@ -124,22 +124,55 @@ export async function createUser(email, password, metadata = {}) {
 }
 
 /**
+ * 🔐 Helper: Criar cliente autenticado com token JWT do usuário
+ * 
+ * USO: Operações que o USUÁRIO faz sobre SEUS próprios dados
+ * EXEMPLO: Ver carteira, histórico de transações, execuções de ferramentas
+ * 
+ * ✅ QUANDO USAR:
+ * - SELECT de dados próprios (economy_user_wallets, economy_transactions, tools_executions)
+ * - UPDATE de perfil próprio (profiles)
+ * - SELECT de dados públicos (tools_catalog, gamification_achievements)
+ * 
+ * ❌ QUANDO NÃO USAR:
+ * - Operações que acessam dados de OUTROS usuários
+ * - Functions do sistema (debit_credits, increment_tool_usage)
+ * - Audit logs (auth_audit_log, operations_audit_log)
+ * - Views administrativas (admin_tool_revenue_stats)
+ * 
+ * @param {string} userToken - Token JWT do usuário autenticado (req.user.token)
+ * @returns {SupabaseClient} Cliente Supabase com contexto do usuário
+ */
+export function createAuthenticatedClient(userToken) {
+    if (!userToken) {
+        throw new Error('Token do usuário é obrigatório');
+    }
+
+    return createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY,
+        {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${userToken}`
+                }
+            },
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+                detectSessionInUrl: false
+            }
+        }
+    );
+}
+
+/**
  * Helper: Fazer logout
  */
 export async function signOut(token) {
     try {
-        // Criar cliente temporário com o token do usuário
-        const userClient = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY,
-            {
-                global: {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            }
-        );
+        // Usar helper createAuthenticatedClient
+        const userClient = createAuthenticatedClient(token);
         
         const { error } = await userClient.auth.signOut();
         

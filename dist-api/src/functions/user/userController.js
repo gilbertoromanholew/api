@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { supabase, supabaseAdmin } from '../../config/supabase.js';
+import { createAuthenticatedClient } from '../../config/supabase.js';
 
 /**
  * GET /api/user/profile
@@ -9,18 +9,8 @@ export async function getProfile(req, res) {
     try {
         const userId = req.user.id;
         
-        // ✅ Criar cliente autenticado com token do usuário
-        const userSupabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY,
-            {
-                global: {
-                    headers: {
-                        Authorization: `Bearer ${req.user.token}`
-                    }
-                }
-            }
-        );
+        // ✅ Usar helper createAuthenticatedClient
+        const userSupabase = createAuthenticatedClient(req.user.token);
         
         // Buscar perfil
         const { data: profile, error: profileError } = await userSupabase
