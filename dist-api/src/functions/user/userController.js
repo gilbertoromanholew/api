@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase, supabaseAdmin } from '../../config/supabase.js';
 
 /**
@@ -8,34 +9,57 @@ export async function getProfile(req, res) {
     try {
         const userId = req.user.id;
         
+        // ✅ Criar cliente autenticado com token do usuário
+        const userSupabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY,
+            {
+                global: {
+                    headers: {
+                        Authorization: `Bearer ${req.user.token}`
+                    }
+                }
+            }
+        );
+        
         // Buscar perfil
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await userSupabase
             .from('profiles')
             .select('*')
-            .eq('user_id', userId)
+            .eq('id', userId) // ✅ CORRIGIDO: profiles usa 'id', não 'user_id'
             .single();
         
         if (profileError) {
-            throw new Error('Erro ao buscar perfil');
+            console.error('❌ [getProfile] Erro ao buscar perfil:', profileError);
+            throw new Error(`Erro ao buscar perfil: ${profileError.message}`);
         }
         
         // V7: Buscar carteira
-        const { data: wallet, error: walletError } = await supabase
+        const { data: wallet, error: walletError } = await userSupabase
             .from('economy_user_wallets')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', userId) // ✅ CORRETO: economy_user_wallets usa 'user_id'
             .single();
         
         if (walletError) {
-            throw new Error('Erro ao buscar carteira');
+            console.error('❌ [getProfile] Erro ao buscar carteira:', walletError);
+            throw new Error(`Erro ao buscar carteira: ${walletError.message}`);
         }
         
         // Buscar dados de autenticação (email)
-        const { data: { user }, error: authError } = await supabase.auth.getUser(req.user.token);
+        const { data: { user }, error: authError } = await userSupabase.auth.getUser(req.user.token);
         
         if (authError) {
-            throw new Error('Erro ao buscar dados de autenticação');
+            console.error('❌ [getProfile] Erro ao buscar auth user:', authError);
+            throw new Error(`Erro ao buscar dados de autenticação: ${authError.message}`);
         }
+        
+        console.log('✅ [getProfile] Perfil encontrado:', {
+            user_id: userId,
+            full_name: profile.full_name,
+            cpf: profile.cpf,
+            email: user.email
+        });
         
         return res.json({
             success: true,
@@ -63,6 +87,7 @@ export async function getProfile(req, res) {
             }
         });
     } catch (error) {
+        console.error('❌ [getProfile] Erro geral:', error);
         return res.status(500).json({
             success: false,
             error: error.message

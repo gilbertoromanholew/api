@@ -3,10 +3,31 @@
  * Gerencia tracking de uso de ferramentas e estatísticas
  */
 
+import { createClient } from '@supabase/supabase-js';
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 
 /**
+ * 🔒 HELPER: Criar cliente Supabase autenticado com JWT do usuário
+ * @param {string} token - JWT token do usuário
+ * @returns {SupabaseClient}
+ */
+function createAuthenticatedClient(token) {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    }
+  );
+}
+
+/**
  * Registrar uso de uma ferramenta
+ * ⚠️ USA supabaseAdmin porque é chamado APÓS consumo de pontos (já validado)
  * @param {string} userId - ID do usuário
  * @param {string} toolName - Nome da ferramenta (slug)
  * @param {object} options - Opções adicionais
@@ -28,15 +49,17 @@ export async function trackToolUsage(userId, toolName, options = {}) {
       return { data: null, error: 'Ferramenta não encontrada' };
     }
 
-    // V7: Inserir em tools.executions
+    // V7: Inserir em tools.executions (schema tools)
     const { data, error } = await supabaseAdmin
       .from('tools_executions')
       .insert({
         user_id: userId,
         tool_id: tool.id,
-        cost_in_points: costInPoints,
-        success,
-        result: metadata,
+        cost_in_points: costInPoints, // ✅ CORRETO: coluna é 'cost_in_points'
+        points_used: costInPoints, // ✅ ADICIONAR: 'points_used' também
+        success, // ✅ CORRETO: coluna boolean 'success'
+        output_data: metadata, // ✅ CORRETO: 'output_data'
+        error_message: success ? null : (metadata?.error || 'Erro desconhecido'),
         executed_at: new Date().toISOString()
       })
       .select()
@@ -66,7 +89,7 @@ export async function getMostUsedTools(limit = 4) {
     const { data: executions, error: execError } = await supabaseAdmin
       .from('tools_executions')
       .select('tool_id')
-      .eq('success', true)
+      .eq('success', true) // ✅ CORRETO: coluna boolean 'success'
       .order('created_at', { ascending: false })
       .limit(1000);
 
@@ -141,19 +164,23 @@ export async function getMostUsedTools(limit = 4) {
  * Obter ferramentas mais usadas PELO USUÁRIO (pessoal)
  * ✅ SEGURO: RLS garante que user_id = auth.uid()
  * @param {string} userId - ID do usuário
+ * @param {string} userToken - JWT token do usuário
  * @param {number} limit - Número de ferramentas a retornar
  * @returns {Promise<{data, error}>}
  */
-export async function getMyMostUsedTools(userId, limit = 4) {
+export async function getMyMostUsedTools(userId, userToken, limit = 4) {
   try {
     console.log(`📊 [MyTools] Buscando top ${limit} ferramentas do usuário ${userId}`);
     
+    // ✅ SEGURO: Criar cliente autenticado com JWT do usuário
+    const userSupabase = createAuthenticatedClient(userToken);
+    
     // ✅ RLS policy valida automaticamente: user_id = auth.uid()
-    const { data: executions, error } = await supabase
+    const { data: executions, error } = await userSupabase
       .from('tools_executions')
       .select('tool_id')
-      .eq('user_id', userId)  // ✅ RLS valida
-      .eq('success', true)
+      .eq('user_id', userId)
+      .eq('success', true) // ✅ CORRETO: coluna boolean 'success'
       .order('created_at', { ascending: false })
       .limit(500);  // Últimas 500 execuções
 
@@ -187,7 +214,7 @@ export async function getMyMostUsedTools(userId, limit = 4) {
 
     // Buscar detalhes das ferramentas
     const toolIds = sorted.map(t => t.tool_id);
-    const { data: tools } = await supabase
+    const { data: tools } = await userSupabase // ✅ Usar mesmo cliente autenticado
       .from('tools_catalog')
       .select('id, slug, name, description, tool_type')
       .in('id', toolIds)
@@ -324,16 +351,21 @@ export async function getPlatformFavorites() {
 }
 
 /**
- * Obter estatísticas de uso de ferramentas de um usuário
+ * Obter estatísticas de uso de ferramentas do usuário
+ * ✅ SEGURO: RLS garante que user_id = auth.uid()
  * @param {string} userId - ID do usuário
+ * @param {string} userToken - JWT token do usuário
  * @returns {Promise<{data, error}>}
  */
-export async function getUserToolStats(userId) {
+export async function getUserToolStats(userId, userToken) {
   try {
+    // ✅ SEGURO: Criar cliente autenticado com JWT do usuário
+    const userSupabase = createAuthenticatedClient(userToken);
+    
     // V7: Buscar execuções do usuário
-    const { data: executions, error } = await supabaseAdmin
+    const { data: executions, error } = await userSupabase
       .from('tools_executions')
-      .select('tool_id, success, executed_at, result')
+      .select('tool_id, success, executed_at, output_data') // ✅ CORRETO: 'success' boolean, 'output_data'
       .eq('user_id', userId)
       .order('executed_at', { ascending: false });
 
@@ -346,6 +378,7 @@ export async function getUserToolStats(userId) {
       return {
         data: {
           totalUses: 0,
+          monthlyUses: 0, // ✅ NOVO
           successfulUses: 0,
           successRate: 0,
           mostUsedTools: [],
@@ -357,7 +390,7 @@ export async function getUserToolStats(userId) {
 
     // Buscar informações das ferramentas
     const toolIds = [...new Set(executions.map(e => e.tool_id))];
-    const { data: tools } = await supabaseAdmin
+    const { data: tools } = await userSupabase // ✅ Usar mesmo cliente autenticado
       .from('tools_catalog')
       .select('id, name, slug')
       .in('id', toolIds);
@@ -370,6 +403,13 @@ export async function getUserToolStats(userId) {
     // Agregar estatísticas
     const totalUses = executions.length;
     const successfulUses = executions.filter(e => e.success).length;
+    
+    // ✅ Calcular uso no mês atual
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthlyExecutions = executions.filter(e => new Date(e.executed_at) >= startOfMonth);
+    const monthlyUses = monthlyExecutions.length;
+    
     const toolCounts = {};
     
     executions.forEach(item => {
@@ -395,12 +435,13 @@ export async function getUserToolStats(userId) {
       display_name: toolMap[exec.tool_id]?.name || exec.tool_id,
       success: exec.success,
       used_at: exec.executed_at,
-      result: exec.result
+      result: exec.output_data // ✅ CORRIGIDO: 'output_data', não 'result'
     }));
 
     return {
       data: {
         totalUses,
+        monthlyUses, // ✅ NOVO: Uso no mês atual
         successfulUses,
         successRate: totalUses > 0 ? (successfulUses / totalUses * 100).toFixed(1) : 0,
         mostUsedTools: mostUsed,

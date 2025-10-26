@@ -120,9 +120,10 @@ router.get('/most-used', requireAuth, async (req, res) => {
 router.get('/my-most-used', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userToken = req.user.token; // ✅ JWT do usuário
     const limit = parseInt(req.query.limit) || 4;
 
-    const { data, error } = await toolsService.getMyMostUsedTools(userId, limit);
+    const { data, error } = await toolsService.getMyMostUsedTools(userId, userToken, limit);
 
     if (error) {
       return res.status(500).json({
@@ -224,12 +225,14 @@ router.post('/track', requireAuth, async (req, res) => {
 /**
  * GET /api/tools/stats
  * Obter estatísticas de uso do usuário (autenticado)
+ * ✅ SEGURO: RLS valida auth.uid() = user_id
  */
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userToken = req.user.token; // ✅ JWT do usuário
 
-    const { data, error } = await toolsService.getUserToolStats(userId);
+    const { data, error } = await toolsService.getUserToolStats(userId, userToken);
 
     if (error) {
       return res.status(500).json({
