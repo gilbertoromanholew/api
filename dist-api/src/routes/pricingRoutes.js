@@ -1,5 +1,6 @@
 import express from 'express';
 import { requireAuth } from '../middlewares/adminAuth.js';
+import { supabase } from '../config/supabase.js';
 import * as pricingService from '../services/toolsPricingService.js';
 
 const router = express.Router();
@@ -39,8 +40,8 @@ router.get('/:toolSlug/usage', requireAuth, async (req, res) => {
     const { toolSlug } = req.params;
     const userId = req.user.id;
 
-    // Buscar ferramenta
-    const { data: tool, error } = await supabaseAdmin
+    // Buscar ferramenta (usando supabase com RLS, não admin)
+    const { data: tool, error } = await supabase
       .from('tools_catalog')
       .select('id')
       .eq('slug', toolSlug)

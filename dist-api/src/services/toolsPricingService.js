@@ -83,6 +83,8 @@ export function getNormalToolCost(tool, planType) {
  * Obter usos da ferramenta no mês atual
  */
 export async function getMonthlyUsage(userId, toolId) {
+  console.log(`📊 [AUDIT] Consultando uso mensal: userId=${userId}, toolId=${toolId}`);
+  
   const { data, error } = await supabaseAdmin
     .rpc('get_monthly_usage', {
       p_user_id: userId,
@@ -90,10 +92,11 @@ export async function getMonthlyUsage(userId, toolId) {
     });
 
   if (error) {
-    console.error('Erro ao buscar uso mensal:', error);
+    console.error('❌ [AUDIT] Erro ao buscar uso mensal:', error);
     return 0;
   }
 
+  console.log(`✅ [AUDIT] Uso mensal obtido: ${data} usos`);
   return data || 0;
 }
 
@@ -101,6 +104,8 @@ export async function getMonthlyUsage(userId, toolId) {
  * Incrementar contador de uso mensal
  */
 export async function incrementMonthlyUsage(userId, toolId) {
+  console.log(`📊 [AUDIT] Incrementando uso: userId=${userId}, toolId=${toolId}`);
+  
   const { data, error } = await supabaseAdmin
     .rpc('increment_tool_usage', {
       p_user_id: userId,
@@ -108,10 +113,11 @@ export async function incrementMonthlyUsage(userId, toolId) {
     });
 
   if (error) {
-    console.error('Erro ao incrementar uso mensal:', error);
+    console.error(`❌ [AUDIT] FALHA ao incrementar uso: ${error.message}`);
     throw new Error('Erro ao registrar uso da ferramenta');
   }
 
+  console.log(`✅ [AUDIT] Uso incrementado com sucesso: ${data} usos totais`);
   return data;
 }
 

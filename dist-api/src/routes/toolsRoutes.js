@@ -13,8 +13,9 @@ const router = express.Router();
 /**
  * GET /api/tools/list
  * Listar todas as ferramentas ativas do catálogo
+ * ✅ SEGURANÇA: Requer autenticação para evitar scraping
  */
-router.get('/list', async (req, res) => {
+router.get('/list', requireAuth, async (req, res) => {
   try {
     const { data: tools, error } = await supabase
       .from('tools_catalog')
@@ -76,9 +77,10 @@ router.get('/list', async (req, res) => {
 
 /**
  * GET /api/tools/most-used
- * Obter ferramentas mais usadas da plataforma (público)
+ * Obter ferramentas mais usadas da plataforma
+ * ✅ SEGURANÇA: Requer autenticação para evitar análise de concorrência
  */
-router.get('/most-used', async (req, res) => {
+router.get('/most-used', requireAuth, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 4;
 
