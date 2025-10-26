@@ -45,7 +45,12 @@ router.get('/list', async (req, res) => {
         base_cost: tool.cost_in_points || 0,
         final_cost: tool.cost_in_points || 0,
         points_cost: tool.cost_in_points || 0,
-        requires_pro: !tool.is_free_for_pro,
+        // ✅ NOVA LÓGICA: Baseado em access_level (padrão: 'free')
+        // 'professional' → Requer plano profissional
+        // 'free' → Todos podem usar (pagando créditos)
+        requires_pro: (tool.access_level || 'free') === 'professional',
+        access_level: tool.access_level || 'free',
+        is_planning: tool.is_planning || false,
         tags: [],
         is_active: tool.is_active,
         display_order: tool.display_order

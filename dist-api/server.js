@@ -24,6 +24,7 @@ import planningToolsRoutes from './src/routes/planningToolsRoutes.js';
 import promoCodesRoutes from './src/routes/promoCodesRoutes.js';
 import referralRoutes from './src/routes/referralRoutes.js';
 import creditsRoutes from './src/routes/creditsRoutes.js'; // Sistema centralizado de pontos
+import pricingRoutes from './src/routes/pricingRoutes.js'; // Sistema de precificação diferenciada
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
@@ -124,6 +125,9 @@ app.use('/referrals', apiLimiter, referralRoutes);
 
 // Sistema de créditos/pontos centralizado
 app.use('/credits', apiLimiter, creditsRoutes);
+
+// Sistema de precificação diferenciada por plano
+app.use('/pricing', apiLimiter, pricingRoutes);
 
 // =========================================================================
 // 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
