@@ -4,6 +4,7 @@
  */
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import { addBonusPoints } from './pointsService.js';
 
 /**
  * Gerar código de referral único para um usuário
@@ -150,37 +151,12 @@ export async function applyReferralCode(newUserId, referralCode) {
     // V7: Dar bônus de boas-vindas para o novo usuário
     const welcomeBonus = 25; // 25 créditos de bônus
     
-    const { data: userWallet } = await supabaseAdmin
-      .from('economy_user_wallets')
-      .select('bonus_credits, total_earned_bonus')
-      .eq('user_id', newUserId)
-      .single();
-
-    const newBonusCredits = (userWallet?.bonus_credits || 0) + welcomeBonus;
-    const newTotalEarnedBonus = (userWallet?.total_earned_bonus || 0) + welcomeBonus;
-
-    await supabaseAdmin
-      .from('economy_user_wallets')
-      .update({
-        bonus_credits: newBonusCredits,
-        total_earned_bonus: newTotalEarnedBonus
-      })
-      .eq('user_id', newUserId);
-
-    await supabaseAdmin
-      .from('economy_transactions')
-      .insert({
-        user_id: newUserId,
-        amount: welcomeBonus,
-        type: 'referral_bonus',
-        point_type: 'bonus',
-        balance_before: userWallet?.bonus_credits || 0,
-        balance_after: newBonusCredits,
-        description: `Bônus por ser indicado por ${referrer.full_name || referrer.email}`,
-        metadata: {
-          referrer_id: referrer.id
-        }
-      });
+    // ✅ Usar serviço centralizado
+    await addBonusPoints(newUserId, welcomeBonus, {
+      type: 'referral_bonus',
+      description: `Bônus por ser indicado por ${referrer.full_name || referrer.email}`,
+      referred_user_id: referrer.id
+    });
 
     return {
       data: {
@@ -257,48 +233,12 @@ export async function rewardReferrer(referredUserId, bonusAmount = 50) {
       return { data: null, error: 'Referral não encontrado ou não elegível' };
     }
 
-    // V7: Buscar carteira do referrer
-    const { data: referrerWallet, error: referrerError } = await supabaseAdmin
-      .from('economy_user_wallets')
-      .select('bonus_credits, total_earned_bonus')
-      .eq('user_id', referral.referrer_id)
-      .single();
-
-    if (referrerError) {
-      return { data: null, error: 'Referrer não encontrado' };
-    }
-
-    // V7: Adicionar bônus ao referrer
-    const newBonusCredits = (referrerWallet.bonus_credits || 0) + bonusAmount;
-    const newTotalEarnedBonus = (referrerWallet.total_earned_bonus || 0) + bonusAmount;
-
-    const { error: updateError } = await supabaseAdmin
-      .from('economy_user_wallets')
-      .update({
-        bonus_credits: newBonusCredits,
-        total_earned_bonus: newTotalEarnedBonus
-      })
-      .eq('user_id', referral.referrer_id);
-
-    if (updateError) {
-      return { data: null, error: 'Erro ao adicionar bônus' };
-    }
-
-    // V7: Registrar transação
-    await supabaseAdmin
-      .from('economy_transactions')
-      .insert({
-        user_id: referral.referrer_id,
-        amount: bonusAmount,
-        type: 'referral_reward',
-        point_type: 'bonus',
-        balance_before: referrerWallet.bonus_credits,
-        balance_after: newBonusCredits,
-        description: `Bônus por indicar amigo que completou primeira ação`,
-        metadata: {
-          referred_user_id: referredUserId
-        }
-      });
+    // ✅ Usar serviço centralizado para recompensar referrer
+    await addBonusPoints(referral.referrer_id, bonusAmount, {
+      type: 'referral_reward',
+      description: `Bônus por indicar amigo que completou primeira ação`,
+      referred_user_id: referredUserId
+    });
 
     // V7: Marcar referral como recompensado (já feito no início, mas garantir)
     await supabaseAdmin

@@ -20,8 +20,10 @@ import achievementsRoutes from './src/routes/achievementsRoutes.js';
 import subscriptionRoutes from './src/routes/subscriptionRoutes.js';
 // V7: Novas features - Tools, Promo Codes, Referrals
 import toolsRoutes from './src/routes/toolsRoutes.js';
+import planningToolsRoutes from './src/routes/planningToolsRoutes.js';
 import promoCodesRoutes from './src/routes/promoCodesRoutes.js';
 import referralRoutes from './src/routes/referralRoutes.js';
+import creditsRoutes from './src/routes/creditsRoutes.js'; // Sistema centralizado de pontos
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
@@ -116,8 +118,12 @@ app.use('/subscription', apiLimiter, subscriptionRoutes);
 
 // Tracking de ferramentas, códigos promocionais e sistema de indicação
 app.use('/tools', apiLimiter, toolsRoutes);
+app.use('/tools/planning', apiLimiter, planningToolsRoutes);
 app.use('/promo-codes', apiLimiter, promoCodesRoutes);
 app.use('/referrals', apiLimiter, referralRoutes);
+
+// Sistema de créditos/pontos centralizado
+app.use('/credits', apiLimiter, creditsRoutes);
 
 // =========================================================================
 // 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)

@@ -4,6 +4,7 @@
  */
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import { addBonusPoints } from './pointsService.js';
 
 /**
  * Validar código promocional
@@ -84,43 +85,12 @@ export async function redeemPromoCode(userId, code) {
       case 'BONUS_CREDITS':
         creditsAwarded = promoCode.value;
         
-        // V7: Atualizar carteira do usuário
-        const { data: wallet } = await supabaseAdmin
-          .from('economy_user_wallets')
-          .select('bonus_credits, total_earned_bonus')
-          .eq('user_id', userId)
-          .single();
-
-        const newBonusCredits = (wallet?.bonus_credits || 0) + creditsAwarded;
-        const newTotalEarnedBonus = (wallet?.total_earned_bonus || 0) + creditsAwarded;
-
-        const { error: updateError } = await supabaseAdmin
-          .from('economy_user_wallets')
-          .update({ 
-            bonus_credits: newBonusCredits,
-            total_earned_bonus: newTotalEarnedBonus
-          })
-          .eq('user_id', userId);
-
-        if (updateError) {
-          return { data: null, error: 'Erro ao adicionar créditos' };
-        }
-
-        // V7: Registrar transação
-        await supabaseAdmin
-          .from('economy_transactions')
-          .insert({
-            user_id: userId,
-            type: 'promo_code',
-            point_type: 'bonus',
-            amount: creditsAwarded,
-            balance_before: wallet?.bonus_credits || 0,
-            balance_after: newBonusCredits,
-            description: `Código promocional: ${code}`,
-            metadata: {
-              promo_code: code
-            }
-          });
+        // ✅ Usar serviço centralizado de pontos
+        const bonusResult = await addBonusPoints(userId, creditsAwarded, {
+          type: 'promo_code',
+          description: `Código promocional: ${code}`,
+          promo_code: code
+        });
 
         result = { type: 'credits', amount: creditsAwarded };
         break;
