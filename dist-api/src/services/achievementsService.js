@@ -8,6 +8,9 @@
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 import logger from '../config/logger.js';
+import { emitAchievementUnlocked } from './socketService.js';
+import { addBonusPoints } from './pointsService.js';
+import { notifyAchievementUnlocked } from './notificationsService.js';
 
 /**
  * Listar todas as conquistas disponíveis
@@ -324,25 +327,67 @@ export async function unlockAchievement(userId, achievementId) {
             return { data: null, error };
         }
 
-        // Buscar info da conquista para dar recompensa
+        // Buscar info completa da conquista para dar recompensa e notificar
         const { data: achievement } = await supabase
             .from('gamification_achievements')
-            .select('reward_bonus_credits')
+            .select('*')
             .eq('id', achievementId)
             .single();
 
+        // 🔌 WebSocket: Notificar usuário sobre conquista desbloqueada
+        if (achievement) {
+            emitAchievementUnlocked(userId, {
+                id: achievementId,
+                title: achievement.title,
+                description: achievement.description,
+                points: achievement.reward_bonus_credits,
+                icon: achievement.icon || '🏆',
+                category: achievement.category
+            });
+            
+            // 🔔 Criar notificação persistente no banco
+            await notifyAchievementUnlocked(userId, {
+                id: achievementId,
+                title: achievement.title,
+                description: achievement.description,
+                points: achievement.reward_bonus_credits,
+                icon: achievement.icon || '🏆'
+            });
+            
+            logger.info(`🏆 Conquista desbloqueada, notificada via WebSocket e salva no banco`, { 
+                userId, 
+                achievementId,
+                title: achievement.title
+            });
+        }
+
         // Adicionar pontos bônus (se tiver recompensa)
         if (achievement?.reward_bonus_credits > 0) {
-            // TODO: Chamar pointsService.addBonusPoints()
-            logger.tool(`Bonus points earned from achievement`, { 
-                userId, 
-                achievementId, 
-                bonusPoints: achievement.reward_bonus_credits 
-            });
+            try {
+                // Chamar pointsService para adicionar pontos e emitir evento WebSocket automaticamente
+                await addBonusPoints(userId, achievement.reward_bonus_credits, {
+                    description: `Conquista desbloqueada: ${achievement.title}`
+                });
+                
+                logger.info(`💰 Pontos bônus adicionados via conquista`, { 
+                    userId, 
+                    achievementId,
+                    bonusPoints: achievement.reward_bonus_credits,
+                    achievementTitle: achievement.title
+                });
+            } catch (pointsError) {
+                // Log do erro mas não falha o unlock da conquista
+                logger.error(`Erro ao adicionar pontos da conquista`, { 
+                    userId, 
+                    achievementId, 
+                    error: pointsError.message 
+                });
+            }
         }
 
         return { data, error: null };
     } catch (error) {
+        logger.error(`Erro ao desbloquear conquista`, { userId, achievementId, error: error.message });
         return { data: null, error };
     }
 }

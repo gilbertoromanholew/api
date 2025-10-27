@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { ipFilter } from './src/middlewares/ipFilter.js';
@@ -27,6 +28,8 @@ import referralRoutes from './src/routes/referralRoutes.js';
 import creditsRoutes from './src/routes/creditsRoutes.js'; // Sistema centralizado de pontos
 import pricingRoutes from './src/routes/pricingRoutes.js'; // Sistema de precificação diferenciada
 import adminRoutes from './src/routes/adminRoutes.js'; // V7: Admin Panel
+import notificationsRoutes from './src/routes/notificationsRoutes.js'; // V8: Sistema de notificações
+import presenceRoutes from './src/routes/presenceRoutes.js'; // V8: Sistema de presença online
 import { supabaseProxy, supabaseProxyCors } from './src/middlewares/supabaseProxy.js';
 import securityHeaders from './src/middlewares/securityHeaders.js';
 import config from './src/config/index.js';
@@ -39,8 +42,12 @@ import {
 } from './src/middlewares/rateLimiters.js';
 // Fase 1: CSRF Protection
 import { validateCsrfToken } from './src/middlewares/csrfProtection.js';
+// V8: WebSocket para atualizações em tempo real
+import { initializeSocket } from './src/services/socketService.js';
+import { startPresenceCleanup } from './src/services/presenceService.js';
 
 const app = express();
+const httpServer = createServer(app);
 
 // Trust proxy - IMPORTANTE: Permite que o Express confie no Traefik/Nginx
 // Necessário para rate limiting e logs corretos quando atrás de proxy
@@ -86,12 +93,50 @@ app.use(cookieParser());
 // Endpoints públicos (login, register) são automaticamente excluídos
 app.use(validateCsrfToken);
 
-// Health check endpoint (para Docker healthcheck) - ANTES do filtro de IP
+// Health check endpoint (para Docker healthcheck e frontend) - ANTES do filtro de IP
 app.get('/health', (req, res) => {
+    // Verificar se está em modo manutenção (via variável de ambiente)
+    const isInMaintenance = process.env.MAINTENANCE_MODE === 'true';
+    
+    if (isInMaintenance) {
+        return res.status(503).json({
+            status: 'maintenance',
+            maintenance: true,
+            message: process.env.MAINTENANCE_MESSAGE || 'Sistema em manutenção. Voltamos em breve!',
+            timestamp: new Date().toISOString(),
+            estimatedReturn: process.env.MAINTENANCE_ESTIMATED_RETURN || null
+        });
+    }
+    
     res.status(200).json({
-        status: 'healthy',
+        status: 'online',
+        healthy: true,
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        version: '2.13.0'
+    });
+});
+
+// Health check alternativo em /api/health
+app.get('/api/health', (req, res) => {
+    const isInMaintenance = process.env.MAINTENANCE_MODE === 'true';
+    
+    if (isInMaintenance) {
+        return res.status(503).json({
+            status: 'maintenance',
+            maintenance: true,
+            message: process.env.MAINTENANCE_MESSAGE || 'Sistema em manutenção. Voltamos em breve!',
+            timestamp: new Date().toISOString(),
+            estimatedReturn: process.env.MAINTENANCE_ESTIMATED_RETURN || null
+        });
+    }
+    
+    res.status(200).json({
+        status: 'online',
+        healthy: true,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: '2.13.0'
     });
 });
 
@@ -131,11 +176,17 @@ app.use('/credits', apiLimiter, creditsRoutes);
 // Sistema de precificação diferenciada por plano
 app.use('/pricing', apiLimiter, pricingRoutes);
 
+// Sistema de notificações em tempo real
+app.use('/notifications', apiLimiter, notificationsRoutes);
+
 // =========================================================================
 // 📍 V7: ADMIN PANEL (requer autenticação + role admin)
 // =========================================================================
 // Painel administrativo para gerenciamento de usuários e sistema
 app.use('/admin', apiLimiter, adminRoutes);
+
+// Sistema de presença online (admin only)
+app.use('/presence', apiLimiter, presenceRoutes);
 
 // =========================================================================
 // � V9: AUTO-DISCOVERY DE FERRAMENTAS
@@ -276,8 +327,14 @@ await autoLoadRoutes(app, apiLimiter);
 app.use(notFoundHandler);  // 404 - Rota não encontrada
 app.use(errorHandler);     // Erro genérico
 
-// Iniciar servidor
-app.listen(config.server.port, config.server.host, () => {
+// V8: Inicializar Socket.IO ANTES de iniciar o servidor
+initializeSocket(httpServer);
+
+// V8: Iniciar serviço de limpeza de presença (marca usuários inativos como offline)
+startPresenceCleanup();
+
+// Iniciar servidor (usando httpServer em vez de app.listen)
+httpServer.listen(config.server.port, config.server.host, () => {
     // Importar e executar logs de inicialização
     import('./src/utils/startupLogger.js')
         .then(({ logStartup }) => logStartup())

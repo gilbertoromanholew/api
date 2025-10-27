@@ -16,6 +16,7 @@ import {
   addBonusPoints,
   addPurchasedPoints
 } from '../services/pointsService.js';
+import { emitCreditsUpdate } from '../services/socketService.js';
 import logger from '../config/logger.js';
 
 const router = express.Router();
@@ -70,7 +71,7 @@ router.get('/history', requireAuth, async (req, res) => {
     
     return res.json({
       success: true,
-      data: history
+      data: result
     });
   } catch (error) {
     logger.error('Erro ao buscar histórico de créditos', { userId: req.user.id, error: error.message });
@@ -170,6 +171,13 @@ router.post('/add-bonus', requireAuth, requireAdmin, async (req, res) => {
       type: 'admin_adjustment',
       description: description || 'Ajuste administrativo',
       admin_user_id: req.user.id
+    });
+    
+    // 🔌 WebSocket: Notificar usuário sobre créditos atualizados
+    emitCreditsUpdate(user_id, {
+      total: result.new_balance,
+      bonus: result.bonus_credits,
+      purchased: result.purchased_points
     });
     
     return res.json({

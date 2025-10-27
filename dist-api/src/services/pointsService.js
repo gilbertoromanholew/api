@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import { emitCreditsUpdate, emitLevelUp } from './socketService.js';
 
 /**
  * ========================================
@@ -223,6 +224,14 @@ export async function consumePoints(userId, userToken, amount, metadata = {}) {
         }
         throw new Error('Erro ao consumir pontos: ' + error.message);
     }
+
+    // 🔌 WebSocket: Notificar usuário sobre gasto de créditos
+    emitCreditsUpdate(userId, {
+        balance: data.new_balance,
+        change: -amount, // Valor negativo indica gasto
+        type: 'consumption',
+        reason: metadata.description || `Ferramenta: ${metadata.tool_name || 'uso de créditos'}`
+    });
     
     // Retornar no formato esperado
     return {
@@ -259,6 +268,17 @@ export async function addBonusPoints(userId, amount, metadata = {}) {
     if (error) {
         throw new Error('Erro ao adicionar pontos bônus: ' + error.message);
     }
+
+    // 🔌 WebSocket: Notificar usuário sobre atualização de créditos
+    emitCreditsUpdate(userId, {
+        balance: data.new_balance,
+        change: amount,
+        type: 'bonus',
+        reason: metadata.description || 'Pontos bônus recebidos'
+    });
+
+    // TODO: Implementar detecção de level-up quando estrutura de levels estiver pronta
+    // Se houver level-up, emitir: emitLevelUp(userId, { newLevel, rewards })
     
     return {
         added: amount,
@@ -292,6 +312,14 @@ export async function addPurchasedPoints(userId, amount, metadata = {}) {
     if (error) {
         throw new Error('Erro ao adicionar pontos comprados: ' + error.message);
     }
+
+    // 🔌 WebSocket: Notificar usuário sobre atualização de créditos
+    emitCreditsUpdate(userId, {
+        balance: data.new_balance,
+        change: amount,
+        type: 'purchase',
+        reason: metadata.description || 'Compra de pontos realizada'
+    });
     
     return {
         added: amount,

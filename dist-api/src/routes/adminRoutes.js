@@ -73,6 +73,13 @@ router.get('/users', async (req, res) => {
                     .eq('user_id', profile.id)
                     .single();
 
+                // Buscar presença (status online/offline)
+                const { data: presence } = await supabaseAdmin
+                    .from('user_presence')
+                    .select('is_online, last_seen')
+                    .eq('user_id', profile.id)
+                    .single();
+
                 return {
                     id: profile.id,
                     full_name: profile.full_name,
@@ -80,6 +87,8 @@ router.get('/users', async (req, res) => {
                     cpf: maskCPF(profile.cpf),
                     role: profile.role,
                     referral_code: profile.referral_code,
+                    is_online: presence?.is_online || false,
+                    last_seen: presence?.last_seen || null,
                     credits: {
                         bonus: wallet?.bonus_credits || 0,
                         purchased: wallet?.purchased_points || 0,

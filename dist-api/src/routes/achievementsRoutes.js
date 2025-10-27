@@ -49,6 +49,39 @@ router.get(
 );
 
 /**
+ * GET /api/achievements/me
+ * Lista conquistas do usuário logado
+ * Auth: Obrigatória
+ */
+router.get(
+  '/me',
+  requireAuth,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { data, error } = await achievementsService.getUserAchievements(userId);
+
+      if (error) {
+        return res.status(500).json({
+          success: false,
+          error: error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        data
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+);
+
+/**
  * GET /api/achievements/user/:userId
  * Lista conquistas de um usuário específico
  * Auth: Obrigatória (deve ser próprio perfil ou admin)
