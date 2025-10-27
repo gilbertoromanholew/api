@@ -14,13 +14,14 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import logger from '../config/logger.js';
 
 // Cliente Supabase com Service Role (bypass RLS para inserção)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.SUPABASE_INTERNAL_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseServiceKey) {
-    console.error('⚠️ SUPABASE_SERVICE_ROLE_KEY não configurada! Auditoria não funcionará.');
+    logger.error('SUPABASE_SERVICE_ROLE_KEY não configurada! Auditoria não funcionará.');
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -64,12 +65,12 @@ export async function logAuthEvent(data) {
             });
         
         if (error) {
-            console.error('[Audit] Erro ao registrar evento de autenticação:', error);
+            logger.error('Erro ao registrar evento de autenticação', { action: data.action, error });
         } else {
-            console.log(`[Audit] ✅ Auth event logged: ${data.action} (success: ${data.success !== false})`);
+            logger.auth(`Auth event logged: ${data.action}`, { success: data.success !== false });
         }
     } catch (error) {
-        console.error('[Audit] Exception ao registrar evento de autenticação:', error);
+        logger.error('Exception ao registrar evento de autenticação', { error });
     }
 }
 
@@ -204,12 +205,12 @@ export async function logOperation(data) {
             });
         
         if (error) {
-            console.error('[Audit] Erro ao registrar operação:', error);
+            logger.error('Erro ao registrar operação', { operation: data.operation, resource: data.resource, error });
         } else {
-            console.log(`[Audit] ✅ Operation logged: ${data.operation} on ${data.resource || 'N/A'} (${data.executionTime || 0}ms)`);
+            logger.tool(`Operation logged: ${data.operation} on ${data.resource || 'N/A'}`, { executionTime: data.executionTime });
         }
     } catch (error) {
-        console.error('[Audit] Exception ao registrar operação:', error);
+        logger.error('Exception ao registrar operação', { error });
     }
 }
 
@@ -292,12 +293,12 @@ export async function logRateLimitViolation(data) {
             });
         
         if (error) {
-            console.error('[Audit] Erro ao registrar violação de rate limit:', error);
+            logger.error('Erro ao registrar violação de rate limit', { limiterType: data.limiterType, endpoint: data.endpoint, error });
         } else {
-            console.warn(`[Audit] ⚠️ Rate limit violation: ${data.limiterType} on ${data.endpoint} (IP: ${data.ip})`);
+            logger.security(`Rate limit violation: ${data.limiterType} on ${data.endpoint}`, { ip: data.ip, attempts: data.attempts });
         }
     } catch (error) {
-        console.error('[Audit] Exception ao registrar violação de rate limit:', error);
+        logger.error('Exception ao registrar violação de rate limit', { error });
     }
 }
 
@@ -340,7 +341,7 @@ export function auditMiddleware(operation, resource = null) {
                 executionTime: executionTime,
                 success: body.success !== false,
                 error: body.error || null
-            }).catch(err => console.error('[Audit] Failed to log operation:', err));
+            }).catch(err => logger.error('Failed to log operation', { error: err }));
             
             return originalJson(body);
         };
@@ -365,13 +366,13 @@ export async function getAuditStats(userId = null) {
             .rpc('get_audit_stats', { user_id_param: userId });
         
         if (error) {
-            console.error('[Audit] Erro ao obter estatísticas:', error);
+            logger.error('Erro ao obter estatísticas de auditoria', { userId, error });
             return null;
         }
         
         return data[0];
     } catch (error) {
-        console.error('[Audit] Exception ao obter estatísticas:', error);
+        logger.error('Exception ao obter estatísticas de auditoria', { userId, error });
         return null;
     }
 }
@@ -389,13 +390,13 @@ export async function getFailedLoginAttempts() {
             .limit(100);
         
         if (error) {
-            console.error('[Audit] Erro ao obter tentativas falhadas:', error);
+            logger.error('Erro ao obter tentativas falhadas de login', { error });
             return [];
         }
         
         return data;
     } catch (error) {
-        console.error('[Audit] Exception ao obter tentativas falhadas:', error);
+        logger.error('Exception ao obter tentativas falhadas de login', { error });
         return [];
     }
 }
@@ -413,13 +414,13 @@ export async function getSuspiciousActivities() {
             .limit(100);
         
         if (error) {
-            console.error('[Audit] Erro ao obter atividades suspeitas:', error);
+            logger.error('Erro ao obter atividades suspeitas', { error });
             return [];
         }
         
         return data;
     } catch (error) {
-        console.error('[Audit] Exception ao obter atividades suspeitas:', error);
+        logger.error('Exception ao obter atividades suspeitas', { error });
         return [];
     }
 }
@@ -437,13 +438,13 @@ export async function getTopRateLimitViolators() {
             .limit(100);
         
         if (error) {
-            console.error('[Audit] Erro ao obter violadores de rate limit:', error);
+            logger.error('Erro ao obter violadores de rate limit', { error });
             return [];
         }
         
         return data;
     } catch (error) {
-        console.error('[Audit] Exception ao obter violadores de rate limit:', error);
+        logger.error('Exception ao obter violadores de rate limit', { error });
         return [];
     }
 }
@@ -465,13 +466,13 @@ export async function getUserAuthLogs(userId, limit = 50) {
             .limit(limit);
         
         if (error) {
-            console.error('[Audit] Erro ao obter logs de autenticação:', error);
+            logger.error('Erro ao obter logs de autenticação', { userId, error });
             return [];
         }
         
         return data;
     } catch (error) {
-        console.error('[Audit] Exception ao obter logs de autenticação:', error);
+        logger.error('Exception ao obter logs de autenticação', { userId, error });
         return [];
     }
 }
@@ -493,13 +494,13 @@ export async function getUserOperationLogs(userId, limit = 50) {
             .limit(limit);
         
         if (error) {
-            console.error('[Audit] Erro ao obter logs de operações:', error);
+            logger.error('Erro ao obter logs de operações', { userId, error });
             return [];
         }
         
         return data;
     } catch (error) {
-        console.error('[Audit] Exception ao obter logs de operações:', error);
+        logger.error('Exception ao obter logs de operações', { userId, error });
         return [];
     }
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createAuthenticatedClient } from '../../config/supabase.js';
+import logger from '../../config/logger.js';
 
 /**
  * GET /api/user/profile
@@ -20,7 +21,7 @@ export async function getProfile(req, res) {
             .single();
         
         if (profileError) {
-            console.error('❌ [getProfile] Erro ao buscar perfil:', profileError);
+            logger.error('Erro ao buscar perfil', { userId, error: profileError.message });
             throw new Error(`Erro ao buscar perfil: ${profileError.message}`);
         }
         
@@ -32,7 +33,7 @@ export async function getProfile(req, res) {
             .single();
         
         if (walletError) {
-            console.error('❌ [getProfile] Erro ao buscar carteira:', walletError);
+            logger.error('Erro ao buscar carteira', { userId, error: walletError.message });
             throw new Error(`Erro ao buscar carteira: ${walletError.message}`);
         }
         
@@ -40,15 +41,16 @@ export async function getProfile(req, res) {
         const { data: { user }, error: authError } = await userSupabase.auth.getUser(req.user.token);
         
         if (authError) {
-            console.error('❌ [getProfile] Erro ao buscar auth user:', authError);
+            logger.error('Erro ao buscar dados de autenticação', { userId, error: authError.message });
             throw new Error(`Erro ao buscar dados de autenticação: ${authError.message}`);
         }
         
-        console.log('✅ [getProfile] Perfil encontrado:', {
-            user_id: userId,
-            full_name: profile.full_name,
-            cpf: profile.cpf,
-            email: user.email
+        logger.info('Perfil completo encontrado', {
+            userId,
+            fullName: profile.full_name,
+            cpf: profile.cpf ? '***' : null,
+            email: user.email,
+            role: profile.role // ✅ Log para debug
         });
         
         return res.json({
@@ -60,6 +62,7 @@ export async function getProfile(req, res) {
                     email_confirmed: user.email_confirmed_at !== null,
                     full_name: profile.full_name,
                     cpf: profile.cpf,
+                    role: profile.role || 'user', // ✅ CRÍTICO: Adicionar role para admin panel
                     referral_code: profile.referral_code,
                     referred_by: profile.referred_by,
                     welcome_popup_shown: profile.welcome_popup_shown || false,
@@ -77,7 +80,7 @@ export async function getProfile(req, res) {
             }
         });
     } catch (error) {
-        console.error('❌ [getProfile] Erro geral:', error);
+        logger.error('Erro geral ao buscar perfil', { userId: req.user?.id, error: error.message });
         return res.status(500).json({
             success: false,
             error: error.message

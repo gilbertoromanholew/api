@@ -7,6 +7,7 @@
  */
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import logger from '../config/logger.js';
 
 /**
  * Listar todos os planos disponíveis
@@ -195,7 +196,7 @@ export async function processWeeklyAllowance() {
             //     source: 'weekly_allowance'
             // });
             
-            console.log(`[Subscription] Mesada semanal processada para user ${subscription.user_id}: +20 pontos`);
+            logger.info('Mesada semanal PRO processada', { userId: subscription.user_id, bonusPoints: 20 });
             processed++;
         }
 
@@ -282,7 +283,7 @@ export async function handleStripeWebhook(event) {
                 break;
 
             default:
-                console.log(`[Stripe] Unhandled event type ${event.type}`);
+                logger.info('Evento Stripe não tratado', { eventType: event.type });
         }
 
         return { success: true, error: null };

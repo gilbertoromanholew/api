@@ -13,6 +13,8 @@
  * TODO: Integração com SMTP ou Supabase para envio real de emails
  */
 
+import logger from '../config/logger.js';
+
 // ============================================================================
 // STORAGE DE ALERTAS
 // ============================================================================
@@ -43,7 +45,10 @@ class AlertStore {
             this.alerts.shift();
         }
 
-        console.log(`[Alert System] Novo alerta criado: ${alert.type} para CPF ${alert.cpf?.substring(0, 3)}.***.***-**`);
+        logger.security(`Novo alerta de segurança criado: ${alert.type}`, { 
+            cpf: alert.cpf?.substring(0, 3) + '.***.***-**',
+            severity: alert.severity
+        });
         
         return alert;
     }
@@ -226,7 +231,7 @@ async function processAlertQueue() {
         return { processed: 0, sent: 0, failed: 0 };
     }
 
-    console.log(`[Alert System] Processando ${pending.length} alertas pendentes...`);
+    logger.security(`Processando fila de alertas`, { pendingCount: pending.length });
 
     let sent = 0;
     let failed = 0;
@@ -239,22 +244,21 @@ async function processAlertQueue() {
             // await sendEmailViaSupabase(alert);
             
             // Por enquanto, apenas simula envio e marca como enviado
-            console.log(`[Alert System] SIMULANDO envio de email:`, {
+            logger.security('SIMULANDO envio de email de alerta', {
                 to: alert.cpf ? 'user@email.com' : 'admin@email.com',
-                subject: alert.title,
-                body: alert.message
+                subject: alert.title
             });
 
             alertStore.markAsSent(alert.id, alert.cpf);
             sent++;
         } catch (error) {
-            console.error(`[Alert System] Erro ao processar alerta ${alert.id}:`, error);
+            logger.error('Erro ao processar alerta de segurança', { alertId: alert.id, error });
             alertStore.markAsFailed(alert.id, error.message);
             failed++;
         }
     }
 
-    console.log(`[Alert System] Processamento concluído: ${sent} enviados, ${failed} falharam`);
+    logger.security('Processamento de alertas concluído', { sent, failed });
 
     return { processed: pending.length, sent, failed };
 }
@@ -269,11 +273,15 @@ function startAlertWorker() {
     setInterval(async () => {
         const result = await processAlertQueue();
         if (result.processed > 0) {
-            console.log(`[Alert Worker] Processados ${result.processed} alertas (${result.sent} enviados, ${result.failed} falharam)`);
+            logger.security('Alert Worker executado', { 
+                processed: result.processed, 
+                sent: result.sent, 
+                failed: result.failed 
+            });
         }
     }, interval);
 
-    console.log('[Alert System] Worker iniciado - processamento a cada 5 minutos');
+    logger.info('Alert Worker iniciado - processamento a cada 5 minutos');
 }
 
 // ============================================================================

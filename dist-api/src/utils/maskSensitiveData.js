@@ -7,6 +7,8 @@
  * LGPD Art. 46: Segurança dos dados pessoais
  */
 
+import logger from '../config/logger.js';
+
 /**
  * Máscara CPF para logs (LGPD compliance)
  * @param {string} cpf - CPF com ou sem formatação
@@ -128,7 +130,7 @@ export function secureLog(message, data = {}) {
     if (sanitized.refreshToken) sanitized.refreshToken = '***';
     if (sanitized.csrfToken) sanitized.csrfToken = '***';
     
-    console.log(message, sanitized);
+    logger.info(message, sanitized);
 }
 
 /**
@@ -188,7 +190,7 @@ export function sanitizeObject(obj) {
 export function secureErrorLog(message, error, context = {}) {
     const sanitizedContext = sanitizeObject(context);
     
-    console.error(message, {
+    logger.error(message, {
         error: error.message,
         code: error.code,
         stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,

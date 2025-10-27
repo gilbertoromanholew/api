@@ -1,3 +1,5 @@
+import logger from '../config/logger.js';
+
 /**
  * Middleware global de tratamento de erros
  * Captura todos os erros não tratados e retorna resposta padronizada
@@ -7,13 +9,13 @@
  * @param {Function} next - Função next do Express
  */
 export const errorHandler = (err, req, res, next) => {
-    console.error('\n' + '='.repeat(80));
-    console.error('❌ GLOBAL ERROR HANDLER');
-    console.error('='.repeat(80));
-    console.error('Error Name:', err.name);
-    console.error('Error Message:', err.message);
-    console.error('Stack:', err.stack);
-    console.error('='.repeat(80) + '\n');
+    logger.error('Global error handler capturou erro', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method
+    });
     
     // Erro de validação
     if (err.name === 'ValidationError') {

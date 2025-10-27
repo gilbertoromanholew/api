@@ -2,6 +2,7 @@ import { allowedIPs } from '../config/allowedIPs.js';
 import { accessLogger } from '../utils/accessLogger.js';
 import { getClientIP, isIPInRange, getConnectionOrigin } from '../utils/ipUtils.js';
 import { ipBlockingSystem } from '../utils/ipBlockingSystem.js';
+import logger from '../config/logger.js';
 
 // Cache de geolocalização (evitar chamadas excessivas à API)
 const geoCache = new Map();
@@ -59,7 +60,7 @@ async function getIPGeolocation(ip) {
             }
         }
     } catch (error) {
-        console.error(`❌ Erro ao buscar geolocalização para ${ip}:`, error.message);
+        logger.error('Erro ao buscar geolocalização de IP', { ip, error: error.message });
     }
 
     // Fallback se falhar
@@ -166,38 +167,18 @@ export const ipFilter = async (req, res, next) => {
     // Detectar origem da conexão
     const origin = getConnectionOrigin(clientIp);
     
-    // Log completo no console
-    console.log('\n' + '='.repeat(80));
-    console.log(`${origin.icon} IP FILTER - CLIENT ACCESS ATTEMPT`);
-    console.log('='.repeat(80));
-    console.log(`⏰ Time: ${clientInfo.timestamp}`);
-    console.log(`\n📍 IP ANALYSIS:`);
-    console.log(`   🎯 Detected (used for auth): ${clientInfo.ip_detected}`);
-    console.log(`   ${origin.icon} Origin: ${origin.network} (${origin.type})`);
-    console.log(`   📦 Raw (req.ip): ${clientInfo.ip_raw}`);
-    console.log(`   🔀 X-Forwarded-For: ${clientInfo.ip_forwarded_for || 'Not set'}`);
-    console.log(`   🔗 X-Real-IP: ${clientInfo.ip_real || 'Not set'}`);
-    console.log(`   🔌 Socket: ${clientInfo.ip_socket || 'Not set'}`);
-    console.log(`\n🌍 LOCATION:`);
-    console.log(`   Country: ${clientInfo.country || 'Unknown'} (${clientInfo.countryCode || 'XX'})`);
-    console.log(`   City: ${clientInfo.city || 'Unknown'}`);
-    if (origin.type === 'zerotier') {
-        console.log(`\n� ZEROTIER INFO:`);
-        console.log(`   Network: fada62b01530e6b6`);
-        console.log(`   Range: 10.244.0.0/16`);
-        console.log(`   Security: Encrypted P2P connection`);
-    }
-    console.log(`\n�💻 CLIENT:`);
-    console.log(`   Browser: ${clientInfo.browser}`);
-    console.log(`   Platform: ${clientInfo.platform}`);
-    console.log(`   User Agent: ${clientInfo.user_agent || 'Not provided'}`);
-    console.log(`\n📄 REQUEST:`);
-    console.log(`   Method: ${req.method}`);
-    console.log(`   URL: ${req.url}`);
-    console.log(`   Referer: ${clientInfo.referer || 'Direct access'}`);
-    console.log(`   Language: ${clientInfo.accept_language || 'Not specified'}`);
-    console.log(`\n${clientInfo.is_authorized ? '✅' : '❌'} AUTHORIZATION: ${clientInfo.is_authorized ? '✅ YES - ACCESS GRANTED' : '❌ NO - ACCESS DENIED'}`);
-    console.log('='.repeat(80) + '\n');
+    // Log de acesso via logger
+    logger.security('IP Filter - Tentativa de acesso', {
+        timestamp: clientInfo.timestamp,
+        ip: clientInfo.ip_detected,
+        origin: `${origin.network} (${origin.type})`,
+        location: `${clientInfo.city || 'Unknown'}, ${clientInfo.country || 'Unknown'} (${clientInfo.countryCode || 'XX'})`,
+        browser: clientInfo.browser,
+        platform: clientInfo.platform,
+        method: req.method,
+        url: req.url,
+        authorized: clientInfo.is_authorized
+    });
     
     // Registrar TODOS os acessos no sistema de logs (sem filtros)
     accessLogger.addLog(clientInfo);

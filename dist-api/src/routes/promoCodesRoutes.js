@@ -6,6 +6,7 @@
 import express from 'express';
 import * as promoCodesService from '../services/promoCodesService.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
@@ -44,7 +45,7 @@ router.post('/validate', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao validar código:', error);
+    logger.error('Erro ao validar código promocional', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -83,7 +84,7 @@ router.post('/redeem', requireAuth, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao resgatar código:', error);
+    logger.error('Erro ao resgatar código promocional', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -116,7 +117,7 @@ router.get('/my-codes', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar códigos resgatados:', error);
+    logger.error('Erro ao buscar códigos resgatados', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -170,7 +171,7 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao criar código:', error);
+    logger.error('Erro ao criar código promocional', { adminId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message

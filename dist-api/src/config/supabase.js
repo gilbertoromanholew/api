@@ -1,13 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import logger from './logger.js';
 
 dotenv.config();
 
 // Debug: Mostrar configuração do Supabase
-console.log('\n🔧 Configuração Supabase:');
-console.log(`   URL: ${process.env.SUPABASE_URL || '❌ NÃO CONFIGURADA'}`);
-console.log(`   ANON_KEY: ${process.env.SUPABASE_ANON_KEY ? '✅ Configurada' : '❌ NÃO CONFIGURADA'}`);
-console.log(`   SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurada' : '❌ NÃO CONFIGURADA'}\n`);
+logger.info('Configuração Supabase', {
+    url: process.env.SUPABASE_URL ? '✅ Configurada' : '❌ NÃO CONFIGURADA',
+    anonKey: process.env.SUPABASE_ANON_KEY ? '✅ Configurada' : '❌ NÃO CONFIGURADA',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurada' : '❌ NÃO CONFIGURADA'
+});
 
 // Validar variáveis de ambiente
 if (!process.env.SUPABASE_URL) {
@@ -54,7 +56,7 @@ export const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Avisar se SERVICE_ROLE_KEY não está configurada
 if (!supabaseAdmin) {
-    console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY não configurada - Operações admin desabilitadas');
+    logger.warn('SUPABASE_SERVICE_ROLE_KEY não configurada - Operações admin desabilitadas');
 }
 
 /**
@@ -70,7 +72,7 @@ export async function getUserFromToken(token) {
         
         return user;
     } catch (error) {
-        console.error('Erro ao validar token:', error.message);
+        logger.error('Erro ao validar token', { error: error.message });
         return null;
     }
 }

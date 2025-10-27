@@ -22,6 +22,7 @@ import {
     secureLog, 
     secureErrorLog 
 } from '../utils/maskSensitiveData.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
@@ -32,11 +33,11 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseAnonKey) {
-    console.error('⚠️ SUPABASE_ANON_KEY não configurada! Rotas de autenticação não funcionarão.');
+    logger.warn('SUPABASE_ANON_KEY não configurada! Rotas de autenticação não funcionarão.');
 }
 
 if (!supabaseServiceKey) {
-    console.error('⚠️ SUPABASE_SERVICE_ROLE_KEY não configurada! Algumas funcionalidades podem não funcionar.');
+    logger.warn('SUPABASE_SERVICE_ROLE_KEY não configurada! Algumas funcionalidades podem não funcionar.');
 }
 
 // Cliente com anon key (para operações públicas)
@@ -444,23 +445,12 @@ router.post('/register', registerLimiter, async (req, res) => {
             // Gerar link de verificação
             const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
             
-            // ✅ Log do OTP e Link (sempre aparece, mesmo em produção para debug inicial)
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('📧 CÓDIGO OTP + LINK MÁGICO GERADOS');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log(`Email: ${email}`);
-            console.log(`Código OTP: ${otpCode}`);
-            console.log(`Link de Verificação:`);
-            console.log(verificationLink);
-            console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')} (3 minutos)`);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            
-            // Log seguro mascarado para auditoria
-            secureLog('[Auth] OTP e token gerados', { 
-                email, 
-                otp: otpCode, // Será mascarado automaticamente em logs de auditoria
-                token: verificationToken.substring(0, 20) + '...',
-                expiresAt: expiresAt.toISOString() 
+            // ✅ Log do OTP e Link para desenvolvimento
+            logger.auth('OTP e Link Mágico gerados', {
+                email,
+                otpCode,
+                verificationLink,
+                expiresAt: expiresAt.toISOString()
             });
         }
 
@@ -472,7 +462,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
         // ❌ NOVO FLUXO: NÃO fazer login automático
         // Usuário precisa verificar email antes de fazer login
-        console.log('📧 Registro concluído. Aguardando verificação de email...');
+        logger.info('Registro concluído, aguardando verificação de email', { userId: authResponse.user.id });
 
         res.json({
             success: true,
@@ -521,15 +511,13 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        console.log('🔐 Tentativa de login:', {
-            email: email || 'VAZIO',
-            password: password ? '***' : 'VAZIO',
-            bodyKeys: Object.keys(req.body),
-            body: JSON.stringify(req.body)
+        logger.auth('Tentativa de login com email', {
+            hasEmail: !!email,
+            hasPassword: !!password
         });
 
         if (!email || !password) {
-            console.log('❌ Login rejeitado: email ou senha faltando');
+            logger.warn('Login rejeitado: email ou senha faltando', { email });
             return res.status(400).json({
                 success: false,
                 error: 'Email e senha são obrigatórios'
@@ -565,10 +553,9 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
                 path: '/'
             });
 
-            console.log('✅ Cookies de sessão definidos:', {
-                access_token: 'SET (HTTP-only)',
-                refresh_token: 'SET (HTTP-only)',
-                expires_in: data.session.expires_in
+            logger.auth('Cookies de sessão HTTP-only definidos no login com email', {
+                userId: data.user.id,
+                expiresIn: data.session.expires_in
             });
         }
 
@@ -579,7 +566,7 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
         logLogin(data.user.id, req.ip, req.headers['user-agent'], { 
             email,
             method: 'email_password'
-        }).catch(err => console.error('[Audit] Failed to log login:', err));
+        }).catch(err => logger.error('Falha ao registrar login na auditoria', { err }));
 
         res.json({
             success: true,
@@ -590,12 +577,12 @@ router.post('/login', dualLoginLimiter, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao fazer login:', error);
+        logger.error('Erro ao fazer login', { email, error: error.message });
         
         // ❌ Registrar auditoria de login falhado
         logFailedLogin(email, req.ip, req.headers['user-agent'], error.message, { 
             method: 'email_password'
-        }).catch(err => console.error('[Audit] Failed to log failed login:', err));
+        }).catch(err => logger.error('Falha ao registrar login falhado na auditoria', { err }));
 
         res.status(401).json({
             success: false,
@@ -614,14 +601,13 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
     try {
         const { cpf, password } = req.body;
 
-        console.log('🔐 Tentativa de login com CPF:', {
-            cpf: cpf ? 'presente' : 'VAZIO',
-            password: password ? '***' : 'VAZIO',
-            bodyKeys: Object.keys(req.body)
+        logger.auth('Tentativa de login com CPF', {
+            hasCpf: !!cpf,
+            hasPassword: !!password
         });
 
         if (!cpf || !password) {
-            console.log('❌ Login rejeitado: CPF ou senha faltando');
+            logger.warn('Login com CPF rejeitado: CPF ou senha faltando');
             return res.status(400).json({
                 success: false,
                 error: 'CPF e senha são obrigatórios'
@@ -630,12 +616,12 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
 
         // Limpar formatação do CPF
         const cleanCPF = cpf.replace(/\D/g, '');
-        console.log('🧹 CPF limpo:', cleanCPF);
+        logger.auth('CPF limpo para validação', { cleanCPF: cleanCPF.substring(0, 3) + '.***.***-**' });
 
         // Validar CPF (algoritmo completo com dígitos verificadores)
         const { isValidCPF } = await import('../utils/authUtils.js');
         if (!isValidCPF(cleanCPF)) {
-            console.log('❌ CPF inválido');
+            logger.warn('CPF inválido fornecido no login');
             return res.status(400).json({
                 success: false,
                 error: 'CPF inválido. Verifique os dígitos.'
@@ -643,26 +629,25 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
         }
 
         // 1️⃣ Buscar profile pelo CPF para pegar o ID (que é FK de auth.users.id)
-        console.log('🔍 Buscando profile pelo CPF em public.profiles...');
+        logger.auth('Buscando profile pelo CPF');
         const { data: profileData, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('id, cpf, full_name, email_verified')
             .eq('cpf', cleanCPF)
             .maybeSingle();
 
-        console.log('📊 Resultado da busca profile:', { 
+        logger.auth('Resultado da busca de profile', { 
             found: !!profileData, 
-            id: profileData?.id,
             emailVerified: profileData?.email_verified
         });
 
         if (profileError && profileError.code !== 'PGRST116') {
-            console.error('❌ Erro do Supabase:', profileError);
+            logger.error('Erro do Supabase ao buscar profile', { profileError });
             throw profileError;
         }
 
         if (!profileData) {
-            console.log('❌ CPF não encontrado no banco');
+            logger.warn('CPF não encontrado no banco');
             return res.status(401).json({
                 success: false,
                 error: 'CPF ou senha inválidos'
@@ -670,27 +655,27 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
         }
 
         // 2️⃣ Buscar email em auth.users usando o ID do profile
-        console.log('👤 Buscando email em auth.users pelo ID:', profileData.id);
+        logger.auth('Buscando email em auth.users', { userId: profileData.id });
         const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
 
         if (userError) {
-            console.error('❌ Erro ao buscar usuário:', userError);
+            logger.error('Erro ao buscar usuário no auth.users', { userError });
             throw userError;
         }
 
         if (!user?.email) {
-            console.log('❌ Email não encontrado para este usuário');
+            logger.warn('Email não encontrado para o usuário');
             return res.status(401).json({
                 success: false,
                 error: 'CPF ou senha inválidos'
             });
         }
 
-        console.log('📧 Email encontrado:', user.email);
+        logger.auth('Email encontrado para CPF', { email: user.email });
 
         // ✅ VERIFICAR SE EMAIL FOI VERIFICADO
         if (!profileData.email_verified) {
-            console.log('⚠️ Email não verificado. Bloqueando login.');
+            logger.warn('Email não verificado, bloqueando login', { email: user.email });
             return res.status(403).json({
                 success: false,
                 error: 'Email não verificado',
@@ -704,18 +689,18 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
         }
         
         // 3️⃣ Fazer login com email + senha (Supabase verifica a senha em auth.users)
-        console.log('🔑 Tentando autenticação com email e senha...');
+        logger.auth('Autenticando com email e senha');
         const { data, error } = await supabase.auth.signInWithPassword({
             email: user.email,
             password
         });
 
         if (error) {
-            console.error('❌ Erro na autenticação:', error.message);
+            logger.error('Erro na autenticação com CPF', { error: error.message });
             throw error;
         }
 
-        console.log('✅ Login com CPF realizado com sucesso');
+        logger.auth('Login com CPF realizado com sucesso', { userId: data.user.id });
 
         // ✅ FIXAR SESSÃO: Setar cookies HTTP-only para autenticação
         if (data.session) {
@@ -737,10 +722,9 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
                 path: '/'
             });
 
-            console.log('✅ Cookies de sessão definidos:', {
-                access_token: 'SET (HTTP-only)',
-                refresh_token: 'SET (HTTP-only)',
-                expires_in: data.session.expires_in
+            logger.auth('Cookies de sessão definidos no login com CPF', {
+                userId: data.user.id,
+                expiresIn: data.session.expires_in
             });
         }
 
@@ -751,7 +735,7 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
         logLogin(data.user.id, req.ip, req.headers['user-agent'], { 
             cpf: cleanCPF,
             method: 'cpf_password'
-        }).catch(err => console.error('[Audit] Failed to log login:', err));
+        }).catch(err => logger.error('Falha ao registrar login CPF na auditoria', { err }));
 
         res.json({
             success: true,
@@ -762,14 +746,14 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao fazer login com CPF:', error);
+        logger.error('Erro crítico ao fazer login com CPF', { error: error.message });
         
         // ❌ Registrar auditoria de login falhado
         const { cpf } = req.body;
         const cleanCPFForLog = cpf ? cpf.replace(/\D/g, '') : 'unknown';
         logFailedLogin(cleanCPFForLog, req.ip, req.headers['user-agent'], error.message, { 
             method: 'cpf_password'
-        }).catch(err => console.error('[Audit] Failed to log failed login:', err));
+        }).catch(err => logger.error('Falha ao registrar login CPF falhado na auditoria', { err }));
 
         // Mensagem de erro mais clara
         let errorMessage = 'CPF ou senha inválidos';
@@ -806,10 +790,10 @@ router.post('/logout', async (req, res) => {
                 const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
                 if (!userError && user) {
                     userId = user.id;
-                    console.log(`[Logout] User ID encontrado: ${userId}`);
+                    logger.auth('User ID encontrado para logout', { userId });
                 }
             } catch (err) {
-                console.error('[Logout] Could not get user for audit:', err.message);
+                logger.error('Não foi possível obter usuário para auditoria de logout', { error: err.message });
             }
         }
 
@@ -817,10 +801,10 @@ router.post('/logout', async (req, res) => {
         try {
             const { error } = await supabase.auth.signOut();
             if (error) {
-                console.warn('[Logout] Supabase signOut error (não crítico):', error.message);
+                logger.warn('Erro não crítico no signOut do Supabase', { error: error.message });
             }
         } catch (err) {
-            console.warn('[Logout] Supabase signOut failed (não crítico):', err.message);
+            logger.warn('SignOut do Supabase falhou (não crítico)', { error: err.message });
         }
 
         // Limpar cookies de sessão (SEMPRE fazer isso, mesmo se signOut falhar)
@@ -830,12 +814,12 @@ router.post('/logout', async (req, res) => {
         // 🔐 Limpar CSRF token
         clearCsrfToken(res);
 
-        console.log('✅ Logout realizado e cookies limpos');
+        logger.auth('Logout realizado e cookies limpos', { userId });
 
         // ✅ Registrar auditoria de logout
         if (userId) {
             logLogout(userId, req.ip, req.headers['user-agent'])
-                .catch(err => console.error('[Audit] Failed to log logout:', err));
+                .catch(err => logger.error('Falha ao registrar logout na auditoria', { err }));
         }
 
         res.json({
@@ -843,7 +827,7 @@ router.post('/logout', async (req, res) => {
             message: 'Logout realizado com sucesso'
         });
     } catch (error) {
-        console.error('Erro ao fazer logout:', error);
+        logger.error('Erro ao fazer logout', { error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao fazer logout',
@@ -881,7 +865,7 @@ router.get('/session', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao obter sessão:', error);
+        logger.error('Erro ao obter sessão', { error: error.message });
         res.status(401).json({
             success: false,
             error: 'Sessão inválida',
@@ -1339,9 +1323,12 @@ router.post('/resend-otp', resendOTPLimiter, async (req, res) => {
             .select();
 
         if (invalidateError) {
-            console.error('❌ Erro ao invalidar códigos antigos:', invalidateError);
+            logger.error('Erro ao invalidar códigos OTP antigos', { userEmail, invalidateError });
         } else if (invalidatedCodes && invalidatedCodes.length > 0) {
-            console.log(`✓ ${invalidatedCodes.length} código(s) anterior(es) invalidado(s) para ${userEmail}`);
+            logger.info('Códigos OTP anteriores invalidados', { 
+                userEmail, 
+                count: invalidatedCodes.length 
+            });
         }
 
         // 🔒 GERAR DEVICE TOKEN (se não foi fornecido)
@@ -1390,14 +1377,12 @@ router.post('/resend-otp', resendOTPLimiter, async (req, res) => {
 
         // TODO: Enviar email com código OTP via Resend
         if (process.env.NODE_ENV !== 'production') {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('📧 CÓDIGO OTP REENVIADO (DEV ONLY)');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log(`Email: ${userEmail}`);
-            console.log(`Código: ${otpCode}`);
-            console.log(`Device: ${finalDeviceToken}`);
-            console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            logger.auth('Código OTP reenviado (DEV)', {
+                email: userEmail,
+                otpCode,
+                deviceToken: finalDeviceToken,
+                expiresAt: expiresAt.toISOString()
+            });
         }
 
         res.json({
@@ -1461,9 +1446,12 @@ router.post('/resend-confirmation', resendOTPLimiter, async (req, res) => {
             .select();
 
         if (invalidateError) {
-            console.error('❌ Erro ao invalidar códigos antigos:', invalidateError);
+            logger.error('Erro ao invalidar códigos OTP antigos do resend', { email, invalidateError });
         } else if (invalidatedCodes && invalidatedCodes.length > 0) {
-            console.log(`✓ ${invalidatedCodes.length} código(s) anterior(es) invalidado(s) para ${email}`);
+            logger.info('Códigos OTP anteriores invalidados no resend', { 
+                email, 
+                count: invalidatedCodes.length 
+            });
         }
 
         // Gerar novo código OTP
@@ -1488,13 +1476,11 @@ router.post('/resend-confirmation', resendOTPLimiter, async (req, res) => {
         }
 
         // TODO: Enviar email com código OTP
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📧 CÓDIGO OTP REENVIADO (resend-confirmation)');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`Email: ${email}`);
-        console.log(`Código: ${otpCode}`);
-        console.log(`Expira em: ${expiresAt.toLocaleString('pt-BR')}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.auth('Código OTP reenviado (resend-confirmation)', {
+            email,
+            otpCode,
+            expiresAt: expiresAt.toISOString()
+        });
 
         res.json({
             success: true,
@@ -1502,7 +1488,7 @@ router.post('/resend-confirmation', resendOTPLimiter, async (req, res) => {
             expiresIn: 3 // minutos
         });
     } catch (error) {
-        console.error('Erro ao reenviar confirmação:', error);
+        logger.error('Erro ao reenviar confirmação de email', { error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao reenviar email',
@@ -1521,7 +1507,7 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
         const { email, code, token } = req.body;
         const otpCode = code || token; // Aceita ambos os nomes
 
-        console.log('🔍 Verificando código OTP:', { email, code: otpCode });
+        logger.auth('Verificando código OTP para confirmação de email', { email });
 
         if (!email || !otpCode) {
             return res.status(400).json({
@@ -1542,10 +1528,9 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
             .limit(1)
             .maybeSingle();
 
-        console.log('📋 Resultado da busca OTP:', { 
-            found: !!otpData, 
-            error: otpError?.message,
-            otpData: otpData ? { id: otpData.id, expires_at: otpData.expires_at, used_at: otpData.used_at } : null
+        logger.auth('Resultado da busca de código OTP', { 
+            found: !!otpData,
+            hasError: !!otpError
         });
 
         if (otpError) {
@@ -1566,7 +1551,7 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
             .eq('id', otpData.id);
 
         // Confirmar email do usuário no Supabase Auth
-        console.log('📧 Confirmando email do usuário:', otpData.user_id);
+        logger.auth('Confirmando email do usuário no Supabase Auth', { userId: otpData.user_id });
         
         const now = new Date().toISOString();
         const { data: updateData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -1579,18 +1564,17 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
         );
 
         if (confirmError) {
-            console.error('❌ Erro ao confirmar email:', confirmError);
-            console.error('Detalhes do erro:', JSON.stringify(confirmError, null, 2));
+            logger.error('Erro ao confirmar email no Supabase Auth', { 
+                userId: otpData.user_id, 
+                error: confirmError 
+            });
             throw new Error(`Erro ao confirmar email: ${confirmError.message}`);
         }
         
-        console.log('✅ Email confirmado com sucesso:', {
-            email_confirmed_at: now,
-            updated_user: updateData
-        });
+        logger.auth('Email confirmado com sucesso', { userId: otpData.user_id });
 
         // Atualizar perfil
-        console.log('👤 Atualizando perfil do usuário');
+        logger.auth('Atualizando perfil do usuário', { userId: otpData.user_id });
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
             .update({ 
@@ -1600,20 +1584,23 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
             .eq('id', otpData.user_id);
 
         if (profileError) {
-            console.error('❌ Erro ao atualizar perfil:', profileError);
+            logger.error('Erro ao atualizar perfil após confirmação de email', { 
+                userId: otpData.user_id, 
+                profileError 
+            });
         }
 
         // Buscar dados completos do usuário
-        console.log('🔍 Buscando dados do usuário');
+        logger.auth('Buscando dados completos do usuário', { userId: otpData.user_id });
         const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(otpData.user_id);
 
         if (userError) {
-            console.error('❌ Erro ao buscar usuário:', userError);
+            logger.error('Erro ao buscar dados do usuário', { userId: otpData.user_id, userError });
             throw new Error(`Erro ao buscar usuário: ${userError.message}`);
         }
 
         // Buscar email e senha do usuário para criar sessão
-        console.log('🔐 Criando sessão para login automático');
+        logger.auth('Criando sessão para login automático', { userId: otpData.user_id });
         
         // Buscar profile para pegar dados adicionais
         const { data: profileData } = await supabaseAdmin
@@ -1622,7 +1609,7 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
             .eq('id', otpData.user_id)
             .single();
 
-        console.log('✅ Email confirmado - retornando dados para login automático');
+        logger.auth('Email confirmado - retornando dados para login automático', { userId: otpData.user_id, email });
 
         res.json({
             success: true,
@@ -1645,7 +1632,7 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao verificar email:', error);
+        logger.error('Erro ao verificar email', { error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao verificar código',
@@ -1670,9 +1657,7 @@ router.post('/forgot-password', rateLimit({
     try {
         const { cpf } = req.body;
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🔑 /forgot-password CHAMADO');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.auth('Endpoint /forgot-password chamado', { hasCpf: !!cpf });
 
         if (!cpf) {
             return res.status(400).json({
@@ -1692,7 +1677,7 @@ router.post('/forgot-password', rateLimit({
 
         if (profileError || !profileData) {
             // Por segurança, não revelar se CPF existe ou não
-            console.log('⚠️ CPF não encontrado, mas retornando sucesso (segurança)');
+            logger.security('CPF não encontrado, retornando sucesso por segurança', { cpf: maskSensitiveData(cleanCPF) });
             return res.json({
                 success: true,
                 message: 'Se este CPF estiver cadastrado, você receberá um código para recuperar sua senha.'
@@ -1701,7 +1686,7 @@ router.post('/forgot-password', rateLimit({
 
         // ✅ VERIFICAR SE EMAIL FOI VERIFICADO
         if (!profileData.email_verified) {
-            console.log('⚠️ Email não verificado. Bloqueando recuperação de senha.');
+            logger.security('Email não verificado, bloqueando recuperação de senha', { userId: profileData.id });
             return res.status(403).json({
                 success: false,
                 error: 'Email não verificado',
@@ -1717,7 +1702,7 @@ router.post('/forgot-password', rateLimit({
         const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
 
         if (userError || !user) {
-            console.log('⚠️ Usuário não encontrado no Auth');
+            logger.security('Usuário não encontrado no Auth, retornando sucesso por segurança', { userId: profileData.id });
             return res.json({
                 success: true,
                 message: 'Se este CPF estiver cadastrado, você receberá um código para recuperar sua senha.'
@@ -1742,13 +1727,13 @@ router.post('/forgot-password', rateLimit({
             }]);
 
         if (otpError) {
-            console.error('❌ Erro ao salvar OTP:', otpError);
+            logger.error('Erro ao salvar OTP', { userId: profileData.id, error: otpError.message });
             throw otpError;
         }
 
         // Tentar enviar email via Supabase (opcional, não bloqueia se falhar)
         try {
-            console.log('📧 Tentando enviar email de recuperação via Supabase...');
+            logger.info('Tentando enviar email de recuperação via Supabase', { userId: profileData.id, email: maskSensitiveData(userEmail) });
             const { error: emailError } = await supabaseAdmin.auth.resetPasswordForEmail(userEmail, {
                 redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?mode=password-reset`
             });
@@ -1756,26 +1741,25 @@ router.post('/forgot-password', rateLimit({
             if (emailError) {
                 // Verificar se é erro de rate limit do Supabase
                 if (emailError.status === 429 || emailError.code === 'over_email_send_rate_limit') {
-                    console.log('⚠️ Rate limit do Supabase atingido, mas código OTP já foi gerado e salvo');
+                    logger.warn('Rate limit do Supabase atingido, mas código OTP já foi gerado e salvo', { userId: profileData.id });
                 } else {
-                    console.error('⚠️ Erro ao enviar email via Supabase:', emailError.message);
+                    logger.error('Erro ao enviar email via Supabase', { userId: profileData.id, error: emailError.message });
                 }
             } else {
-                console.log('✅ Email de recuperação enviado via Supabase');
+                logger.auth('Email de recuperação enviado via Supabase', { userId: profileData.id });
             }
         } catch (emailError) {
-            console.log('⚠️ Falha ao enviar email via Supabase, mas código OTP continua válido:', emailError.message);
+            logger.warn('Falha ao enviar email via Supabase, mas código OTP continua válido', { userId: profileData.id, error: emailError.message });
         }
 
-        // Log do código no console (ambiente de desenvolvimento)
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🔑 CÓDIGO DE RECUPERAÇÃO DE SENHA GERADO');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`📱 CPF: ${cleanCPF}`);
-        console.log(`📧 Email: ${userEmail}`);
-        console.log(`🔢 Código OTP: ${otpCode}`);
-        console.log(`⏱️  Expira em: ${expiresAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (10 minutos)`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // Log do código (ambiente de desenvolvimento)
+        logger.auth('Código de recuperação de senha gerado', {
+            userId: profileData.id,
+            cpf: maskSensitiveData(cleanCPF),
+            email: maskSensitiveData(userEmail),
+            otpCode: process.env.NODE_ENV === 'development' ? otpCode : '******',
+            expiresAt: expiresAt.toISOString()
+        });
 
         // Retornar sucesso com email parcialmente mascarado
         const maskedEmail = userEmail.replace(/(.{3})(.*)(@.*)/, '$1***$3');
@@ -1789,7 +1773,7 @@ router.post('/forgot-password', rateLimit({
             }
         });
     } catch (error) {
-        console.error('❌ Erro ao solicitar recuperação de senha:', error);
+        logger.error('Erro ao solicitar recuperação de senha', { error: error.message });
         
         // Tratamento específico de erros
         if (error.status === 429 || error.code === 'over_email_send_rate_limit') {
@@ -1823,7 +1807,7 @@ router.post('/reset-password', rateLimit({
     try {
         const { cpf, code, newPassword } = req.body;
 
-        console.log('🔑 /reset-password chamado');
+        logger.auth('Endpoint /reset-password chamado', { hasCpf: !!cpf, hasCode: !!code });
 
         if (!cpf || !code || !newPassword) {
             return res.status(400).json({
@@ -1908,11 +1892,11 @@ router.post('/reset-password', rateLimit({
         );
 
         if (updateError) {
-            console.error('❌ Erro ao atualizar senha:', updateError);
+            logger.error('Erro ao atualizar senha', { userId: profileData.id, error: updateError.message });
             throw updateError;
         }
 
-        console.log('✅ Senha redefinida com sucesso para CPF:', cleanCPF);
+        logger.auth('Senha redefinida com sucesso', { userId: profileData.id, cpf: maskSensitiveData(cleanCPF) });
 
         res.json({
             success: true,
@@ -1922,7 +1906,7 @@ router.post('/reset-password', rateLimit({
             }
         });
     } catch (error) {
-        console.error('Erro ao redefinir senha:', error);
+        logger.error('Erro ao redefinir senha', { error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao redefinir senha',
@@ -1972,7 +1956,7 @@ router.get('/rate-limit-status', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao consultar status de rate limit:', error);
+        logger.error('Erro ao consultar status de rate limit', { error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao consultar status'
@@ -2008,7 +1992,7 @@ router.get('/security-stats', requireAuth, requireAdmin, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao buscar estatísticas de segurança:', error);
+        logger.error('Erro ao buscar estatísticas de segurança', { adminEmail: req.user.email, error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao buscar estatísticas'
@@ -2025,7 +2009,7 @@ router.post('/reset-rate-limit', requireAuth, requireAdmin, async (req, res) => 
     try {
         const { ip, cpf, resetAll } = req.body;
 
-        console.log(`[Admin Action] Reset rate limit por ${req.user.email}: IP=${ip}, CPF=${cpf}, resetAll=${resetAll}`);
+        logger.security('Admin resetando rate limit', { adminEmail: req.user.email, ip, cpf: cpf ? maskSensitiveData(cpf) : undefined, resetAll });
 
         if (resetAll === true) {
             dualStore.resetAll();
@@ -2050,7 +2034,7 @@ router.post('/reset-rate-limit', requireAuth, requireAdmin, async (req, res) => 
             admin: req.user.email
         });
     } catch (error) {
-        console.error('Erro ao resetar rate limit:', error);
+        logger.error('Erro ao resetar rate limit', { adminEmail: req.user.email, error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao resetar rate limit'
@@ -2086,7 +2070,7 @@ router.get('/alerts', requireAuth, requireAdmin, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao buscar alertas:', error);
+        logger.error('Erro ao buscar alertas', { adminEmail: req.user.email, error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao buscar alertas'
@@ -2101,7 +2085,7 @@ router.get('/alerts', requireAuth, requireAdmin, async (req, res) => {
  */
 router.post('/alerts/process', requireAuth, requireAdmin, async (req, res) => {
     try {
-        console.log(`[Admin Action] Processamento manual de alertas por ${req.user.email}`);
+        logger.security('Admin processando alertas manualmente', { adminEmail: req.user.email });
         
         const { processAlertQueue } = await import('../utils/alertSystem.js');
         const result = await processAlertQueue();
@@ -2113,7 +2097,7 @@ router.post('/alerts/process', requireAuth, requireAdmin, async (req, res) => {
             admin: req.user.email
         });
     } catch (error) {
-        console.error('Erro ao processar alertas:', error);
+        logger.error('Erro ao processar alertas', { adminEmail: req.user.email, error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao processar alertas',
@@ -2189,7 +2173,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao buscar dashboard:', error);
+        logger.error('Erro ao buscar dashboard', { adminEmail: req.user.email, error: error.message });
         res.status(500).json({
             success: false,
             error: 'Erro ao buscar dashboard',

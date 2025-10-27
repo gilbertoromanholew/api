@@ -16,6 +16,7 @@ import {
   addBonusPoints,
   addPurchasedPoints
 } from '../services/pointsService.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
@@ -28,11 +29,12 @@ router.get('/balance', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const userToken = req.user.token; // JWT do usuário
-    console.log('💰 [Credits] Buscando saldo para:', userId);
+    logger.info('Buscando saldo de créditos', { userId });
     
     const balance = await getBalance(userId, userToken);
     
-    console.log('✅ [Credits] Saldo encontrado:', {
+    logger.info('Saldo de créditos encontrado', {
+      userId,
       bonus: balance.bonus_credits,
       purchased: balance.purchased_points,
       total: balance.total_credits
@@ -43,7 +45,7 @@ router.get('/balance', requireAuth, async (req, res) => {
       data: balance
     });
   } catch (error) {
-    console.error('❌ [Credits] Erro ao buscar saldo:', error);
+    logger.error('Erro ao buscar saldo de créditos', { userId: req.user.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -68,10 +70,10 @@ router.get('/history', requireAuth, async (req, res) => {
     
     return res.json({
       success: true,
-      data: result
+      data: history
     });
   } catch (error) {
-    console.error('❌ [Credits] Erro ao buscar histórico:', error);
+    logger.error('Erro ao buscar histórico de créditos', { userId: req.user.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -102,7 +104,7 @@ router.get('/can-use/:tool_name', requireAuth, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('❌ [Credits] Erro ao verificar ferramenta:', error);
+    logger.error('Erro ao verificar se pode usar ferramenta', { userId: req.user.id, toolName: req.body.tool_name, error: error.message });
     return res.status(400).json({
       success: false,
       error: error.message
@@ -141,7 +143,7 @@ router.post('/consume', requireAuth, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('❌ [Credits] Erro ao consumir pontos:', error);
+    logger.error('Erro ao consumir pontos', { userId: req.user.id, amount: req.body.amount, error: error.message });
     return res.status(400).json({
       success: false,
       error: error.message
@@ -175,7 +177,7 @@ router.post('/add-bonus', requireAuth, requireAdmin, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('❌ [Credits] Erro ao adicionar bônus:', error);
+    logger.error('Erro ao adicionar bônus (admin)', { targetUserId: req.body.userId, amount: req.body.amount, error: error.message });
     return res.status(400).json({
       success: false,
       error: error.message
@@ -210,7 +212,7 @@ router.post('/add-purchased', requireAuth, requireAdmin, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('❌ [Credits] Erro ao adicionar pontos comprados:', error);
+    logger.error('Erro ao adicionar pontos comprados (admin)', { targetUserId: req.body.userId, amount: req.body.amount, error: error.message });
     return res.status(400).json({
       success: false,
       error: error.message

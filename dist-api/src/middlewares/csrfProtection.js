@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import logger from '../config/logger.js';
 
 /**
  * 🔐 CSRF Protection Middleware
@@ -58,12 +59,10 @@ export function setCsrfToken(req, res, expiresIn = 24 * 60 * 60 * 1000) {
         path: '/'
     });
     
-    console.log('🔐 CSRF token gerado:', {
-        token: token.substring(0, 8) + '...',
-        expiresIn: `${expiresIn / 1000}s`,
-        sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: false
+    logger.security('CSRF token gerado', {
+        tokenPreview: token.substring(0, 8) + '...',
+        expiresInSeconds: expiresIn / 1000,
+        secure: process.env.NODE_ENV === 'production'
     });
     
     return token;
@@ -127,7 +126,7 @@ export function validateCsrfToken(req, res, next) {
     
     // Validação: ambos devem existir
     if (!headerToken || !cookieToken) {
-        console.warn('⚠️ CSRF validation failed: Token ausente', {
+        logger.warn('CSRF validation failed: Token ausente', {
             path: req.path,
             method,
             hasHeader: !!headerToken,
@@ -150,11 +149,11 @@ export function validateCsrfToken(req, res, next) {
     );
     
     if (!tokensMatch) {
-        console.warn('⚠️ CSRF validation failed: Token inválido', {
+        logger.warn('CSRF validation failed: Token inválido', {
             path: req.path,
             method,
-            headerToken: headerToken.substring(0, 8) + '...',
-            cookieToken: cookieToken.substring(0, 8) + '...',
+            headerTokenPreview: headerToken.substring(0, 8) + '...',
+            cookieTokenPreview: cookieToken.substring(0, 8) + '...',
             ip: req.ip
         });
         
@@ -166,7 +165,7 @@ export function validateCsrfToken(req, res, next) {
     }
     
     // ✅ Token válido
-    console.log('✅ CSRF token válido:', {
+    logger.security('CSRF token válido', {
         path: req.path,
         method
     });
@@ -191,7 +190,7 @@ export function clearCsrfToken(res) {
         sameSite: 'strict' // ✅ Deve corresponder ao setCsrfToken
     });
     
-    console.log('🗑️ CSRF token removido');
+    logger.security('CSRF token removido');
 }
 
 /**

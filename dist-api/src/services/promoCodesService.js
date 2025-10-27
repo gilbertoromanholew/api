@@ -5,6 +5,7 @@
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 import { addBonusPoints } from './pointsService.js';
+import logger from '../config/logger.js';
 
 /**
  * Validar código promocional
@@ -45,7 +46,7 @@ export async function validatePromoCode(code) {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Erro ao validar código:', error);
+    logger.error('Erro ao validar código promocional', { code, error });
     return { data: null, error: error.message };
   }
 }
@@ -161,7 +162,7 @@ export async function redeemPromoCode(userId, code) {
       });
 
     if (redemptionError) {
-      console.error('Erro ao registrar redenção:', redemptionError);
+      logger.error('Erro ao registrar redenção de código promocional', { promoCodeId: promoCode.id, userId, redemptionError });
       // Não falhar se apenas o registro falhar
     }
 
@@ -175,7 +176,7 @@ export async function redeemPromoCode(userId, code) {
       error: null
     };
   } catch (error) {
-    console.error('Erro ao resgatar código:', error);
+    logger.error('Erro ao resgatar código promocional', { userId, code, error });
     return { data: null, error: error.message };
   }
 }
@@ -206,7 +207,7 @@ export async function getUserRedeemedCodes(userId) {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Erro ao buscar códigos resgatados:', error);
+    logger.error('Erro ao buscar códigos resgatados', { userId, error });
     return { data: null, error: error.message };
   }
 }
@@ -251,7 +252,7 @@ export async function createPromoCode(codeData) {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Erro ao criar código:', error);
+    logger.error('Erro ao criar código promocional', { codeData, error });
     return { data: null, error: error.message };
   }
 }

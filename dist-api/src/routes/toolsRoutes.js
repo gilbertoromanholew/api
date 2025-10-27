@@ -7,6 +7,7 @@ import express from 'express';
 import { supabase } from '../config/supabase.js';
 import * as toolsService from '../services/toolsService.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
@@ -104,7 +105,7 @@ router.get('/most-used', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar ferramentas mais usadas:', error);
+    logger.error('Erro ao buscar ferramentas mais usadas', { error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -140,7 +141,7 @@ router.get('/my-most-used', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar minhas ferramentas:', error);
+    logger.error('Erro ao buscar minhas ferramentas', { userId: req.user.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -172,7 +173,7 @@ router.get('/platform-favorites', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar favoritos da plataforma:', error);
+    logger.error('Erro ao buscar favoritos da plataforma', { error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -214,7 +215,7 @@ router.post('/track', requireAuth, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao registrar uso de ferramenta:', error);
+    logger.error('Erro ao registrar uso de ferramenta', { userId: req.user.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -243,10 +244,10 @@ router.get('/stats', requireAuth, async (req, res) => {
 
     return res.json({
       success: true,
-      data
+      data: data // ✅ CORRIGIDO: retornar 'data' ao invés de 'stats' (que não existe)
     });
   } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
+    logger.error('Erro ao buscar estatísticas de ferramentas', { userId: req.user.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -280,7 +281,7 @@ router.get('/history', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar histórico:', error);
+    logger.error('Erro ao buscar histórico de ferramentas', { userId: req.user.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message

@@ -11,6 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import logger from '../config/logger.js';
 
 // Cliente Supabase
 const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.SUPABASE_URL || 'http://supabase-kong:8000';
@@ -53,7 +54,7 @@ export async function requireAuth(req, res, next) {
         };
         next();
     } catch (error) {
-        console.error('[Auth Middleware] Erro ao verificar autenticação:', error);
+        logger.error('Erro ao verificar autenticação', { error: error.message });
         return res.status(500).json({
             success: false,
             error: 'Erro ao verificar autenticação',
@@ -84,7 +85,7 @@ export async function requireAdmin(req, res, next) {
             .single();
 
         if (error) {
-            console.error('[Auth Middleware] Erro ao buscar perfil:', error);
+            logger.error('Erro ao buscar perfil do usuário', { userId: req.user.id, error: error.message });
             return res.status(500).json({
                 success: false,
                 error: 'Erro ao verificar permissões',
@@ -94,7 +95,7 @@ export async function requireAdmin(req, res, next) {
 
         // Verificar se é admin
         if (profile.role !== 'admin') {
-            console.warn(`[Auth Middleware] Acesso negado para usuário ${req.user.id} (role: ${profile.role})`);
+            logger.warn('Acesso negado - usuário não é admin', { userId: req.user.id, role: profile.role });
             return res.status(403).json({
                 success: false,
                 error: 'Acesso negado',
@@ -104,10 +105,10 @@ export async function requireAdmin(req, res, next) {
 
         // Adicionar role ao request
         req.user.role = profile.role;
-        console.log(`[Auth Middleware] Admin ${req.user.id} autenticado`);
+        logger.auth('Admin autenticado', { userId: req.user.id });
         next();
     } catch (error) {
-        console.error('[Auth Middleware] Erro ao verificar role de admin:', error);
+        logger.error('Erro ao verificar role de admin', { error: error.message });
         return res.status(500).json({
             success: false,
             error: 'Erro ao verificar permissões',
@@ -154,10 +155,10 @@ export async function optionalAuth(req, res, next) {
 
         // Token válido, anexa usuário
         req.user = user;
-        console.log(`[Optional Auth] Usuário ${user.id} autenticado`);
+        logger.auth('Usuário autenticado opcionalmente', { userId: user.id });
         next();
     } catch (error) {
-        console.error('[Optional Auth] Erro ao validar token:', error);
+        logger.error('Erro ao validar token opcional', { error: error.message });
         // Em caso de erro, continua sem usuário (não bloqueia)
         req.user = null;
         next();

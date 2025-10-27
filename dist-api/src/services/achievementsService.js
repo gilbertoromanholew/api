@@ -7,6 +7,7 @@
  */
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import logger from '../config/logger.js';
 
 /**
  * Listar todas as conquistas disponíveis
@@ -333,7 +334,11 @@ export async function unlockAchievement(userId, achievementId) {
         // Adicionar pontos bônus (se tiver recompensa)
         if (achievement?.reward_bonus_credits > 0) {
             // TODO: Chamar pointsService.addBonusPoints()
-            console.log(`[Achievements] +${achievement.reward_bonus_credits} bonus points for user ${userId}`);
+            logger.tool(`Bonus points earned from achievement`, { 
+                userId, 
+                achievementId, 
+                bonusPoints: achievement.reward_bonus_credits 
+            });
         }
 
         return { data, error: null };

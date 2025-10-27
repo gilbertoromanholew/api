@@ -1,10 +1,13 @@
 import dotenv from 'dotenv';
+import logger from './logger.js';
 
 // Carregar variáveis de ambiente
 dotenv.config();
 
 // Debug básico
-console.log('� dotenv carregado, SUPABASE_URL:', process.env.SUPABASE_URL ? '✅' : '❌');
+logger.info('Variáveis de ambiente carregadas', { 
+    supabaseUrl: process.env.SUPABASE_URL ? 'configurado' : 'não configurado' 
+});
 
 // Configurações centralizadas da aplicação
 const config = {

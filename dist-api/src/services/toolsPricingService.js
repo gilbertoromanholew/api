@@ -1,5 +1,6 @@
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 import * as toolsService from './toolsService.js';
+import logger from '../config/logger.js';
 
 /**
  * ========================================
@@ -84,7 +85,7 @@ export function getNormalToolCost(tool, planType) {
  * Obter usos da ferramenta no mês atual
  */
 export async function getMonthlyUsage(userId, toolId) {
-  console.log(`📊 [AUDIT] Consultando uso mensal: userId=${userId}, toolId=${toolId}`);
+  logger.tool('Consultando uso mensal da ferramenta', { userId, toolId });
   
   const { data, error } = await supabaseAdmin
     .rpc('get_monthly_usage', {
@@ -93,11 +94,11 @@ export async function getMonthlyUsage(userId, toolId) {
     });
 
   if (error) {
-    console.error('❌ [AUDIT] Erro ao buscar uso mensal:', error);
+    logger.error('Erro ao buscar uso mensal', { userId, toolId, error });
     return 0;
   }
 
-  console.log(`✅ [AUDIT] Uso mensal obtido: ${data} usos`);
+  logger.tool('Uso mensal obtido', { userId, toolId, usageCount: data });
   return data || 0;
 }
 
@@ -105,7 +106,7 @@ export async function getMonthlyUsage(userId, toolId) {
  * Incrementar contador de uso mensal
  */
 export async function incrementMonthlyUsage(userId, toolId) {
-  console.log(`📊 [AUDIT] Incrementando uso: userId=${userId}, toolId=${toolId}`);
+  logger.tool('Incrementando uso mensal da ferramenta', { userId, toolId });
   
   const { data, error } = await supabaseAdmin
     .rpc('increment_tool_usage', {
@@ -114,11 +115,11 @@ export async function incrementMonthlyUsage(userId, toolId) {
     });
 
   if (error) {
-    console.error(`❌ [AUDIT] FALHA ao incrementar uso: ${error.message}`);
+    logger.error('FALHA ao incrementar uso mensal', { userId, toolId, error });
     throw new Error('Erro ao registrar uso da ferramenta');
   }
 
-  console.log(`✅ [AUDIT] Uso incrementado com sucesso: ${data} usos totais`);
+  logger.tool('Uso incrementado com sucesso', { userId, toolId, totalUsages: data });
   return data;
 }
 
@@ -289,10 +290,10 @@ export async function calculateAndCharge(toolSlug, userId, experienceType = 'lit
         used_free_allowance: usedFreeAllowance
       }
     });
-    console.log(`✅ [Tracking] Execução registrada: ${toolSlug} (${cost} créditos)`);
+    logger.tool('Execução de ferramenta registrada', { toolSlug, cost });
   } catch (trackError) {
     // Não falha se tracking der erro (fail-safe)
-    console.error('⚠️ [Tracking] Erro ao registrar execução:', trackError.message);
+    logger.warn('Erro ao registrar execução da ferramenta', { toolSlug, error: trackError.message });
   }
 
   return {

@@ -40,6 +40,7 @@
 import { glob } from 'glob';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../config/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,7 +52,7 @@ const __dirname = path.dirname(__filename);
  * @returns {Promise<Object>} Estatísticas do carregamento
  */
 export async function autoLoadToolRoutes(app) {
-    console.log('\n🔧 [Auto-Discovery] Carregando ferramentas...');
+    logger.info('Iniciando auto-discovery de ferramentas');
     
     const stats = {
         loaded: 0,
@@ -69,7 +70,7 @@ export async function autoLoadToolRoutes(app) {
             absolute: false
         });
         
-        console.log(`   📂 Encontrados ${routeFiles.length} arquivos de rotas\n`);
+        logger.info(`Encontrados ${routeFiles.length} arquivos de rotas`, { toolsPath });
         
         for (const routeFile of routeFiles) {
             try {
@@ -100,23 +101,20 @@ export async function autoLoadToolRoutes(app) {
                     config
                 });
                 
-                console.log(`   ✅ ${slug.padEnd(25)} ← ${routeFile}`);
+                logger.tool(`Ferramenta carregada: ${slug}`, { file: routeFile, config });
                 
             } catch (error) {
                 stats.failed++;
-                console.error(`   ❌ ${routeFile}: ${error.message}`);
+                logger.error(`Falha ao carregar ferramenta: ${routeFile}`, { error: error.message });
             }
         }
         
-        console.log(`\n✅ [Auto-Discovery] ${stats.loaded} ferramentas carregadas com sucesso`);
-        if (stats.failed > 0) {
-            console.warn(`⚠️  [Auto-Discovery] ${stats.failed} ferramentas falharam`);
-        }
+        logger.info(`Auto-discovery concluído: ${stats.loaded} sucesso, ${stats.failed} falhas`, stats);
         
         return stats;
         
     } catch (error) {
-        console.error('❌ [Auto-Discovery] Erro fatal:', error.message);
+        logger.error('Erro fatal no auto-discovery', { error: error.message, stack: error.stack });
         throw error;
     }
 }
@@ -152,7 +150,7 @@ export async function listAvailableTools() {
                 hasConfig: !!toolModule.config
             });
         } catch (error) {
-            console.error(`Erro ao listar ${routeFile}:`, error.message);
+            logger.error(`Erro ao listar ferramenta: ${routeFile}`, { error: error.message });
         }
     }
     

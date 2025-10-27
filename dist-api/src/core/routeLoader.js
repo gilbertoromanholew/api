@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../config/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,7 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
     const funcionalidadesDir = path.join(__dirname, '../functions');
     const loadedRoutes = [];
     
-    console.log('\n📦 Auto-carregando funcionalidades...\n');
+    logger.info('Auto-carregando funcionalidades...');
     
     try {
         const categories = fs.readdirSync(funcionalidadesDir);
@@ -32,7 +33,7 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
             
             // Ignorar pasta de template
             if (category === '_TEMPLATE') {
-                console.log(`   ⏭️  Ignorando: ${category} (template)`);
+                logger.info('Ignorando categoria template', { category });
                 continue;
             }
             
@@ -51,10 +52,10 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
                         // Fase 2: Aplicar rate limiter se fornecido
                         if (rateLimiter) {
                             app.use(`/${category}`, rateLimiter, routeModule.default);
-                            console.log(`   ✅ ${category}/${routeFile} -> /${category} (com rate limiting)`);
+                            logger.info('Rota carregada com rate limiting', { category, routeFile, prefix: `/${category}` });
                         } else {
                             app.use(`/${category}`, routeModule.default);
-                            console.log(`   ✅ ${category}/${routeFile} -> /${category}`);
+                            logger.info('Rota carregada', { category, routeFile, prefix: `/${category}` });
                         }
                         loadedRoutes.push({
                             category,
@@ -63,21 +64,21 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
                             prefix: `/${category}`
                         });
                     } else {
-                        console.log(`   ⚠️  ${category}/${routeFile} - sem export default`);
+                        logger.warn('Arquivo de rotas sem export default', { category, routeFile });
                     }
                 } catch (error) {
-                    console.error(`   ❌ Erro ao carregar ${category}/${routeFile}:`, error.message);
+                    logger.error('Erro ao carregar arquivo de rotas', { category, routeFile, error: error.message });
                 }
             } else {
-                console.log(`   ⚠️  ${category} - nenhum arquivo *Routes.js encontrado`);
+                logger.warn('Categoria sem arquivo *Routes.js', { category });
             }
         }
         
-        console.log(`\n✅ Total: ${loadedRoutes.length} funcionalidade(s) carregada(s)\n`);
+        logger.info('Funcionalidades carregadas com sucesso', { total: loadedRoutes.length });
         return loadedRoutes;
         
     } catch (error) {
-        console.error('❌ Erro ao carregar funcionalidades:', error);
+        logger.error('Erro ao carregar funcionalidades', { error: error.message });
         return [];
     }
 }
@@ -116,7 +117,7 @@ export function listFuncionalidades() {
         
         return funcionalidades;
     } catch (error) {
-        console.error('Erro ao listar funcionalidades:', error);
+        logger.error('Erro ao listar funcionalidades', { error: error.message });
         return [];
     }
 }
@@ -154,7 +155,7 @@ export async function getDiscoveredRoutes() {
         
         return routes;
     } catch (error) {
-        console.error('Erro ao obter rotas descobertas:', error);
+        logger.error('Erro ao obter rotas descobertas', { error: error.message });
         return [];
     }
 }

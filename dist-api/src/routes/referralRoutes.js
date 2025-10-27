@@ -6,6 +6,7 @@
 import express from 'express';
 import * as referralService from '../services/referralService.js';
 import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get('/my-code', requireAuth, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao obter código:', error);
+    logger.error('Erro ao obter código de referral', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -70,7 +71,7 @@ router.post('/apply', requireAuth, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao aplicar código:', error);
+    logger.error('Erro ao aplicar código de referral', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -100,7 +101,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao obter estatísticas:', error);
+    logger.error('Erro ao obter estatísticas de referral', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -135,7 +136,7 @@ router.post('/complete', requireAuth, async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Erro ao completar referral:', error);
+    logger.error('Erro ao completar referral', { userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message

@@ -11,6 +11,7 @@
  */
 
 import Joi from 'joi';
+import logger from '../config/logger.js';
 
 // ============================================================================
 // SCHEMAS DE AUTENTICAÇÃO
@@ -260,7 +261,7 @@ export function validate(schema) {
                 type: detail.type
             }));
             
-            console.warn(`[Validation] Request validation failed:`, {
+            logger.warn('Request validation failed', {
                 path: req.path,
                 method: req.method,
                 errors: errors
@@ -301,7 +302,7 @@ export function validateQuery(schema) {
                 type: detail.type
             }));
             
-            console.warn(`[Validation] Query validation failed:`, {
+            logger.warn('Query validation failed', {
                 path: req.path,
                 method: req.method,
                 errors: errors
@@ -341,7 +342,7 @@ export function validateParams(schema) {
                 type: detail.type
             }));
             
-            console.warn(`[Validation] Params validation failed:`, {
+            logger.warn('Params validation failed', {
                 path: req.path,
                 method: req.method,
                 errors: errors

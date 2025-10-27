@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { supabase, supabaseAdmin } from '../config/supabase.js';
+import logger from '../config/logger.js';
 
 /**
  * 🔒 HELPER: Criar cliente Supabase autenticado com JWT do usuário
@@ -45,7 +46,7 @@ export async function trackToolUsage(userId, toolName, options = {}) {
       .single();
 
     if (!tool) {
-      console.warn(`Ferramenta ${toolName} não encontrada no catálogo`);
+      logger.warn('Ferramenta não encontrada no catálogo', { toolName });
       return { data: null, error: 'Ferramenta não encontrada' };
     }
 
@@ -66,13 +67,13 @@ export async function trackToolUsage(userId, toolName, options = {}) {
       .single();
 
     if (error) {
-      console.error('Erro ao registrar uso de ferramenta:', error);
+      logger.error('Erro ao registrar uso de ferramenta', { error });
       return { data: null, error };
     }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Erro inesperado ao registrar uso:', error);
+    logger.error('Erro inesperado ao registrar uso', { error });
     return { data: null, error: error.message };
   }
 }
@@ -94,7 +95,7 @@ export async function getMostUsedTools(limit = 4) {
       .limit(1000);
 
     if (execError) {
-      console.error('Erro ao buscar execuções:', execError);
+      logger.error('Erro ao buscar execuções', { execError });
       return { data: [], error: null }; // Retorna vazio ao invés de erro
     }
 
@@ -129,7 +130,7 @@ export async function getMostUsedTools(limit = 4) {
       .eq('is_active', true);
 
     if (toolsError) {
-      console.error('Erro ao buscar ferramentas:', toolsError);
+      logger.error('Erro ao buscar ferramentas', { toolsError });
       return { data: [], error: null };
     }
 
@@ -155,7 +156,7 @@ export async function getMostUsedTools(limit = 4) {
 
     return { data: mostUsed, error: null };
   } catch (error) {
-    console.error('Erro inesperado ao buscar ferramentas:', error);
+    logger.error('Erro inesperado ao buscar ferramentas', { error });
     return { data: [], error: null }; // Retorna vazio em caso de erro
   }
 }
@@ -170,7 +171,7 @@ export async function getMostUsedTools(limit = 4) {
  */
 export async function getMyMostUsedTools(userId, userToken, limit = 4) {
   try {
-    console.log(`📊 [MyTools] Buscando top ${limit} ferramentas do usuário ${userId}`);
+    logger.tool('Buscando ferramentas mais usadas pelo usuário', { userId, limit });
     
     // ✅ SEGURO: Criar cliente autenticado com JWT do usuário
     const userSupabase = createAuthenticatedClient(userToken);
@@ -185,12 +186,12 @@ export async function getMyMostUsedTools(userId, userToken, limit = 4) {
       .limit(500);  // Últimas 500 execuções
 
     if (error) {
-      console.error('Erro ao buscar execuções do usuário:', error);
+      logger.error('Erro ao buscar execuções do usuário', { userId, error });
       return { data: [], error: null };
     }
 
     if (!executions || executions.length === 0) {
-      console.log('ℹ️ [MyTools] Usuário ainda não tem execuções');
+      logger.info('Usuário ainda não tem execuções', { userId });
       return { data: [], error: null };
     }
 
@@ -241,10 +242,10 @@ export async function getMyMostUsedTools(userId, userToken, limit = 4) {
       })
       .filter(Boolean);
 
-    console.log(`✅ [MyTools] Encontradas ${myMostUsed.length} ferramentas do usuário`);
+    logger.tool('Ferramentas do usuário encontradas', { userId, count: myMostUsed.length });
     return { data: myMostUsed, error: null };
   } catch (error) {
-    console.error('Erro inesperado ao buscar ferramentas do usuário:', error);
+    logger.error('Erro inesperado ao buscar ferramentas do usuário', { userId, error });
     return { data: [], error: null };
   }
 }
@@ -256,7 +257,7 @@ export async function getMyMostUsedTools(userId, userToken, limit = 4) {
  */
 export async function getPlatformFavorites() {
   try {
-    console.log('⭐ [Favorites] Buscando favoritos da plataforma...');
+    logger.tool('Buscando favoritos da plataforma');
     
     // ✅ Query agregada - não expõe dados pessoais
     const { data: executions, error } = await supabaseAdmin
@@ -278,12 +279,12 @@ export async function getPlatformFavorites() {
       .limit(2000);  // Últimas 2000 execuções
 
     if (error) {
-      console.error('Erro ao buscar execuções:', error);
+      logger.error('Erro ao buscar execuções', { error });
       return { data: [], error: null };
     }
 
     if (!executions || executions.length === 0) {
-      console.log('ℹ️ [Favorites] Ainda não há execuções na plataforma');
+      logger.info('Ainda não há execuções na plataforma');
       return { data: [], error: null };
     }
 
@@ -342,10 +343,10 @@ export async function getPlatformFavorites() {
       }
     });
 
-    console.log(`✅ [Favorites] Encontrados ${result.length} favoritos da plataforma`);
+    logger.tool('Favoritos da plataforma encontrados', { count: result.length });
     return { data: result, error: null };
   } catch (error) {
-    console.error('Erro inesperado ao buscar favoritos:', error);
+    logger.error('Erro inesperado ao buscar favoritos', { error });
     return { data: [], error: null };
   }
 }
@@ -370,7 +371,7 @@ export async function getUserToolStats(userId, userToken) {
       .order('executed_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar estatísticas do usuário:', error);
+      logger.error('Erro ao buscar estatísticas do usuário', { userId, error });
       return { data: null, error };
     }
 
@@ -450,7 +451,7 @@ export async function getUserToolStats(userId, userToken) {
       error: null
     };
   } catch (error) {
-    console.error('Erro inesperado ao buscar estatísticas:', error);
+    logger.error('Erro inesperado ao buscar estatísticas', { error });
     return { data: null, error: error.message };
   }
 }
@@ -485,7 +486,7 @@ export async function getUserToolHistory(userId, limit = 50) {
       .limit(limit);
 
     if (error) {
-      console.error('Erro ao buscar histórico:', error);
+      logger.error('Erro ao buscar histórico', { userId, error });
       return { data: null, error };
     }
 
@@ -505,7 +506,7 @@ export async function getUserToolHistory(userId, limit = 50) {
 
     return { data: history, error: null };
   } catch (error) {
-    console.error('Erro inesperado ao buscar histórico:', error);
+    logger.error('Erro inesperado ao buscar histórico', { error });
     return { data: null, error: error.message };
   }
 }

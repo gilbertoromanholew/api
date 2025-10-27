@@ -5,6 +5,7 @@
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 import { addBonusPoints } from './pointsService.js';
+import logger from '../config/logger.js';
 
 /**
  * Gerar código de referral único para um usuário
@@ -33,7 +34,7 @@ export async function generateReferralCode(userId) {
       .rpc('generate_referral_code');
 
     if (error) {
-      console.error('Erro ao gerar código:', error);
+      logger.error('Erro ao gerar código de referral', { userId, error });
       return { data: null, error: error.message };
     }
 
@@ -49,7 +50,7 @@ export async function generateReferralCode(userId) {
 
     return { data: { code: data }, error: null };
   } catch (error) {
-    console.error('Erro inesperado ao gerar código:', error);
+    logger.error('Erro inesperado ao gerar código de referral', { userId, error });
     return { data: null, error: error.message };
   }
 }
@@ -78,7 +79,7 @@ export async function getReferralCode(userId) {
 
     return { data: { code: data.referral_code }, error: null };
   } catch (error) {
-    console.error('Erro ao obter código:', error);
+    logger.error('Erro ao obter código de referral', { userId, error });
     return { data: null, error: error.message };
   }
 }
@@ -145,7 +146,7 @@ export async function applyReferralCode(newUserId, referralCode) {
       });
 
     if (historyError) {
-      console.error('Erro ao criar histórico:', historyError);
+      logger.error('Erro ao criar histórico de referral', { referrerId: referrer.id, referredId: newUserId, historyError });
     }
 
     // V7: Dar bônus de boas-vindas para o novo usuário
@@ -170,7 +171,7 @@ export async function applyReferralCode(newUserId, referralCode) {
       error: null
     };
   } catch (error) {
-    console.error('Erro ao aplicar código de referral:', error);
+    logger.error('Erro ao aplicar código de referral', { newUserId, referralCode, error });
     return { data: null, error: error.message };
   }
 }
@@ -208,7 +209,7 @@ export async function completeReferral(referredUserId) {
 
     return { data: { success: true }, error: null };
   } catch (error) {
-    console.error('Erro ao completar referral:', error);
+    logger.error('Erro ao completar referral', { referredUserId, error });
     return { data: null, error: error.message };
   }
 }
@@ -250,7 +251,7 @@ export async function rewardReferrer(referredUserId, bonusAmount = 50) {
 
     return { data: { success: true, bonusAwarded: bonusAmount }, error: null };
   } catch (error) {
-    console.error('Erro ao recompensar referrer:', error);
+    logger.error('Erro ao recompensar referrer', { referredUserId, bonusAmount, error });
     return { data: null, error: error.message };
   }
 }
@@ -277,7 +278,7 @@ export async function getReferralStats(userId) {
       .order('referred_at', { ascending: false });
 
     if (referralsError) {
-      console.error('Erro ao buscar referrals:', referralsError);
+      logger.error('Erro ao buscar referrals do usuário', { userId, referralsError });
       return { data: null, error: referralsError.message };
     }
 
@@ -297,7 +298,7 @@ export async function getReferralStats(userId) {
       error: null
     };
   } catch (error) {
-    console.error('Erro ao obter estatísticas:', error);
+    logger.error('Erro ao obter estatísticas de referral', { userId, error });
     return { data: null, error: error.message };
   }
 }

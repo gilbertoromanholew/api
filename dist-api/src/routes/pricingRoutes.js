@@ -2,6 +2,7 @@ import express from 'express';
 import { requireAuth } from '../middlewares/adminAuth.js';
 import { supabase } from '../config/supabase.js';
 import * as pricingService from '../services/toolsPricingService.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get('/:toolSlug', requireAuth, async (req, res) => {
     const { toolSlug } = req.params;
     const userId = req.user.id;
 
-    console.log(`📊 [Pricing] Consultando preço: ${toolSlug} para usuário ${userId}`);
+    logger.info('Consultando preço de ferramenta', { toolSlug, userId });
 
     const pricing = await pricingService.getToolPricing(toolSlug, userId);
 
@@ -23,7 +24,7 @@ router.get('/:toolSlug', requireAuth, async (req, res) => {
       data: pricing
     });
   } catch (error) {
-    console.error('❌ [Pricing] Erro:', error);
+    logger.error('Erro ao consultar preço', { toolSlug: req.params?.toolSlug, userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -65,7 +66,7 @@ router.get('/:toolSlug/usage', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ [Pricing] Erro ao buscar uso:', error);
+    logger.error('Erro ao buscar uso mensal', { toolSlug: req.params?.toolSlug, userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
@@ -94,7 +95,7 @@ router.post('/:toolSlug/calculate', requireAuth, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('❌ [Pricing] Erro ao calcular:', error);
+    logger.error('Erro ao calcular custo', { toolSlug: req.params?.toolSlug, userId: req.user?.id, error: error.message });
     return res.status(500).json({
       success: false,
       error: error.message
