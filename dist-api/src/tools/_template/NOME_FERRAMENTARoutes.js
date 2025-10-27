@@ -5,26 +5,22 @@ import * as controller from './NOME_FERRAMENTAController.js';
 const router = express.Router();
 
 /**
- * ⚙️ CONFIGURAÇÃO DA FERRAMENTA
+ * 🔒 ROTAS DA FERRAMENTA
  * 
- * Esta configuração é usada pelo sistema de AUTO-DISCOVERY.
- * O servidor escaneia esta pasta e registra automaticamente a ferramenta.
+ * Sistema V9: FONTE ÚNICA DA VERDADE = Supabase (tools_catalog)
+ * 
+ * Todas as informações (slug, name, description, cost, category) são
+ * buscadas diretamente do Supabase em tempo de execução.
+ * 
+ * BENEFÍCIOS:
+ * ✅ Zero duplicação de dados
+ * ✅ Atualização instantânea (mudar no Supabase = reflete imediatamente)
+ * ✅ Sem dessincronia entre código e banco
+ * ✅ Manutenção simplificada
  * 
  * IMPORTANTE:
- * - slug: DEVE SER IGUAL ao campo 'slug' no Supabase (tools_catalog)
- * - name: Nome exibido no sistema
- */
-export const config = {
-    slug: 'SLUG_FERRAMENTA',              // ⚠️ ALTERAR: mesmo do Supabase
-    name: 'Nome da Ferramenta',           // ⚠️ ALTERAR: nome amigável
-    version: '1.0.0',
-    description: 'Descrição da ferramenta',
-    category: 'Categoria',                // Ex: Trabalhista, Financeiro, Validadores
-    author: 'Sistema V9'
-};
-
-/**
- * 🔒 ROTAS (TODAS COM AUTENTICAÇÃO)
+ * - O slug da ferramenta é definido no nome da pasta
+ * - O auto-discovery usa o nome da pasta como slug
  */
 
 // POST /api/tools/SLUG_FERRAMENTA/execute
@@ -32,7 +28,7 @@ export const config = {
 router.post('/execute', requireAuth, controller.execute);
 
 // GET /api/tools/SLUG_FERRAMENTA/info
-// Retorna informações da ferramenta (requer autenticação)
+// Retorna informações da ferramenta (do Supabase)
 router.get('/info', requireAuth, controller.getInfo);
 
 export { router };

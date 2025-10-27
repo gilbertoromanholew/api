@@ -1,17 +1,17 @@
 import * as service from './NOME_FERRAMENTAService.js';
 import { supabaseAdmin } from '../../config/supabase.js';
-import { config } from './NOME_FERRAMENTARoutes.js';
 
 /**
  * 🎯 POST /api/tools/SLUG_FERRAMENTA/execute
  * 
- * FLUXO:
+ * FLUXO V9 (Fonte Única da Verdade = Supabase):
  * 1. Valida dados de entrada
- * 2. Busca custo da ferramenta no Supabase (tools_catalog)
- * 3. Debita pontos do usuário (debit_credits)
- * 4. Executa lógica de negócio (Service)
- * 5. Registra execução para auditoria (tools_executions)
- * 6. Retorna resultado
+ * 2. Busca TODOS os dados da ferramenta no Supabase (slug, name, cost, is_active)
+ * 3. Verifica se ferramenta está ativa
+ * 4. Debita pontos do usuário (debit_credits)
+ * 5. Executa lógica de negócio (Service)
+ * 6. Registra execução para auditoria (tools_executions)
+ * 7. Retorna resultado
  */
 export async function execute(req, res) {
     try {
@@ -25,38 +25,48 @@ export async function execute(req, res) {
             });
         }
 
-        // ETAPA 1: Buscar custo da ferramenta no Supabase
+        // ETAPA 1: Buscar ferramenta no Supabase (FONTE ÚNICA DA VERDADE)
+        // O slug é extraído do caminho da pasta pelo auto-discovery
+        const toolSlug = 'SLUG_FERRAMENTA'; // ⚠️ ALTERAR para o slug real
+        
         const { data: tool, error: toolError } = await supabaseAdmin
             .from('tools_catalog')
-            .select('id, cost_in_points')
-            .eq('slug', config.slug)
+            .select('id, slug, name, cost_in_points, is_active')
+            .eq('slug', toolSlug)
             .single();
 
         if (toolError || !tool) {
-            console.error(`[${config.slug}] Ferramenta não encontrada no catálogo:`, toolError);
-            return res.status(500).json({ 
-                error: 'Ferramenta não configurada no sistema' 
+            console.error(`[${toolSlug}] Ferramenta não encontrada no catálogo:`, toolError);
+            return res.status(404).json({ 
+                error: 'Ferramenta não encontrada' 
             });
         }
 
-        // ETAPA 2: Deduzir pontos do usuário
+        // ETAPA 2: Verificar se ferramenta está ativa
+        if (!tool.is_active) {
+            return res.status(403).json({ 
+                error: 'Ferramenta temporariamente indisponível' 
+            });
+        }
+
+        // ETAPA 3: Debitar pontos do usuário
         const { error: debitError } = await supabaseAdmin.rpc('debit_credits', {
             p_user_id: userId,
             p_amount: tool.cost_in_points,
-            p_reason: `Uso da ferramenta: ${config.name}`
+            p_reason: `Uso da ferramenta: ${tool.name}`  // ✅ Nome vem do Supabase
         });
 
         if (debitError) {
-            console.error(`[${config.slug}] Erro ao debitar pontos:`, debitError);
+            console.error(`[${toolSlug}] Erro ao debitar pontos:`, debitError);
             return res.status(400).json({ 
-                error: 'Saldo insuficiente ou erro ao debitar pontos' 
+                error: 'Saldo insuficiente ou erro ao processar pontos' 
             });
         }
 
-        // ETAPA 3: Executar lógica da ferramenta
+        // ETAPA 4: Executar lógica da ferramenta
         const resultado = await service.processar(inputData);
 
-        // ETAPA 4: Registrar execução (auditoria)
+        // ETAPA 5: Registrar histórico de execução (auditoria)
         await supabaseAdmin.from('tools_executions').insert({
             user_id: userId,
             tool_id: tool.id,
@@ -66,14 +76,18 @@ export async function execute(req, res) {
             success: true
         });
 
-        // ETAPA 5: Retornar resultado
+        // ETAPA 6: Retornar resultado com metadados
         return res.json({
             success: true,
-            resultado
+            resultado,
+            metadata: {
+                tool_name: tool.name,
+                points_used: tool.cost_in_points
+            }
         });
 
     } catch (error) {
-        console.error(`[${config.slug}] Erro ao executar:`, error);
+        console.error(`[SLUG_FERRAMENTA] Erro ao executar:`, error);
         
         // Em caso de erro, tentar reverter pontos (opcional)
         // TODO: Implementar reversão de pontos se necessário
@@ -87,25 +101,38 @@ export async function execute(req, res) {
 /**
  * 🔍 GET /api/tools/SLUG_FERRAMENTA/info
  * 
- * Retorna informações sobre a ferramenta.
- * Útil para validar se está funcionando.
+ * Retorna informações sobre a ferramenta (do Supabase).
+ * Frontend usa para exibir nome, custo, categoria, etc.
  */
 export async function getInfo(req, res) {
     try {
+        const toolSlug = 'SLUG_FERRAMENTA'; // ⚠️ ALTERAR para o slug real
+        
+        // Buscar informações do Supabase (fonte única)
+        const { data: tool, error } = await supabaseAdmin
+            .from('tools_catalog')
+            .select('*')
+            .eq('slug', toolSlug)
+            .single();
+
+        if (error || !tool) {
+            return res.status(404).json({ 
+                error: 'Ferramenta não encontrada' 
+            });
+        }
+
         return res.json({
             success: true,
             tool: {
-                ...config,
-                status: 'operational',
-                autoDiscovered: true,
+                ...tool,  // ✅ Todos os dados do Supabase
                 endpoints: {
-                    execute: `POST /api/tools/${config.slug}/execute`,
-                    info: `GET /api/tools/${config.slug}/info`
+                    execute: `POST /api/tools/${toolSlug}/execute`,
+                    info: `GET /api/tools/${toolSlug}/info`
                 }
             }
         });
     } catch (error) {
-        console.error(`[${config.slug}] Erro ao obter info:`, error);
+        console.error(`[SLUG_FERRAMENTA] Erro ao obter info:`, error);
         return res.status(500).json({ error: error.message });
     }
 }
