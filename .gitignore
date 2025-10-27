@@ -1,7 +1,0 @@
-# Environment files - NUNCA commitar arquivos com secrets reais
-.env                    # Arquivo de desenvolvimento local
-.env.local              # Arquivo local alternativo
-.env.*                  # Qualquer variação de .env
-
-# Template para Coolify - PODE ser commitado (apenas referência)
-!.env.coolify           # Exceção: permite commitar o template
