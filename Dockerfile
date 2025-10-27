@@ -35,6 +35,10 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/server.js ./server.js
 
+# [CORREÇÃO] Dar ao usuário 'nodejs' a propriedade de todo o diretório /app
+# Isso permitirá que ele crie a pasta /app/logs
+RUN chown -R nodejs:nodejs /app
+
 # Mudar para usuário não-root
 USER nodejs
 
