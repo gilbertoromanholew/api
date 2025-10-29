@@ -112,7 +112,8 @@ export function validateCsrfToken(req, res, next) {
         '/auth/resend-confirmation',
         '/auth/verify-email-token',
         '/auth/forgot-password',
-        '/auth/reset-password'
+        '/auth/reset-password',
+        '/auth/logout'           // Logout não requer CSRF (usuário já autenticado)
     ];
     
     // Se é endpoint público, não valida CSRF (ainda não tem token)
