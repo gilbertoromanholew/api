@@ -371,10 +371,130 @@ export const toolExecutionLimiter = rateLimit({
     }
 });
 
+/**
+ * Rate limiter inteligente para rotas autenticadas
+ * Mais permissivo para usuários PRO e autenticados
+ * 
+ * Estratégia:
+ * - Usuários PRO: 500 req/15min (5x mais que padrão)
+ * - Usuários autenticados comuns: 200 req/15min (2x mais que padrão)
+ * - Usuários não autenticados: 100 req/15min (padrão)
+ * - Key: User ID (se autenticado) OU IP
+ */
+export const smartApiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    
+    // Limite dinâmico baseado no tipo de usuário
+    max: (req) => {
+        // Usuários PRO têm limite maior
+        if (req.user && req.user.role === 'pro') {
+            return 500; // 5x mais permissivo
+        }
+        // Usuários autenticados têm limite intermediário
+        if (req.userId || (req.user && req.user.id)) {
+            return 200; // 2x mais permissivo
+        }
+        // Usuários não autenticados usam limite padrão
+        return 100;
+    },
+    
+    message: (req) => {
+        const isPro = req.user && req.user.role === 'pro';
+        const isAuthenticated = req.userId || (req.user && req.user.id);
+        
+        let limit, message;
+        if (isPro) {
+            limit = 500;
+            message = 'Você excedeu o limite PRO de requisições. Por favor, aguarde alguns minutos.';
+        } else if (isAuthenticated) {
+            limit = 200;
+            message = 'Você excedeu o limite de requisições. Por favor, aguarde alguns minutos.';
+        } else {
+            limit = 100;
+            message = 'Você excedeu o limite de requisições. Por favor, aguarde alguns minutos.';
+        }
+        
+        return {
+            success: false,
+            error: 'Too many requests',
+            message,
+            limit,
+            retryAfter: 15 * 60,
+            userType: isPro ? 'pro' : isAuthenticated ? 'authenticated' : 'anonymous'
+        };
+    },
+    
+    standardHeaders: true,
+    legacyHeaders: false,
+    
+    // Rate limit por usuário (se autenticado) OU IP
+    keyGenerator: (req) => {
+        // Se tiver req.userId (setado pelo requireAuth), usar ele
+        if (req.userId) {
+            return `user-${req.userId}`;
+        }
+        // Se tiver req.user (setado pelo requireAuth), usar ele
+        if (req.user && req.user.id) {
+            return `user-${req.user.id}`;
+        }
+        // Se não, usar IP
+        return req.ip || req.connection.remoteAddress;
+    },
+    
+    handler: (req, res) => {
+        const identifier = req.userId || req.user?.id || req.ip;
+        const isPro = req.user && req.user.role === 'pro';
+        const isAuthenticated = req.userId || (req.user && req.user.id);
+        
+        console.warn(`[Smart Rate Limit] API limit exceeded - Identifier: ${identifier}, Type: ${isPro ? 'PRO' : isAuthenticated ? 'AUTH' : 'ANON'}`);
+        
+        // Fase 3: Registrar violação
+        logRateLimitViolation({
+            ip: req.ip,
+            userId: req.userId || req.user?.id || null,
+            endpoint: req.path,
+            limiterType: 'smart-api',
+            attempts: isPro ? 500 : isAuthenticated ? 200 : 100,
+            userAgent: req.headers['user-agent'],
+            metadata: { userRole: req.user?.role || 'anonymous' }
+        }).catch(err => console.error('[Rate Limit] Failed to log violation:', err));
+        
+        const limit = isPro ? 500 : isAuthenticated ? 200 : 100;
+        const message = isPro 
+            ? 'Você excedeu o limite PRO de requisições. Por favor, aguarde alguns minutos.'
+            : 'Você excedeu o limite de requisições. Por favor, aguarde alguns minutos.';
+        
+        res.status(429).json({
+            success: false,
+            error: 'Too many requests',
+            message,
+            limit,
+            retryAfter: 15 * 60,
+            userType: isPro ? 'pro' : isAuthenticated ? 'authenticated' : 'anonymous'
+        });
+    },
+    
+    skip: (req) => {
+        // Skip para VPN ZeroTier (sempre)
+        const ip = req.ip || req.connection.remoteAddress;
+        if (ip && ip.startsWith('10.244.')) {
+            return true;
+        }
+        
+        // Usuários PRO nunca são limitados (exceto pela VPN acima)
+        if (req.user && req.user.role === 'pro') {
+            return true;
+        }
+        
+        return false;
+    }
+});
+
 export default {
     authLimiter,
     registerLimiter,
     apiLimiter,
     supabaseLimiter,
-    toolExecutionLimiter
+    toolExecutionLimiter,
+    smartApiLimiter
 };

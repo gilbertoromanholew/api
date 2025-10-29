@@ -38,7 +38,8 @@ import {
     authLimiter, 
     registerLimiter, 
     apiLimiter, 
-    supabaseLimiter 
+    supabaseLimiter,
+    smartApiLimiter 
 } from './src/middlewares/rateLimiters.js';
 // Fase 1: CSRF Protection
 import { validateCsrfToken } from './src/middlewares/csrfProtection.js';
@@ -160,24 +161,24 @@ app.use('/auth', authRoutes);
 // 📍 V7: ROTAS DE GAMIFICAÇÃO E ECONOMIA (público/autenticado)
 // =========================================================================
 // Conquistas e assinaturas Pro (Nova Economia V7)
-// Rate limiting aplicado (apiLimiter - 100 req/15min)
-app.use('/achievements', apiLimiter, achievementsRoutes);
-app.use('/subscription', apiLimiter, subscriptionRoutes);
+// Rate limiting inteligente aplicado (smartApiLimiter - dinâmico por tipo de usuário)
+app.use('/achievements', smartApiLimiter, achievementsRoutes);
+app.use('/subscription', smartApiLimiter, subscriptionRoutes);
 
 // Tracking de ferramentas, códigos promocionais e sistema de indicação
-app.use('/tools', apiLimiter, toolsRoutes);
-app.use('/tools/planning', apiLimiter, planningToolsRoutes);
-app.use('/promo-codes', apiLimiter, promoCodesRoutes);
-app.use('/referrals', apiLimiter, referralRoutes);
+app.use('/tools', smartApiLimiter, toolsRoutes);
+app.use('/tools/planning', smartApiLimiter, planningToolsRoutes);
+app.use('/promo-codes', smartApiLimiter, promoCodesRoutes);
+app.use('/referrals', smartApiLimiter, referralRoutes);
 
 // Sistema de créditos/pontos centralizado
-app.use('/credits', apiLimiter, creditsRoutes);
+app.use('/credits', smartApiLimiter, creditsRoutes);
 
 // Sistema de precificação diferenciada por plano
-app.use('/pricing', apiLimiter, pricingRoutes);
+app.use('/pricing', smartApiLimiter, pricingRoutes);
 
 // Sistema de notificações em tempo real
-app.use('/notifications', apiLimiter, notificationsRoutes);
+app.use('/notifications', smartApiLimiter, notificationsRoutes);
 
 // =========================================================================
 // 📍 V7: ADMIN PANEL (requer autenticação + role admin)
@@ -317,8 +318,8 @@ app.use('/audit', ipFilter, auditRoutes); // 🔒 Auditoria (requireAdmin já ap
 // Fase 2: Rate limiting aplicado (100 req/15min por usuário autenticado)
 
 // Auto-carregar funcionalidades do diretório src/functions/
-// Rate limiting é aplicado globalmente nas rotas autenticadas
-await autoLoadRoutes(app, apiLimiter);
+// Rate limiting inteligente aplicado (dinâmico por tipo de usuário)
+await autoLoadRoutes(app, smartApiLimiter);
 
 // Nota: validateRouteAccess e trackViolations são aplicados dentro das rotas individuais
 // via requireAuth middleware em cada controller
