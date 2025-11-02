@@ -46,6 +46,8 @@ import { validateCsrfToken } from './src/middlewares/csrfProtection.js';
 // V8: WebSocket para atualizações em tempo real
 import { initializeSocket } from './src/services/socketService.js';
 import { startPresenceCleanup } from './src/services/presenceService.js';
+// V8: Request Logger - Registra todas as requisições na tabela admin_access_logs
+import requestLogger from './src/middleware/requestLogger.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -90,7 +92,11 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// 🔐 CSRF Protection - Valida tokens em requisições mutantes (POST/PUT/DELETE/PATCH)
+// � REQUEST LOGGER - Registra todas as requisições em admin_access_logs
+// Colocado ANTES das rotas para capturar todos os acessos
+app.use(requestLogger);
+
+// �🔐 CSRF Protection - Valida tokens em requisições mutantes (POST/PUT/DELETE/PATCH)
 // Endpoints públicos (login, register) são automaticamente excluídos
 app.use(validateCsrfToken);
 
@@ -181,10 +187,11 @@ app.use('/pricing', smartApiLimiter, pricingRoutes);
 app.use('/notifications', smartApiLimiter, notificationsRoutes);
 
 // =========================================================================
-// 📍 V7: ADMIN PANEL (requer autenticação + role admin)
+// 📍 V7: ADMIN PANEL (requer autenticação + role admin + IP whitelist)
 // =========================================================================
 // Painel administrativo para gerenciamento de usuários e sistema
-app.use('/admin', apiLimiter, adminRoutes);
+// 🔒 IP Filter: Apenas IPs autorizados (incluindo ZeroTier 10.244.0.0/16)
+app.use('/admin', ipFilter, apiLimiter, adminRoutes);
 
 // Sistema de presença online (admin only)
 app.use('/presence', apiLimiter, presenceRoutes);

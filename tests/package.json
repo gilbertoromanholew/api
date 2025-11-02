@@ -1,0 +1,16 @@
+{
+  "name": "admin-panel-tests",
+  "version": "1.0.0",
+  "description": "Testes automatizados para o Painel Administrativo V7",
+  "scripts": {
+    "test": "node test-audit-log.js",
+    "test:audit": "node test-audit-log.js",
+    "test:browser": "echo 'Abra o navegador e carregue admin-panel-tests.js no console'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
+  },
+  "devDependencies": {},
+  "author": "Admin Panel Team",
+  "license": "MIT"
+}

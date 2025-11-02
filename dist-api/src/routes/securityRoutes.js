@@ -1,19 +1,27 @@
 /**
  * Rotas para gerenciamento do sistema de bloqueio de IPs
+ * AUDITORIA: Adicionado requireAdmin para proteger endpoints sensíveis
  */
 
 import express from 'express';
 import { ipBlockingSystem } from '../utils/ipBlockingSystem.js';
+import { requireAuth, requireAdmin } from '../middlewares/adminAuth.js';
+import logger from '../config/logger.js';
 
 const router = express.Router();
 
 /**
  * GET /security/stats
  * Estatísticas gerais do sistema de bloqueio
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/stats', (req, res) => {
+router.get('/stats', requireAuth, requireAdmin, (req, res) => {
     try {
         const stats = ipBlockingSystem.getStats();
+        
+        logger.info('Admin consultou estatísticas de segurança', {
+            adminId: req.user.id
+        });
         
         res.json({
             success: true,
@@ -21,6 +29,10 @@ router.get('/stats', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao buscar stats de segurança', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -31,10 +43,16 @@ router.get('/stats', (req, res) => {
 /**
  * GET /security/blocked
  * Lista de IPs permanentemente bloqueados
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/blocked', (req, res) => {
+router.get('/blocked', requireAuth, requireAdmin, (req, res) => {
     try {
         const blocked = ipBlockingSystem.getBlockedIPs();
+        
+        logger.info('Admin listou IPs bloqueados', {
+            adminId: req.user.id,
+            count: blocked.length
+        });
         
         res.json({
             success: true,
@@ -43,6 +61,10 @@ router.get('/blocked', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao listar IPs bloqueados', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -53,10 +75,16 @@ router.get('/blocked', (req, res) => {
 /**
  * GET /security/suspended
  * Lista de IPs temporariamente suspensos
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/suspended', (req, res) => {
+router.get('/suspended', requireAuth, requireAdmin, (req, res) => {
     try {
         const suspended = ipBlockingSystem.getSuspendedIPs();
+        
+        logger.info('Admin listou IPs suspensos', {
+            adminId: req.user.id,
+            count: suspended.length
+        });
         
         res.json({
             success: true,
@@ -65,6 +93,10 @@ router.get('/suspended', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao listar IPs suspensos', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -75,10 +107,16 @@ router.get('/suspended', (req, res) => {
 /**
  * GET /security/warnings
  * Lista de IPs com avisos (tentativas registradas)
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/warnings', (req, res) => {
+router.get('/warnings', requireAuth, requireAdmin, (req, res) => {
     try {
         const warnings = ipBlockingSystem.getWarningIPs();
+        
+        logger.info('Admin listou IPs com avisos', {
+            adminId: req.user.id,
+            count: warnings.length
+        });
         
         res.json({
             success: true,
@@ -87,6 +125,10 @@ router.get('/warnings', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao listar IPs com avisos', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -97,11 +139,18 @@ router.get('/warnings', (req, res) => {
 /**
  * GET /security/check/:ip
  * Verifica o status de um IP específico
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/check/:ip', (req, res) => {
+router.get('/check/:ip', requireAuth, requireAdmin, (req, res) => {
     try {
         const { ip } = req.params;
         const status = ipBlockingSystem.checkIP(ip);
+        
+        logger.info('Admin verificou status de IP', {
+            adminId: req.user.id,
+            checkedIP: ip,
+            status
+        });
         
         res.json({
             success: true,
@@ -110,6 +159,10 @@ router.get('/check/:ip', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao verificar IP', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -120,13 +173,19 @@ router.get('/check/:ip', (req, res) => {
 /**
  * POST /security/unblock/:ip
  * Remover bloqueio permanente de um IP (apenas admin)
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/unblock/:ip', (req, res) => {
+router.post('/unblock/:ip', requireAuth, requireAdmin, (req, res) => {
     try {
         const { ip } = req.params;
         const result = ipBlockingSystem.unblockIP(ip);
         
         if (result) {
+            logger.security('Admin desbloqueou IP', {
+                adminId: req.user.id,
+                unblockedIP: ip
+            });
+            
             res.json({
                 success: true,
                 message: `IP ${ip} has been unblocked`,
@@ -141,6 +200,11 @@ router.post('/unblock/:ip', (req, res) => {
             });
         }
     } catch (error) {
+        logger.error('Erro ao desbloquear IP', {
+            adminId: req.user.id,
+            ip: req.params.ip,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -151,13 +215,19 @@ router.post('/unblock/:ip', (req, res) => {
 /**
  * POST /security/unsuspend/:ip
  * Remover suspensão temporária de um IP (apenas admin)
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/unsuspend/:ip', (req, res) => {
+router.post('/unsuspend/:ip', requireAuth, requireAdmin, (req, res) => {
     try {
         const { ip } = req.params;
         const result = ipBlockingSystem.unsuspendIP(ip);
         
         if (result) {
+            logger.security('Admin removeu suspensão de IP', {
+                adminId: req.user.id,
+                unsuspendedIP: ip
+            });
+            
             res.json({
                 success: true,
                 message: `IP ${ip} suspension has been lifted`,
@@ -172,6 +242,11 @@ router.post('/unsuspend/:ip', (req, res) => {
             });
         }
     } catch (error) {
+        logger.error('Erro ao remover suspensão', {
+            adminId: req.user.id,
+            ip: req.params.ip,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -182,10 +257,16 @@ router.post('/unsuspend/:ip', (req, res) => {
 /**
  * POST /security/cleanup
  * Limpar suspensões expiradas (manutenção)
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/cleanup', (req, res) => {
+router.post('/cleanup', requireAuth, requireAdmin, (req, res) => {
     try {
         const cleaned = ipBlockingSystem.cleanupExpired();
+        
+        logger.info('Admin limpou suspensões expiradas', {
+            adminId: req.user.id,
+            cleanedCount: cleaned
+        });
         
         res.json({
             success: true,
@@ -194,6 +275,10 @@ router.post('/cleanup', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao limpar suspensões', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -204,13 +289,18 @@ router.post('/cleanup', (req, res) => {
 /**
  * GET /security/all
  * Obter todas as informações de segurança de uma vez
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/all', (req, res) => {
+router.get('/all', requireAuth, requireAdmin, (req, res) => {
     try {
         const stats = ipBlockingSystem.getStats();
         const blocked = ipBlockingSystem.getBlockedIPs();
         const suspended = ipBlockingSystem.getSuspendedIPs();
         const warnings = ipBlockingSystem.getWarningIPs();
+        
+        logger.info('Admin consultou todas info de segurança', {
+            adminId: req.user.id
+        });
         
         res.json({
             success: true,
@@ -230,6 +320,10 @@ router.get('/all', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao buscar todas info de segurança', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -240,8 +334,9 @@ router.get('/all', (req, res) => {
 /**
  * POST /security/suspend-manual/:ip
  * Suspender IP manualmente por 1 hora (admin)
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/suspend-manual/:ip', (req, res) => {
+router.post('/suspend-manual/:ip', requireAuth, requireAdmin, (req, res) => {
     try {
         const { ip } = req.params;
         
@@ -261,6 +356,13 @@ router.post('/suspend-manual/:ip', (req, res) => {
             return res.status(400).json(result);
         }
         
+        logger.security('Admin suspendeu IP manualmente', {
+            adminId: req.user.id,
+            suspendedIP: ip,
+            until: result.until,
+            suspensionNumber: result.suspensionNumber
+        });
+        
         res.json({
             success: true,
             message: result.message,
@@ -270,6 +372,11 @@ router.post('/suspend-manual/:ip', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao suspender IP manualmente', {
+            adminId: req.user.id,
+            ip: req.params.ip,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -280,8 +387,9 @@ router.post('/suspend-manual/:ip', (req, res) => {
 /**
  * POST /security/block-manual/:ip
  * Bloquear IP manualmente de forma permanente (admin)
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/block-manual/:ip', (req, res) => {
+router.post('/block-manual/:ip', requireAuth, requireAdmin, (req, res) => {
     try {
         const { ip } = req.params;
         
@@ -297,6 +405,12 @@ router.post('/block-manual/:ip', (req, res) => {
         // Usar método direto de bloqueio manual
         const result = ipBlockingSystem.blockIPManually(ip);
         
+        logger.security('Admin bloqueou IP permanentemente', {
+            adminId: req.user.id,
+            blockedIP: ip,
+            previousState: result.previousState
+        });
+        
         res.json({
             success: true,
             message: result.message,
@@ -306,6 +420,11 @@ router.post('/block-manual/:ip', (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao bloquear IP manualmente', {
+            adminId: req.user.id,
+            ip: req.params.ip,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -317,8 +436,9 @@ router.post('/block-manual/:ip', (req, res) => {
  * GET /security/unified
  * Lista unificada de IPs com paginação, filtros e busca
  * Query params: page, limit, filter (all|normal|warning|suspended|blocked), search
+ * AUDITORIA: Adicionado requireAdmin
  */
-router.get('/unified', async (req, res) => {
+router.get('/unified', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { page = 1, limit = 20, filter = 'all', search = '' } = req.query;
         const pageNum = parseInt(page);
@@ -705,11 +825,16 @@ router.post('/add-ip', async (req, res) => {
 /**
  * GET /security/allowed-ips
  * Listar todos os IPs autorizados
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.get('/allowed-ips', async (req, res) => {
+router.get('/allowed-ips', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { getAllowedIPsList } = await import('../config/allowedIPs.js');
         const list = getAllowedIPsList();
+        
+        logger.info('Admin consultou lista de IPs autorizados', {
+            adminId: req.user.id
+        });
         
         res.json({
             success: true,
@@ -717,6 +842,10 @@ router.get('/allowed-ips', async (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        logger.error('Erro ao buscar IPs autorizados', {
+            adminId: req.user.id,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -728,8 +857,9 @@ router.get('/allowed-ips', async (req, res) => {
  * POST /security/authorize-ip
  * Adicionar IP à lista de autorizados (allowlist)
  * Body: { ip: string, level?: 'guest' | 'trusted', reason?: string }
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/authorize-ip', async (req, res) => {
+router.post('/authorize-ip', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { ip, level, reason } = req.body;
 
@@ -780,8 +910,20 @@ router.post('/authorize-ip', async (req, res) => {
             return res.status(400).json(result);
         }
 
+        logger.security('Admin autorizou novo IP', {
+            adminId: req.user.id,
+            authorizedIP: ip,
+            level: accessLevel,
+            reason: reason || `IP autorizado como ${accessLevel}`
+        });
+
         res.json(result);
     } catch (error) {
+        logger.error('Erro ao autorizar IP', {
+            adminId: req.user.id,
+            ip: req.body.ip,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message
@@ -792,8 +934,9 @@ router.post('/authorize-ip', async (req, res) => {
 /**
  * POST /security/unauthorize-ip/:ip
  * Remover IP da lista de autorizados (allowlist)
+ * AUDITORIA: Adicionado requireAdmin e logging
  */
-router.post('/unauthorize-ip/:ip', async (req, res) => {
+router.post('/unauthorize-ip/:ip', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { ip } = req.params;
 
@@ -813,8 +956,67 @@ router.post('/unauthorize-ip/:ip', async (req, res) => {
             return res.status(400).json(result);
         }
 
+        logger.security('Admin removeu IP autorizado', {
+            adminId: req.user.id,
+            removedIP: ip
+        });
+
         res.json(result);
     } catch (error) {
+        logger.error('Erro ao remover IP autorizado', {
+            adminId: req.user.id,
+            ip: req.params.ip,
+            error: error.message
+        });
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * DELETE /security/revoke-ip/:ip
+ * ALIAS para /security/unauthorize-ip/:ip (compatibilidade frontend)
+ */
+router.delete('/revoke-ip/:ip', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { ip } = req.params;
+
+        // Validar formato do IP
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid IP address format'
+            });
+        }
+
+        const { removeAllowedIP } = await import('../config/allowedIPs.js');
+        const result = removeAllowedIP(ip);
+
+        if (!result.success) {
+            return res.status(404).json({
+                success: false,
+                error: `IP ${ip} não está autorizado`
+            });
+        }
+
+        logger.security('Admin revogou autorização de IP', {
+            adminId: req.user.id,
+            revokedIP: ip
+        });
+
+        res.json({
+            success: true,
+            message: `Autorização do IP ${ip} revogada`
+        });
+    } catch (error) {
+        logger.error('Erro ao revogar IP', {
+            adminId: req.user.id,
+            ip: req.params.ip,
+            error: error.message
+        });
         res.status(500).json({
             success: false,
             error: error.message

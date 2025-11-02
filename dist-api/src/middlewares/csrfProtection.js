@@ -113,7 +113,9 @@ export function validateCsrfToken(req, res, next) {
         '/auth/verify-email-token',
         '/auth/forgot-password',
         '/auth/reset-password',
-        '/auth/logout'           // Logout não requer CSRF (usuário já autenticado)
+        '/auth/logout',           // Logout não requer CSRF (usuário já autenticado)
+        '/admin/login',           // Admin login validado por IP, não por CSRF
+        '/admin/check-ip'         // Check IP é público (pré-login)
     ];
     
     // Se é endpoint público, não valida CSRF (ainda não tem token)

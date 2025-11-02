@@ -780,41 +780,53 @@ router.post('/login-cpf', authLimiter, async (req, res) => {
  */
 router.post('/logout', async (req, res) => {
     try {
+        logger.auth('🚪 Iniciando processo de logout');
+        
         // Obter user_id antes de fazer logout (cookies ainda disponíveis)
         const accessToken = req.cookies?.['sb-access-token'];
         let userId = null;
 
         if (accessToken) {
+            logger.auth('🔍 Token de acesso encontrado, buscando usuário');
             try {
                 // Usar supabaseAdmin para validar o token
                 const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
                 if (!userError && user) {
                     userId = user.id;
-                    logger.auth('User ID encontrado para logout', { userId });
+                    logger.auth('✅ User ID encontrado para logout', { userId });
+                } else {
+                    logger.warn('⚠️ Erro ao obter usuário:', userError);
                 }
             } catch (err) {
-                logger.error('Não foi possível obter usuário para auditoria de logout', { error: err.message });
+                logger.error('❌ Não foi possível obter usuário para auditoria de logout', { error: err.message });
             }
+        } else {
+            logger.warn('⚠️ Nenhum token de acesso encontrado nos cookies');
         }
 
         // Fazer logout (não importa se falhar, vamos limpar os cookies de qualquer forma)
         try {
+            logger.auth('📡 Chamando Supabase signOut...');
             const { error } = await supabase.auth.signOut();
             if (error) {
-                logger.warn('Erro não crítico no signOut do Supabase', { error: error.message });
+                logger.warn('⚠️ Erro não crítico no signOut do Supabase', { error: error.message });
+            } else {
+                logger.auth('✅ Supabase signOut concluído');
             }
         } catch (err) {
-            logger.warn('SignOut do Supabase falhou (não crítico)', { error: err.message });
+            logger.warn('⚠️ SignOut do Supabase falhou (não crítico)', { error: err.message });
         }
 
         // Limpar cookies de sessão (SEMPRE fazer isso, mesmo se signOut falhar)
-        res.clearCookie('sb-access-token', { path: '/' });
-        res.clearCookie('sb-refresh-token', { path: '/' });
+        logger.auth('🗑️ Limpando cookies de sessão...');
+        res.clearCookie('sb-access-token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+        res.clearCookie('sb-refresh-token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production' });
         
         // 🔐 Limpar CSRF token
         clearCsrfToken(res);
+        logger.auth('✅ Cookies limpos');
 
-        logger.auth('Logout realizado e cookies limpos', { userId });
+        logger.auth('✅ Logout realizado com sucesso', { userId });
 
         // ✅ Registrar auditoria de logout
         if (userId) {
@@ -827,7 +839,13 @@ router.post('/logout', async (req, res) => {
             message: 'Logout realizado com sucesso'
         });
     } catch (error) {
-        logger.error('Erro ao fazer logout', { error: error.message });
+        logger.error('❌ Erro ao fazer logout', { error: error.message, stack: error.stack });
+        
+        // Mesmo em caso de erro, tentar limpar cookies
+        res.clearCookie('sb-access-token', { path: '/' });
+        res.clearCookie('sb-refresh-token', { path: '/' });
+        clearCsrfToken(res);
+        
         res.status(500).json({
             success: false,
             error: 'Erro ao fazer logout',
@@ -839,8 +857,28 @@ router.post('/logout', async (req, res) => {
 /**
  * GET /auth/session
  * Obter sessão atual
+ * Rate limiter mais permissivo para verificações de autenticação
  */
-router.get('/session', async (req, res) => {
+const sessionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 50, // 50 verificações por 15min (mais permissivo que o padrão)
+    message: {
+        success: false,
+        error: 'Too many session checks',
+        message: 'Muitas verificações de sessão. Por favor, aguarde alguns minutos.',
+        retryAfter: 15 * 60
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Priorizar user ID se disponível, senão IP
+        if (req.userId) return `user-${req.userId}`;
+        if (req.user && req.user.id) return `user-${req.user.id}`;
+        return req.ip || req.connection.remoteAddress;
+    }
+});
+
+router.get('/session', sessionLimiter, async (req, res) => {
     try {
         // Pegar token do header Authorization OU do cookie
         const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies['sb-access-token'];
