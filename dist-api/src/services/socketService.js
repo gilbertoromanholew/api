@@ -119,7 +119,7 @@ export function initializeSocket(server) {
     });
   });
 
-  console.log('🔌 Socket.IO inicializado com sucesso');
+  // Socket.IO inicializado silenciosamente (sem log de console)
   return io;
 }
 

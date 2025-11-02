@@ -3,10 +3,10 @@ import { emitCreditsUpdate, emitLevelUp } from './socketService.js';
 
 /**
  * ========================================
- * SERVIÇO DE PONTOS/CRÉDITOS - CENTRALIZADO
+ * SERVIÇO DE CRÉDITOS - CENTRALIZADO
  * ========================================
  * Este é o ÚNICO lugar que deve acessar economy_user_wallets
- * e economy_transactions para gerenciamento de pontos.
+ * e economy_transactions para gerenciamento de créditos.
  * 
  * ❌ NUNCA acesse economy_user_wallets diretamente de outros arquivos
  * ✅ SEMPRE use as funções deste serviço
@@ -53,19 +53,19 @@ export async function getBalance(userId, userToken) {
     
     return {
         bonus_credits: data.bonus_credits,
-        purchased_points: data.purchased_points,
-        total_credits: data.bonus_credits + data.purchased_points,
+        purchased_credits: data.purchased_credits,
+        total_credits: data.bonus_credits + data.purchased_credits,
         total_earned_bonus: data.total_earned_bonus,
         total_purchased: data.total_purchased,
         total_spent: data.total_spent,
         pro_weekly_allowance: data.pro_weekly_allowance,
         last_allowance_date: data.last_allowance_date,
-        // Aliases para compatibilidade
-        purchased_credits: data.purchased_points,
+        // Aliases para compatibilidade com código antigo
+        purchased_points: data.purchased_credits,
         free_points: data.bonus_credits,
-        paid_points: data.purchased_points,
-        total_points: data.bonus_credits + data.purchased_points,
-        availableCredits: data.bonus_credits + data.purchased_points // Para planning tools
+        paid_points: data.purchased_credits,
+        total_points: data.bonus_credits + data.purchased_credits,
+        availableCredits: data.bonus_credits + data.purchased_credits // Para planning tools
     };
 }
 
@@ -111,7 +111,7 @@ export async function getHistory(userId, userToken, options = {}) {
     const { data, error, count } = await query;
     
     if (error) {
-        throw new Error('Erro ao buscar histórico de pontos: ' + error.message);
+        throw new Error('Erro ao buscar histórico de créditos: ' + error.message);
     }
     
     const totalPages = Math.ceil(count / limit);
@@ -153,7 +153,7 @@ export async function getToolCost(toolName) {
 }
 
 /**
- * Verificar se usuário tem pontos suficientes para uma ferramenta
+ * Verificar se usuário tem créditos suficientes para uma ferramenta
  */
 export async function canUseTool(userId, toolName) {
     const tool = await getToolCost(toolName);
@@ -177,16 +177,16 @@ export async function canUseTool(userId, toolName) {
 // ========================================
 
 /**
- * Consumir pontos (prioriza gratuitos, depois pagos)
+ * Consumir créditos (prioriza gratuitos, depois pagos)
  * ✅ MÁXIMA SEGURANÇA: Usa JWT do usuário + function RLS
  * @param {string} userId - ID do usuário
  * @param {string} userToken - JWT token do usuário
  * @param {number} amount - Quantidade a debitar
  * @param {object} metadata - Metadados da operação
  */
-export async function consumePoints(userId, userToken, amount, metadata = {}) {
+export async function consumeCredits(userId, userToken, amount, metadata = {}) {
     if (amount <= 0) {
-        throw new Error('Quantidade de pontos deve ser maior que zero');
+        throw new Error('Quantidade de créditos deve ser maior que zero');
     }
     
     // Criar cliente Supabase com JWT do usuário
@@ -204,30 +204,46 @@ export async function consumePoints(userId, userToken, amount, metadata = {}) {
     );
     
     // Usar function do Postgres (valida auth.uid() = user_id internamente)
-    const { data, error } = await supabaseWithAuth
-        .rpc('debit_credits', {
+    const { error } = await supabaseWithAuth
+        .rpc('deduct_credits', {
             p_user_id: userId,
             p_amount: amount,
-            p_reason: metadata.description || `Uso de ferramenta: ${metadata.tool_name || 'desconhecida'}`
+            p_description: metadata.description || `Uso de ferramenta: ${metadata.tool_name || 'desconhecida'}`
         });
     
     if (error) {
         // Tratar erros específicos
-        if (error.message.includes('Saldo insuficiente')) {
-            const match = error.message.match(/Disponível: (\d+), necessário: (\d+)/);
-            const available = match ? match[1] : '?';
-            const needed = match ? match[2] : amount;
-            throw new Error(`Pontos insuficientes. Você tem ${available}, mas precisa de ${needed}`);
+        if (error.message.includes('Créditos insuficientes')) {
+            throw new Error(`Créditos insuficientes`);
         }
-        if (error.message.includes('Acesso negado')) {
-            throw new Error('Você não tem permissão para debitar créditos de outro usuário');
+        if (error.message.includes('Carteira não encontrada')) {
+            throw new Error('Carteira não encontrada');
         }
-        throw new Error('Erro ao consumir pontos: ' + error.message);
+        throw new Error('Erro ao consumir créditos: ' + error.message);
     }
 
-    // 🔌 WebSocket: Notificar usuário sobre gasto de créditos
+    // Buscar novo saldo após débito
+    const newBalance = await getBalance(userId, userToken);
+
+    // � REGISTRAR USO DA FERRAMENTA em tool_usage_tracking
+    try {
+        await supabaseWithAuth
+            .from('tool_usage_tracking')
+            .insert({
+                user_id: userId,
+                tool_slug: metadata.tool_slug || metadata.tool_name || 'unknown',
+                credits_used: amount,
+                success: true,
+                created_at: new Date().toISOString()
+            });
+    } catch (trackError) {
+        console.error('⚠️ Erro ao registrar uso da ferramenta:', trackError);
+        // Não falhar a operação se o tracking falhar
+    }
+
+    // �🔌 WebSocket: Notificar usuário sobre gasto de créditos
     emitCreditsUpdate(userId, {
-        balance: data.new_balance,
+        balance: newBalance.total_credits,
         change: -amount, // Valor negativo indica gasto
         type: 'consumption',
         reason: metadata.description || `Ferramenta: ${metadata.tool_name || 'uso de créditos'}`
@@ -236,24 +252,21 @@ export async function consumePoints(userId, userToken, amount, metadata = {}) {
     // Retornar no formato esperado
     return {
         consumed: amount,
-        free_consumed: data.bonus_used,
-        paid_consumed: data.purchased_used,
-        previous_balance: data.new_balance + amount,
-        new_balance: data.new_balance,
-        transaction_id: data.transaction_id,
-        success: data.success
+        previous_balance: newBalance.total_credits + amount,
+        new_balance: newBalance.total_credits,
+        success: true
     };
 }
 
 /**
- * Adicionar pontos bônus/gratuitos
+ * Adicionar créditos bônus/gratuitos
  * Usado por: promo codes, referrals, admin, etc.
  * ✅ RLS ATIVO: Usa function admin_add_credits() - SECURITY DEFINER
  * ⚠️ Backend DEVE validar permissões antes de chamar
  */
-export async function addBonusPoints(userId, amount, metadata = {}) {
+export async function addBonusCredits(userId, amount, metadata = {}) {
     if (amount <= 0) {
-        throw new Error('Quantidade de pontos deve ser maior que zero');
+        throw new Error('Quantidade de créditos deve ser maior que zero');
     }
     
     // Usar function do Postgres (bypassa RLS com segurança)
@@ -262,11 +275,11 @@ export async function addBonusPoints(userId, amount, metadata = {}) {
             p_user_id: userId,
             p_amount: amount,
             p_type: 'bonus',
-            p_reason: metadata.description || 'Adição de pontos bônus'
+            p_reason: metadata.description || 'Adição de créditos bônus'
         });
     
     if (error) {
-        throw new Error('Erro ao adicionar pontos bônus: ' + error.message);
+        throw new Error('Erro ao adicionar créditos bônus: ' + error.message);
     }
 
     // 🔌 WebSocket: Notificar usuário sobre atualização de créditos
@@ -274,7 +287,7 @@ export async function addBonusPoints(userId, amount, metadata = {}) {
         balance: data.new_balance,
         change: amount,
         type: 'bonus',
-        reason: metadata.description || 'Pontos bônus recebidos'
+        reason: metadata.description || 'Créditos bônus recebidos'
     });
 
     // TODO: Implementar detecção de level-up quando estrutura de levels estiver pronta
@@ -290,14 +303,14 @@ export async function addBonusPoints(userId, amount, metadata = {}) {
 }
 
 /**
- * Adicionar pontos comprados
+ * Adicionar créditos comprados
  * Usado por: Stripe payments, manual admin purchases, etc.
  * ✅ RLS ATIVO: Usa function admin_add_credits() - SECURITY DEFINER
  * ⚠️ Backend DEVE validar permissões antes de chamar
  */
-export async function addPurchasedPoints(userId, amount, metadata = {}) {
+export async function addPurchasedCredits(userId, amount, metadata = {}) {
     if (amount <= 0) {
-        throw new Error('Quantidade de pontos deve ser maior que zero');
+        throw new Error('Quantidade de créditos deve ser maior que zero');
     }
     
     // Usar function do Postgres (bypassa RLS com segurança)
@@ -306,11 +319,11 @@ export async function addPurchasedPoints(userId, amount, metadata = {}) {
             p_user_id: userId,
             p_amount: amount,
             p_type: 'purchase', // Tipo 'purchase' (não 'bonus')
-            p_reason: metadata.description || 'Compra de pontos'
+            p_reason: metadata.description || 'Compra de créditos'
         });
     
     if (error) {
-        throw new Error('Erro ao adicionar pontos comprados: ' + error.message);
+        throw new Error('Erro ao adicionar créditos comprados: ' + error.message);
     }
 
     // 🔌 WebSocket: Notificar usuário sobre atualização de créditos
@@ -318,7 +331,7 @@ export async function addPurchasedPoints(userId, amount, metadata = {}) {
         balance: data.new_balance,
         change: amount,
         type: 'purchase',
-        reason: metadata.description || 'Compra de pontos realizada'
+        reason: metadata.description || 'Compra de créditos realizada'
     });
     
     return {
@@ -334,5 +347,8 @@ export async function addPurchasedPoints(userId, amount, metadata = {}) {
 // ALIASES PARA COMPATIBILIDADE
 // ========================================
 
-export const addFreePoints = addBonusPoints; // Alias para compatibilidade com código antigo
-export const addPaidPoints = addPurchasedPoints; // Alias para compatibilidade com código antigo
+export const consumePoints = consumeCredits; // Alias para compatibilidade com código antigo
+export const addBonusPoints = addBonusCredits; // Alias para compatibilidade com código antigo
+export const addPurchasedPoints = addPurchasedCredits; // Alias para compatibilidade com código antigo
+export const addFreePoints = addBonusCredits; // Alias para compatibilidade com código antigo
+export const addPaidPoints = addPurchasedCredits; // Alias para compatibilidade com código antigo

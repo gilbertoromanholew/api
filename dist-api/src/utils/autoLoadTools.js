@@ -52,8 +52,6 @@ const __dirname = path.dirname(__filename);
  * @returns {Promise<Object>} Estatísticas do carregamento
  */
 export async function autoLoadToolRoutes(app) {
-    logger.info('Iniciando auto-discovery de ferramentas');
-    
     const stats = {
         loaded: 0,
         failed: 0,
@@ -69,8 +67,6 @@ export async function autoLoadToolRoutes(app) {
             cwd: toolsPath,
             absolute: false
         });
-        
-        logger.info(`Encontrados ${routeFiles.length} arquivos de rotas`, { toolsPath });
         
         for (const routeFile of routeFiles) {
             try {
@@ -91,6 +87,20 @@ export async function autoLoadToolRoutes(app) {
                 const config = toolModule.config || { slug: toolFolder };
                 const slug = config.slug || toolFolder;
                 
+                // Extrair endpoints do router (ler rotas definidas)
+                const endpoints = [];
+                if (toolModule.router && toolModule.router.stack) {
+                    toolModule.router.stack.forEach(layer => {
+                        if (layer.route) {
+                            const methods = Object.keys(layer.route.methods).map(m => m.toUpperCase());
+                            const path = layer.route.path;
+                            methods.forEach(method => {
+                                endpoints.push({ method, path });
+                            });
+                        }
+                    });
+                }
+                
                 // Registrar rota
                 app.use(`/api/tools/${slug}`, toolModule.router);
                 
@@ -98,18 +108,15 @@ export async function autoLoadToolRoutes(app) {
                 stats.tools.push({
                     slug,
                     file: routeFile,
-                    config
+                    config,
+                    endpoints
                 });
-                
-                logger.tool(`Ferramenta carregada: ${slug}`, { file: routeFile, config });
                 
             } catch (error) {
                 stats.failed++;
                 logger.error(`Falha ao carregar ferramenta: ${routeFile}`, { error: error.message });
             }
         }
-        
-        logger.info(`Auto-discovery concluído: ${stats.loaded} sucesso, ${stats.failed} falhas`, stats);
         
         return stats;
         

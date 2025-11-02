@@ -48,53 +48,101 @@ function formatMemory(bytes) {
 }
 
 /**
- * Exibe logs simplificados de inicialização
+ * Exibe logs simplificados de inicialização (estilo dashboard limpo)
+ * @param {Object} toolsStats - Estatísticas de ferramentas carregadas
+ * @param {Object} functionsStats - Estatísticas de funcionalidades carregadas
  */
-export function logStartup() {
+export function logStartup(toolsStats = null, functionsStats = null) {
     try {
         const interfaces = getNetworkInterfaces();
         const environment = detectEnvironment();
         const totalMem = os.totalmem();
         const freeMem = os.freemem();
         
-        console.log('\n╔══════════════════════════════════════════════════════════════════╗');
-        console.log('║                    🚀 API SERVER INICIADO                        ║');
-        console.log('╚══════════════════════════════════════════════════════════════════╝\n');
+        // Limpar console antes de mostrar o banner
+        console.clear();
         
-        console.log('📊 SISTEMA:');
-        console.log(`   • Hostname:     ${os.hostname()}`);
-        console.log(`   • Plataforma:   ${os.platform()} (${os.arch()})`);
-        console.log(`   • Node.js:      ${process.version}`);
-        console.log(`   • Ambiente:     ${environment}`);
-        console.log(`   • RAM:          ${formatMemory(totalMem)} (${formatMemory(freeMem)} livre)`);
-        console.log(`   • CPUs:         ${os.cpus().length} cores\n`);
+        console.log('\n');
+        console.log('╔═══════════════════════════════════════════════════════════════════════════╗');
+        console.log('║                                                                           ║');
+        console.log('║                        🚀  API SERVER ONLINE                              ║');
+        console.log('║                                                                           ║');
+        console.log('╚═══════════════════════════════════════════════════════════════════════════╝');
+        console.log('');
         
-        console.log('🌐 REDE:');
+        // Sistema
+        console.log('  📊  SISTEMA');
+        console.log('  ├─ Node.js:', process.version);
+        console.log('  ├─ Ambiente:', environment);
+        console.log('  ├─ CPUs:', os.cpus().length, 'cores');
+        console.log('  └─ RAM:', `${formatMemory(freeMem)} livre de ${formatMemory(totalMem)}`);
+        console.log('');
+        
+        // Rede
+        console.log('  🌐  REDE');
         if (interfaces.length > 0) {
-            interfaces.forEach(iface => {
-                console.log(`   • ${iface.name}: ${iface.ipv4} (${iface.mac})`);
+            interfaces.forEach((iface, index) => {
+                const isLast = index === interfaces.length - 1;
+                const prefix = isLast ? '  └─' : '  ├─';
+                console.log(`${prefix} ${iface.name}:`, iface.ipv4);
             });
         } else {
-            console.log('   • Interfaces internas apenas');
+            console.log('  └─ Localhost apenas');
         }
         console.log('');
         
-        console.log('⚙️  CONFIGURAÇÃO:');
-        console.log(`   • Host:         ${config.server.host}`);
-        console.log(`   • Porta:        ${config.server.port}`);
-        console.log(`   • Modo:         ${process.env.NODE_ENV || 'development'}`);
-        console.log(`   • Frontend:     ${config.frontend.url || 'N/A'}`);
-        console.log(`   • IP Blocking:  ${config.security.ipBlocking ? 'ATIVO' : 'DESATIVADO'}`);
-        console.log(`   • Allowed IPs:  ${config.security.allowedIPs.join(', ')}\n`);
+        // Configuração
+        console.log('  ⚙️   CONFIGURAÇÃO');
+        console.log('  ├─ Modo:', process.env.NODE_ENV || 'development');
+        console.log('  ├─ Porta:', config.server.port);
+        console.log('  ├─ IP Blocking:', config.security.ipBlocking ? '🔒 ATIVO' : '🔓 DESATIVADO');
+        console.log('  └─ Frontend:', config.frontend.url || 'http://localhost:5173');
+        console.log('');
         
-        console.log('🔗 ACESSO:');
+        // Ferramentas Carregadas
+        if (toolsStats && toolsStats.tools && toolsStats.tools.length > 0) {
+            console.log('  🔧  FERRAMENTAS CARREGADAS');
+            toolsStats.tools.forEach((tool, index) => {
+                const isLast = index === toolsStats.tools.length - 1;
+                const prefix = isLast ? '  └─' : '  ├─';
+                
+                console.log(`${prefix} ${tool.slug}`);
+                if (tool.endpoints && tool.endpoints.length > 0) {
+                    tool.endpoints.forEach((endpoint, eIndex) => {
+                        const isLastEndpoint = eIndex === tool.endpoints.length - 1;
+                        const endpointPrefix = isLast ? '     ' : '  │  ';
+                        const marker = isLastEndpoint ? '└─' : '├─';
+                        console.log(`${endpointPrefix}${marker} ${endpoint.method} /api/tools/${tool.slug}${endpoint.path}`);
+                    });
+                }
+            });
+            console.log('');
+        }
+        
+        // Funcionalidades Carregadas
+        if (functionsStats && functionsStats.length > 0) {
+            console.log('  📦  FUNCIONALIDADES CARREGADAS');
+            functionsStats.forEach((func, index) => {
+                const isLast = index === functionsStats.length - 1;
+                const prefix = isLast ? '  └─' : '  ├─';
+                console.log(`${prefix} /${func.category}`);
+            });
+            console.log('');
+        }
+        
+        // Acesso
         const localHost = config.server.host === '0.0.0.0' ? 'localhost' : config.server.host;
-        console.log(`   • API:          http://${localHost}:${config.server.port}`);
-        console.log(`   • Docs:         http://${localHost}:${config.server.port}/docs`);
-        console.log(`   • Dashboard:    http://${localHost}:${config.server.port}/logs`);
-        console.log(`   • Health:       http://${localHost}:${config.server.port}/health\n`);
+        console.log('  🔗  ENDPOINTS');
+        console.log(`  ├─ API:        http://${localHost}:${config.server.port}`);
+        console.log(`  ├─ Docs:       http://${localHost}:${config.server.port}/docs`);
+        console.log(`  ├─ Dashboard:  http://${localHost}:${config.server.port}/logs`);
+        console.log(`  └─ Health:     http://${localHost}:${config.server.port}/health`);
+        console.log('');
         
-        console.log('✅ Servidor pronto para receber requisições!\n');
+        console.log('  ✅  Servidor pronto para requisições');
+        console.log('');
+        console.log('─────────────────────────────────────────────────────────────────────────────');
+        console.log('');
     } catch (error) {
         console.error('❌ Erro ao exibir logs:', error.message);
         console.log(`\n🚀 Servidor rodando em ${config.server.host}:${config.server.port}\n`);

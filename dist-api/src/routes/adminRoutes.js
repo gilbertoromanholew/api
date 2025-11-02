@@ -2,20 +2,32 @@
  * Admin Panel Routes - V7
  * 
  * Endpoints administrativos para gerenciamento de usuários, créditos e sistema.
- * Todos os endpoints requerem autenticação e role de admin (exceto check-ip e check-ip-access).
+ * 
+ * 🔒 SEGURANÇA:
+ * - Todos os endpoints /admin/* são protegidos por ipFilter (middleware global no server.js)
+ * - Endpoints de dados requerem autenticação (requireAuth) + role admin (requireAdmin)
+ * - Endpoints públicos (check-ip, login) apenas validam IP antes da autenticação
  * 
  * Rotas:
- * - GET    /api/admin/check-ip             Verifica IP antes do login (público)
+ * - GET    /api/admin/check-ip             Verifica IP antes do login (público, apenas ipFilter)
  * - GET    /api/admin/check-ip-access      Verifica se IP está na whitelist ZeroTier (público)
+ * - POST   /api/admin/login                Login admin (público com validação de IP)
  * - GET    /api/admin/check-admin-role     Verifica se usuário tem role admin (requer auth)
- * - GET    /api/admin/users                Lista todos os usuários
- * - GET    /api/admin/users/:id            Detalhes de um usuário
- * - POST   /api/admin/users/:id/credits    Adicionar/remover créditos
- * - PATCH  /api/admin/users/:id/role       Alterar role do usuário
- * - DELETE /api/admin/users/:id            Desativar usuário
- * - GET    /api/admin/stats                Estatísticas gerais do sistema
- * - GET    /api/admin/tools                Estatísticas de ferramentas
- * - GET    /api/admin/transactions         Histórico de transações
+ * - GET    /api/admin/users                Lista todos os usuários (ipFilter + auth + admin)
+ * - GET    /api/admin/users/:id            Detalhes de um usuário (ipFilter + auth + admin)
+ * - POST   /api/admin/users/:id/credits    Adicionar/remover créditos (ipFilter + auth + admin)
+ * - PATCH  /api/admin/users/:id/role       Alterar role do usuário (ipFilter + auth + admin)
+ * - DELETE /api/admin/users/:id            Desativar usuário (ipFilter + auth + admin)
+ * - GET    /api/admin/stats                Estatísticas gerais do sistema (ipFilter + auth + admin)
+ * - GET    /api/admin/tools                Estatísticas de uso de ferramentas (ipFilter + auth + admin)
+ * - GET    /api/admin/tools-discovery      Ferramentas carregadas pelo auto-discovery (ipFilter + auth + admin)
+ * - GET    /api/admin/transactions         Histórico de transações (ipFilter + auth + admin)
+ * - GET    /api/admin/docs                 Documentação da API (ipFilter + auth + admin)
+ * - GET    /api/admin/docs-data            Dados de documentação (ipFilter + auth + admin)
+ * - GET    /api/admin/audit-log            Log de auditoria (ipFilter + auth + admin)
+ * - GET    /api/admin/logs                 Logs do sistema (ipFilter + auth + admin)
+ * - GET    /api/admin/logs/stats           Estatísticas de logs (ipFilter + auth + admin)
+ * - DELETE /api/admin/logs                 Limpar logs antigos (ipFilter + auth + admin)
  */
 
 import express from 'express';
@@ -25,6 +37,7 @@ import logger from '../config/logger.js';
 import { maskCPF } from '../utils/maskSensitiveData.js';
 import { checkAdminIP, isAdminIPAllowed } from '../middlewares/adminIpCheck.js';
 import { getClientIP } from '../utils/ipUtils.js';
+import { getRateLimitConfigs, getRateLimitForEndpoint } from '../utils/rateLimitReader.js';
 
 const router = express.Router();
 
@@ -260,7 +273,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
                 // Buscar carteira
                 const { data: wallet } = await supabaseAdmin
                     .from('economy_user_wallets')
-                    .select('bonus_credits, purchased_points, total_spent')
+                    .select('bonus_credits, purchased_credits, total_spent')
                     .eq('user_id', profile.id)
                     .single();
 
@@ -282,8 +295,8 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
                     last_seen: presence?.last_seen || null,
                     credits: {
                         bonus: wallet?.bonus_credits || 0,
-                        purchased: wallet?.purchased_points || 0,
-                        total: (wallet?.bonus_credits || 0) + (wallet?.purchased_points || 0),
+                        purchased: wallet?.purchased_credits || 0,
+                        total: (wallet?.bonus_credits || 0) + (wallet?.purchased_credits || 0),
                         spent: wallet?.total_spent || 0
                     },
                     created_at: profile.created_at
@@ -397,8 +410,8 @@ router.get('/users/:id', requireAuth, requireAdmin, async (req, res) => {
                 },
                 wallet: {
                     bonus_credits: wallet?.bonus_credits || 0,
-                    purchased_points: wallet?.purchased_points || 0,
-                    total: (wallet?.bonus_credits || 0) + (wallet?.purchased_points || 0),
+                    purchased_credits: wallet?.purchased_credits || 0,
+                    total: (wallet?.bonus_credits || 0) + (wallet?.purchased_credits || 0),
                     total_earned: wallet?.total_earned_bonus || 0,
                     total_purchased: wallet?.total_purchased || 0,
                     total_spent: wallet?.total_spent || 0
@@ -465,7 +478,7 @@ router.post('/users/:id/credits', requireAuth, requireAdmin, async (req, res) =>
         }
 
         // Calcular novos valores
-        const field = type === 'bonus' ? 'bonus_credits' : 'purchased_points';
+        const field = type === 'bonus' ? 'bonus_credits' : 'purchased_credits';
         const currentValue = wallet[field];
         const newValue = currentValue + parseInt(amount);
 
@@ -721,11 +734,11 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
         // Total de créditos no sistema
         const { data: wallets } = await supabaseAdmin
             .from('economy_user_wallets')
-            .select('bonus_credits, purchased_points, total_spent');
+            .select('bonus_credits, purchased_credits, total_spent');
 
         const creditsStats = wallets.reduce((acc, wallet) => ({
             totalBonus: acc.totalBonus + (wallet.bonus_credits || 0),
-            totalPurchased: acc.totalPurchased + (wallet.purchased_points || 0),
+            totalPurchased: acc.totalPurchased + (wallet.purchased_credits || 0),
             totalSpent: acc.totalSpent + (wallet.total_spent || 0)
         }), { totalBonus: 0, totalPurchased: 0, totalSpent: 0 });
 
@@ -856,6 +869,39 @@ router.get('/tools', requireAuth, requireAdmin, async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Erro ao buscar estatísticas de ferramentas',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/admin/tools-discovery
+ * Informações sobre ferramentas carregadas pelo auto-discovery
+ * Retorna quais ferramentas foram carregadas, quais falharam e seus endpoints
+ */
+router.get('/tools-discovery', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        // Buscar stats do app.locals (armazenado no server.js após auto-load)
+        const toolsStats = req.app.locals.toolsStats || { loaded: 0, failed: 0, tools: [] };
+
+        logger.info('Admin consultou ferramentas descobertas', {
+            adminId: req.user.id,
+            loaded: toolsStats.loaded,
+            failed: toolsStats.failed
+        });
+
+        res.json({
+            success: true,
+            data: toolsStats
+        });
+    } catch (error) {
+        logger.error('Erro ao buscar ferramentas descobertas (admin)', {
+            adminId: req.user?.id,
+            error: error.message
+        });
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao buscar ferramentas descobertas',
             message: error.message
         });
     }
@@ -1042,9 +1088,16 @@ router.get('/check-admin-role', requireAuth, async (req, res) => {
  */
 router.get('/docs-data', requireAuth, requireAdmin, (req, res) => {
     try {
+        // 🔥 LER RATE LIMITS DINAMICAMENTE DO CÓDIGO
+        const rateLimiters = getRateLimitConfigs();
+        
         const docs = {
             title: 'Documentação da API',
             description: 'Referência completa dos endpoints administrativos',
+            rateLimitInfo: {
+                description: 'Limites de requisições configurados para proteger a API',
+                limiters: rateLimiters
+            },
             sections: [
                 {
                     id: 'auth',
@@ -1056,6 +1109,7 @@ router.get('/docs-data', requireAuth, requireAdmin, (req, res) => {
                             path: '/api/auth/register',
                             description: 'Registrar novo usuário',
                             auth: false,
+                            rateLimit: getRateLimitForEndpoint('/api/auth/register', 'POST'),
                             body: { cpf: 'string', email: 'string', password: 'string', full_name: 'string' }
                         },
                         {
@@ -1063,6 +1117,7 @@ router.get('/docs-data', requireAuth, requireAdmin, (req, res) => {
                             path: '/api/auth/login',
                             description: 'Login com email + senha',
                             auth: false,
+                            rateLimit: getRateLimitForEndpoint('/api/auth/login', 'POST'),
                             body: { email: 'string', password: 'string' }
                         },
                         {
@@ -1070,19 +1125,22 @@ router.get('/docs-data', requireAuth, requireAdmin, (req, res) => {
                             path: '/api/auth/login-cpf',
                             description: 'Login com CPF + senha',
                             auth: false,
+                            rateLimit: getRateLimitForEndpoint('/api/auth/login-cpf', 'POST'),
                             body: { cpf: 'string', password: 'string' }
                         },
                         {
                             method: 'GET',
                             path: '/api/auth/session',
                             description: 'Obter sessão do usuário atual',
-                            auth: true
+                            auth: true,
+                            rateLimit: getRateLimitForEndpoint('/api/auth/session', 'GET')
                         },
                         {
                             method: 'POST',
                             path: '/api/auth/logout',
                             description: 'Encerrar sessão',
-                            auth: true
+                            auth: true,
+                            rateLimit: getRateLimitForEndpoint('/api/auth/logout', 'POST')
                         }
                     ]
                 },

@@ -8,8 +8,9 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/adminAuth.js';
-import { getBalance } from '../services/pointsService.js';
+import { getBalance } from '../services/creditsService.js';
 import { supabase } from '../config/supabase.js';
+import { executePlanningTool } from '../services/planningToolsService.js';
 
 const router = Router();
 
@@ -421,25 +422,11 @@ async function calculateToolCost(userId, toolId, experienceType) {
 
 /**
  * Executa lógica específica de cada ferramenta
- * TODO: Implementar lógica real de cada ferramenta
+ * Agora delegado para planningToolsService.js
  */
 async function executeToolLogic(tool, params, experienceType) {
-  // Aqui viria a lógica específica de cada ferramenta
-  // Por enquanto, retorna um mock
-  
-  const features = experienceType === 'full' ? 
-    'Acesso completo a todos os recursos' : 
-    'Versão experimental com recursos limitados';
-  
-  return {
-    success: true,
-    message: `Ferramenta ${tool.name} executada com sucesso`,
-    experienceType,
-    features,
-    data: {
-      // Resultado da execução da ferramenta
-    }
-  };
+  // Delegar para service layer
+  return await executePlanningTool(tool, params, experienceType);
 }
 
 /**

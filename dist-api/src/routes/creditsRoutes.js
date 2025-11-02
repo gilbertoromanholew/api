@@ -1,8 +1,8 @@
 /**
  * ========================================
- * ROTAS DE CRÉDITOS/PONTOS - CENTRALIZADO
+ * ROTAS DE CRÉDITOS - CENTRALIZADO
  * ========================================
- * Endpoints para gerenciamento de pontos/créditos do usuário
+ * Endpoints para gerenciamento de créditos do usuário
  */
 
 import express from 'express';
@@ -11,11 +11,11 @@ import { requireAdmin } from '../middlewares/accessLevel.js';
 import { 
   getBalance, 
   getHistory, 
-  consumePoints,
+  consumeCredits,
   canUseTool,
-  addBonusPoints,
-  addPurchasedPoints
-} from '../services/pointsService.js';
+  addBonusCredits,
+  addPurchasedCredits
+} from '../services/creditsService.js';
 import { emitCreditsUpdate } from '../services/socketService.js';
 import logger from '../config/logger.js';
 
@@ -23,7 +23,7 @@ const router = express.Router();
 
 /**
  * GET /api/credits/balance
- * Retorna saldo atual de pontos/créditos do usuário
+ * Retorna saldo atual de créditos do usuário
  * ✅ SEGURANÇA MÁXIMA: JWT do usuário + RLS no Postgres
  */
 router.get('/balance', requireAuth, async (req, res) => {
@@ -37,7 +37,7 @@ router.get('/balance', requireAuth, async (req, res) => {
     logger.info('Saldo de créditos encontrado', {
       userId,
       bonus: balance.bonus_credits,
-      purchased: balance.purchased_points,
+      purchased: balance.purchased_credits,
       total: balance.total_credits
     });
     
@@ -56,7 +56,7 @@ router.get('/balance', requireAuth, async (req, res) => {
 
 /**
  * GET /api/credits/history
- * Retorna histórico de transações de pontos (paginado)
+ * Retorna histórico de transações de créditos (paginado)
  * ✅ SEGURANÇA MÁXIMA: JWT do usuário + RLS no Postgres
  */
 router.get('/history', requireAuth, async (req, res) => {
@@ -84,7 +84,7 @@ router.get('/history', requireAuth, async (req, res) => {
 
 /**
  * GET /api/credits/can-use/:tool_name
- * Verifica se usuário tem pontos suficientes para usar uma ferramenta
+ * Verifica se usuário tem créditos suficientes para usar uma ferramenta
  */
 router.get('/can-use/:tool_name', requireAuth, async (req, res) => {
   try {
@@ -115,36 +115,37 @@ router.get('/can-use/:tool_name', requireAuth, async (req, res) => {
 
 /**
  * POST /api/credits/consume
- * Consome pontos manualmente (internal use)
+ * Consome créditos manualmente (internal use)
  * ✅ SEGURANÇA MÁXIMA: JWT do usuário + RLS no Postgres
  */
 router.post('/consume', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const userToken = req.user.token;
-    const { amount, description, tool_name, type } = req.body;
+    const { amount, description, tool_name, tool_slug, type } = req.body;
     
     if (!amount || amount <= 0) {
       return res.status(400).json({
         success: false,
-        error: 'Quantidade de pontos inválida'
+        error: 'Quantidade de créditos inválida'
       });
     }
     
     const metadata = {
       type: type || 'manual_consumption',
-      description: description || 'Consumo manual de pontos',
-      tool_name: tool_name || null
+      description: description || 'Consumo manual de créditos',
+      tool_name: tool_name || null,
+      tool_slug: tool_slug || null
     };
     
-    const result = await consumePoints(userId, userToken, amount, metadata);
+    const result = await consumeCredits(userId, userToken, amount, metadata);
     
     return res.json({
       success: true,
       data: result
     });
   } catch (error) {
-    logger.error('Erro ao consumir pontos', { userId: req.user.id, amount: req.body.amount, error: error.message });
+    logger.error('Erro ao consumir créditos', { userId: req.user.id, amount: req.body.amount, error: error.message });
     return res.status(400).json({
       success: false,
       error: error.message
@@ -154,7 +155,7 @@ router.post('/consume', requireAuth, async (req, res) => {
 
 /**
  * POST /api/credits/add-bonus (ADMIN ONLY)
- * Adiciona pontos bônus a um usuário
+ * Adiciona créditos bônus a um usuário
  */
 router.post('/add-bonus', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -167,7 +168,7 @@ router.post('/add-bonus', requireAuth, requireAdmin, async (req, res) => {
       });
     }
     
-    const result = await addBonusPoints(user_id, amount, {
+    const result = await addBonusCredits(user_id, amount, {
       type: 'admin_adjustment',
       description: description || 'Ajuste administrativo',
       admin_user_id: req.user.id
@@ -177,7 +178,7 @@ router.post('/add-bonus', requireAuth, requireAdmin, async (req, res) => {
     emitCreditsUpdate(user_id, {
       total: result.new_balance,
       bonus: result.bonus_credits,
-      purchased: result.purchased_points
+      purchased: result.purchased_credits
     });
     
     return res.json({
@@ -195,7 +196,7 @@ router.post('/add-bonus', requireAuth, requireAdmin, async (req, res) => {
 
 /**
  * POST /api/credits/add-purchased (ADMIN ONLY)
- * Adiciona pontos comprados a um usuário
+ * Adiciona créditos comprados a um usuário
  */
 router.post('/add-purchased', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -208,9 +209,9 @@ router.post('/add-purchased', requireAuth, requireAdmin, async (req, res) => {
       });
     }
     
-    const result = await addPurchasedPoints(user_id, amount, {
+    const result = await addPurchasedCredits(user_id, amount, {
       type: 'purchase',
-      description: description || 'Compra de pontos',
+      description: description || 'Compra de créditos',
       stripe_payment_id: payment_id,
       admin_user_id: req.user.id
     });
@@ -220,7 +221,7 @@ router.post('/add-purchased', requireAuth, requireAdmin, async (req, res) => {
       data: result
     });
   } catch (error) {
-    logger.error('Erro ao adicionar pontos comprados (admin)', { targetUserId: req.body.userId, amount: req.body.amount, error: error.message });
+    logger.error('Erro ao adicionar créditos comprados (admin)', { targetUserId: req.body.userId, amount: req.body.amount, error: error.message });
     return res.status(400).json({
       success: false,
       error: error.message

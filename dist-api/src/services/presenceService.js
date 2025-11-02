@@ -208,7 +208,7 @@ export function startPresenceCleanup() {
         cleanupInactiveUsers();
     }, 2 * 60 * 1000); // 2 minutos
 
-    logger.info(`🧹 Serviço de limpeza de presença iniciado (intervalo: 2 min)`);
+    logger.debug(`🧹 Serviço de limpeza de presença iniciado (intervalo: 2 min)`);
 
     return interval;
 }

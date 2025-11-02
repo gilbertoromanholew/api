@@ -18,7 +18,7 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
     const funcionalidadesDir = path.join(__dirname, '../functions');
     const loadedRoutes = [];
     
-    logger.info('Auto-carregando funcionalidades...');
+    logger.debug('Auto-carregando funcionalidades...');
     
     try {
         const categories = fs.readdirSync(funcionalidadesDir);
@@ -33,7 +33,7 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
             
             // Ignorar pasta de template
             if (category === '_TEMPLATE') {
-                logger.info('Ignorando categoria template', { category });
+                logger.debug('Ignorando categoria template', { category });
                 continue;
             }
             
@@ -52,10 +52,10 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
                         // Fase 2: Aplicar rate limiter se fornecido
                         if (rateLimiter) {
                             app.use(`/${category}`, rateLimiter, routeModule.default);
-                            logger.info('Rota carregada com rate limiting', { category, routeFile, prefix: `/${category}` });
+                            logger.debug('Rota carregada com rate limiting', { category, routeFile, prefix: `/${category}` });
                         } else {
                             app.use(`/${category}`, routeModule.default);
-                            logger.info('Rota carregada', { category, routeFile, prefix: `/${category}` });
+                            logger.debug('Rota carregada', { category, routeFile, prefix: `/${category}` });
                         }
                         loadedRoutes.push({
                             category,
@@ -74,7 +74,7 @@ export async function autoLoadRoutes(app, rateLimiter = null) {
             }
         }
         
-        logger.info('Funcionalidades carregadas com sucesso', { total: loadedRoutes.length });
+        logger.debug('Funcionalidades carregadas com sucesso', { total: loadedRoutes.length });
         return loadedRoutes;
         
     } catch (error) {

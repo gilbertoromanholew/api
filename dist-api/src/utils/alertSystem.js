@@ -281,7 +281,7 @@ function startAlertWorker() {
         }
     }, interval);
 
-    logger.info('Alert Worker iniciado - processamento a cada 5 minutos');
+    logger.debug('Alert Worker iniciado - processamento a cada 5 minutos');
 }
 
 // ============================================================================

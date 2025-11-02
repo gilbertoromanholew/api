@@ -4,7 +4,7 @@
  */
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
-import { addBonusPoints } from './pointsService.js';
+import { addBonusCredits } from './creditsService.js';
 import logger from '../config/logger.js';
 
 /**
@@ -153,7 +153,7 @@ export async function applyReferralCode(newUserId, referralCode) {
     const welcomeBonus = 25; // 25 créditos de bônus
     
     // ✅ Usar serviço centralizado
-    await addBonusPoints(newUserId, welcomeBonus, {
+    await addBonusCredits(newUserId, welcomeBonus, {
       type: 'referral_bonus',
       description: `Bônus por ser indicado por ${referrer.full_name || referrer.email}`,
       referred_user_id: referrer.id
@@ -235,7 +235,7 @@ export async function rewardReferrer(referredUserId, bonusAmount = 50) {
     }
 
     // ✅ Usar serviço centralizado para recompensar referrer
-    await addBonusPoints(referral.referrer_id, bonusAmount, {
+    await addBonusCredits(referral.referrer_id, bonusAmount, {
       type: 'referral_reward',
       description: `Bônus por indicar amigo que completou primeira ação`,
       referred_user_id: referredUserId

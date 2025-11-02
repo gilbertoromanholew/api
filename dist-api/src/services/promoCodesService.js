@@ -4,7 +4,7 @@
  */
 
 import { supabase, supabaseAdmin } from '../config/supabase.js';
-import { addBonusPoints } from './pointsService.js';
+import { addBonusCredits } from './creditsService.js';
 import logger from '../config/logger.js';
 
 /**
@@ -86,8 +86,8 @@ export async function redeemPromoCode(userId, code) {
       case 'BONUS_CREDITS':
         creditsAwarded = promoCode.value;
         
-        // ✅ Usar serviço centralizado de pontos
-        const bonusResult = await addBonusPoints(userId, creditsAwarded, {
+        // ✅ Usar serviço centralizado de créditos
+        const bonusResult = await addBonusCredits(userId, creditsAwarded, {
           type: 'promo_code',
           description: `Código promocional: ${code}`,
           promo_code: code

@@ -9,7 +9,7 @@
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 import logger from '../config/logger.js';
 import { emitAchievementUnlocked } from './socketService.js';
-import { addBonusPoints } from './pointsService.js';
+import { addBonusCredits } from './creditsService.js';
 import { notifyAchievementUnlocked } from './notificationsService.js';
 
 /**
@@ -364,15 +364,15 @@ export async function unlockAchievement(userId, achievementId) {
         // Adicionar pontos bônus (se tiver recompensa)
         if (achievement?.reward_bonus_credits > 0) {
             try {
-                // Chamar pointsService para adicionar pontos e emitir evento WebSocket automaticamente
-                await addBonusPoints(userId, achievement.reward_bonus_credits, {
+                // Chamar creditsService para adicionar créditos e emitir evento WebSocket automaticamente
+                await addBonusCredits(userId, achievement.reward_bonus_credits, {
                     description: `Conquista desbloqueada: ${achievement.title}`
                 });
                 
-                logger.info(`💰 Pontos bônus adicionados via conquista`, { 
+                logger.info(`💰 Créditos bônus adicionados via conquista`, { 
                     userId, 
                     achievementId,
-                    bonusPoints: achievement.reward_bonus_credits,
+                    bonusCredits: achievement.reward_bonus_credits,
                     achievementTitle: achievement.title
                 });
             } catch (pointsError) {

@@ -100,8 +100,8 @@ app.use(requestLogger);
 // Endpoints públicos (login, register) são automaticamente excluídos
 app.use(validateCsrfToken);
 
-// Health check endpoint (para Docker healthcheck e frontend) - ANTES do filtro de IP
-app.get('/health', (req, res) => {
+// Health check endpoint (para Docker healthcheck e frontend) - 🔒 Protegido por IP
+app.get('/health', ipFilter, (req, res) => {
     // Verificar se está em modo manutenção (via variável de ambiente)
     const isInMaintenance = process.env.MAINTENANCE_MODE === 'true';
     
@@ -124,8 +124,8 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Health check alternativo em /api/health
-app.get('/api/health', (req, res) => {
+// Health check alternativo em /api/health - 🔒 Protegido por IP
+app.get('/api/health', ipFilter, (req, res) => {
     const isInMaintenance = process.env.MAINTENANCE_MODE === 'true';
     
     if (isInMaintenance) {
@@ -197,14 +197,22 @@ app.use('/admin', ipFilter, apiLimiter, adminRoutes);
 app.use('/presence', apiLimiter, presenceRoutes);
 
 // =========================================================================
-// � V9: AUTO-DISCOVERY DE FERRAMENTAS
+// 🔧 V9: AUTO-DISCOVERY DE FERRAMENTAS
 // =========================================================================
 // Carrega automaticamente todas as ferramentas da pasta src/tools/
 // ZERO necessidade de editar server.js manualmente! ✨
-await autoLoadToolRoutes(app);
+const toolsStats = await autoLoadToolRoutes(app);
+
+// Auto-carregar funcionalidades do diretório src/functions/
+// Rate limiting inteligente aplicado (dinâmico por tipo de usuário)
+const functionsStats = await autoLoadRoutes(app, smartApiLimiter);
+
+// 📦 Armazenar stats em app.locals para acesso nas rotas admin
+app.locals.toolsStats = toolsStats;
+app.locals.functionsStats = functionsStats;
 
 // =========================================================================
-// �📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
+// 📍 ROTAS DE INFORMAÇÃO (público, sem autenticação)
 // =========================================================================
 
 // Rotas de sistema (documentação e logs)
@@ -324,10 +332,7 @@ app.use('/audit', ipFilter, auditRoutes); // 🔒 Auditoria (requireAdmin já ap
 // autoLoadRoutes monta as rotas em /{category}
 // Fase 2: Rate limiting aplicado (100 req/15min por usuário autenticado)
 
-// Auto-carregar funcionalidades do diretório src/functions/
-// Rate limiting inteligente aplicado (dinâmico por tipo de usuário)
-await autoLoadRoutes(app, smartApiLimiter);
-
+// Nota: Rotas já foram carregadas acima (linha 208)
 // Nota: validateRouteAccess e trackViolations são aplicados dentro das rotas individuais
 // via requireAuth middleware em cada controller
 
@@ -343,9 +348,9 @@ startPresenceCleanup();
 
 // Iniciar servidor (usando httpServer em vez de app.listen)
 httpServer.listen(config.server.port, config.server.host, () => {
-    // Importar e executar logs de inicialização
+    // Importar e executar logs de inicialização COM estatísticas
     import('./src/utils/startupLogger.js')
-        .then(({ logStartup }) => logStartup())
+        .then(({ logStartup }) => logStartup(toolsStats, functionsStats))
         .catch(() => {
             // Fallback caso o logger falhe
             console.log(`\n🚀 Servidor rodando em ${config.server.host}:${config.server.port}\n`);
